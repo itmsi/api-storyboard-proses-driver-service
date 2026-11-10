@@ -2,7 +2,7 @@
   "success": true,
   "data": {
     "unit": {
-      "id": "unit_9123",
+      "id": "fc06e493-e9c6-429b-9529-bc07084818ee",
       "plate": "B 9123 KZ",
       "type": "CDD Bak"
     },
@@ -11,7 +11,7 @@
     "p2h": null,
     "recheck_requested": true,
     "previous": {
-      "id": "p2h_20261105_9123",
+      "id": "d6c681e9-d765-40c1-9b35-f8ad7f695743",
       "status": "catatan",
       "checked_by": "Budi",
       "checked_at": "2026-11-05T06:10:00+07:00"

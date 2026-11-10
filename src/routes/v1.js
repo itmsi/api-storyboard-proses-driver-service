@@ -18,15 +18,18 @@ router.use(apiLimiter)
  */
 
 router.use(require('../modules/app'))
-
-// Didaftarkan setelah skema DB final (urutan sesuai alur aplikasi):
-// router.use('/auth', require('../modules/auth'))
-// router.use('/me', require('../modules/me'))
-// router.use('/devices', require('../modules/devices'))
-// router.use('/media', require('../modules/media'))
-// router.use('/ocr', require('../modules/ocr'))
-// router.use(require('../modules/p2h'))              // /p2h/template, /units/:unitId/p2h...
-// router.use('/delivery-orders', require('../modules/delivery-orders'))
-// router.use('/sync', require('../modules/sync'))
+router.use('/auth', require('../modules/auth'))
+router.use('/me', require('../modules/me'))
+router.use('/devices', require('../modules/devices'))
+router.use('/media', require('../modules/media'))
+router.use('/sync', require('../modules/sync'))
+router.use('/internal', require('../modules/internal')) // dipanggil project manage company (X-Internal-Key)
+router.use('/delivery-orders', require('../modules/delivery-orders'))
+router.use('/delivery-orders', require('../modules/loading'))
+router.use('/delivery-orders', require('../modules/odometer'))
+router.use('/delivery-orders', require('../modules/expenses'))
+router.use('/delivery-orders', require('../modules/handover'))
+router.use('/delivery-orders', require('../modules/summary'))
+router.use(require('../modules/p2h')) // /p2h/template, /units/:unitId/p2h...
 
 module.exports = router

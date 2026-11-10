@@ -1,7 +1,7 @@
 {
   "success": true,
   "data": {
-    "id": "exp_0144_01",
+    "id": "bff89c85-7925-4a48-903d-436609daf0cf",
     "category": "bbm",
     "amount": 204000,
     "ocr": {
@@ -31,10 +31,10 @@
       "receipt_not_used_before": true
     },
     "media": {
-      "id": "med_rcpt_01",
+      "id": "f97ceecd-7d4d-48ab-bd9f-ddb0e518b8fc",
       "kind": "receipt",
-      "url": "https://cdn.example.com/media/med_rcpt_01.jpg",
-      "thumb_url": "https://cdn.example.com/media/med_rcpt_01_thumb.jpg",
+      "url": "https://cdn.example.com/media/f97ceecd-7d4d-48ab-bd9f-ddb0e518b8fc.jpg",
+      "thumb_url": "https://cdn.example.com/media/f97ceecd-7d4d-48ab-bd9f-ddb0e518b8fc_thumb.jpg",
       "source": "camera",
       "captured_at": "2026-11-05T14:33:00+07:00",
       "server_received_at": "2026-11-05T14:33:00+07:00",
@@ -43,7 +43,7 @@
         "lng": 107.03,
         "accuracy_m": 8
       },
-      "captured_by": "drv_0021",
+      "captured_by": "952975ba-bcf9-4a57-ac3b-be20940d8b25",
       "sha256": "<sha256-hash>"
     }
   }

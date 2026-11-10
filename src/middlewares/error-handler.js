@@ -32,29 +32,29 @@ const notFoundHandler = (req, res, next) => {
   next(new AppError('ROUTE_NOT_FOUND', { details: { method: req.method, path: req.originalUrl } }))
 }
 
-// eslint-disable-next-line no-unused-vars
-const errorHandler = (err, req, res, next) => {
+/** Error apa pun -> objek error kontrak { code, message, http_status, details } (dipakai juga oleh sync batch). */
+const describeError = (err, locale, context = '') => {
   const appError = toAppError(err)
 
   if (!appError || appError.httpStatus >= 500) {
-    logger.error(`${req.method} ${req.originalUrl} -> ${err.stack || err}`)
+    logger.error(`${context} -> ${err.stack || err}`.trim())
   }
 
   const error = appError || new AppError('INTERNAL_ERROR')
-  const locale = resolveLocale(req.headers['accept-language'])
-
   const body = {
-    success: false,
-    error: {
-      code: error.code,
-      message: error.customMessage || t(error.code, locale),
-      http_status: error.httpStatus,
-    },
+    code: error.code,
+    message: error.customMessage || t(error.code, locale),
+    http_status: error.httpStatus,
   }
-  if (error.details !== undefined) body.error.details = error.details
-  if (!appError && !config.app.isProduction) body.error.debug = err.message
-
-  res.status(error.httpStatus).json(body)
+  if (error.details !== undefined) body.details = error.details
+  if (!appError && !config.app.isProduction) body.debug = err.message
+  return body
 }
 
-module.exports = { notFoundHandler, errorHandler }
+// eslint-disable-next-line no-unused-vars
+const errorHandler = (err, req, res, next) => {
+  const error = describeError(err, resolveLocale(req.headers['accept-language']), `${req.method} ${req.originalUrl}`)
+  res.status(error.http_status).json({ success: false, error })
+}
+
+module.exports = { notFoundHandler, errorHandler, describeError }

@@ -1,5 +1,5 @@
 {
-  "client_ref": "9c4f-...-uuid",
+  "client_ref": "2d2ff816-cdd0-4815-b5d2-c4bc0bfc9c15",
   "loaded_at": "2026-11-05T13:06:00+07:00",
   "gps": {
     "lat": -6.18,
@@ -7,15 +7,15 @@
     "accuracy_m": 8
   },
   "cargo_photo_ids": [
-    "med_load_01",
-    "med_load_02"
+    "285f21fc-c60e-44fe-a019-2a71bda2424b",
+    "51b29953-e35b-40a0-b534-3f3a5d53d8b0"
   ],
   "quantity_matches_do": false,
   "quantity_note": "Gudang hanya siapkan 3 palet, 1 palet menyusul",
   "delivery_note_pages": [
     {
       "page": 1,
-      "media_id": "med_sj_01"
+      "media_id": "540c0a4e-0e55-4111-819b-7a1b43afeafd"
     }
   ]
 }

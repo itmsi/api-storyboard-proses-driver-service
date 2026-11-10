@@ -17,40 +17,11 @@ module.exports = {
         content: { 'multipart/form-data': { schema: ref('MediaUploadRequest') } },
       },
       responses: {
+        200: jsonResponse('Sudah pernah diupload dengan `client_ref` yang sama (isi sama dengan upload pertama)', envelope(ref('Media')), '03-media/POST.media.response.json'),
         201: jsonResponse('Tersimpan', envelope(ref('Media')), '03-media/POST.media.response.json'),
         413: { description: 'File terlalu besar', content: { 'application/json': { schema: ref('Error') } } },
         415: { description: 'Tipe file tidak didukung', content: { 'application/json': { schema: ref('Error') } } },
         422: errorRef('ValidationError'),
-        ...authErrors,
-      },
-    },
-  },
-
-  // ===================== OCR =====================
-  '/ocr/odometer': {
-    post: {
-      tags: ['OCR'],
-      summary: 'Baca angka odometer & level BBM dari foto',
-      description: 'Hasil OCR hanya saran; nilai final dikirim ke `POST /delivery-orders/{id}/odometer`.',
-      security: secured,
-      requestBody: jsonBody(ref('OcrMediaRequest'), '07-odometer/POST.ocr.odometer.request.json'),
-      responses: {
-        200: jsonResponse('OK', envelope(ref('OcrOdometerResponse')), '07-odometer/POST.ocr.odometer.response.json'),
-        404: errorRef('NotFound'),
-        ...authErrors,
-      },
-    },
-  },
-  '/ocr/receipt': {
-    post: {
-      tags: ['OCR'],
-      summary: 'Baca struk BBM dari foto',
-      security: secured,
-      requestBody: jsonBody(ref('OcrMediaRequest'), '08-expenses/POST.ocr.receipt.request.json'),
-      responses: {
-        200: jsonResponse('OK', envelope(ref('OcrReceiptResponse')), '08-expenses/POST.ocr.receipt.response.json'),
-        404: errorRef('NotFound'),
-        409: errorRef('DuplicateReceipt'),
         ...authErrors,
       },
     },
@@ -83,6 +54,7 @@ module.exports = {
           'Layak dengan catatan': '04-p2h/GET.units.p2h.today.response.catatan.json',
           'Diminta P2H ulang': '04-p2h/GET.units.p2h.today.response.ulang.json',
         }),
+        403: jsonResponse('Unit tidak ditugaskan ke driver ini hari ini', ref('Error')),
         404: errorRef('NotFound'),
         ...authErrors,
       },
@@ -100,7 +72,9 @@ module.exports = {
       responses: {
         201: jsonResponse('Tersimpan', envelope(ref('P2HSubmitResponse')), '04-p2h/POST.units.p2h.response.json'),
         404: errorRef('NotFound'),
-        409: { description: 'P2H hari ini sudah ada', content: { 'application/json': { schema: ref('Error') } } },
+        200: jsonResponse('Sudah pernah dikirim dengan `client_ref` yang sama (hasil sama)', envelope(ref('P2HSubmitResponse')), '04-p2h/POST.units.p2h.response.json'),
+        403: jsonResponse('Unit tidak ditugaskan ke driver ini hari ini', ref('Error')),
+        409: { description: 'P2H hari ini sudah ada (CONFLICT, `details.p2h_id`)', content: { 'application/json': { schema: ref('Error') } } },
         422: errorRef('ValidationError'),
         ...authErrors,
       },

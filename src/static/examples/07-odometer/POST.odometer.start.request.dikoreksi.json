@@ -1,7 +1,7 @@
 {
-  "client_ref": "e71b-...-uuid",
+  "client_ref": "d6ea96fb-e9b8-40bb-a997-27f81266c548",
   "type": "start",
-  "media_id": "med_odo_start_01",
+  "media_id": "c6c62ddb-ea60-4bb7-9d99-deeb455f5e75",
   "ocr": {
     "km": 45210,
     "fuel_level": "half"

@@ -11,13 +11,13 @@ module.exports = {
     get: {
       tags: ['Delivery Order'],
       summary: 'Daftar DO milik driver',
-      description: 'Dipakai layar "DO ditugaskan" dengan `status=assigned`.',
+      description: 'Dipakai layar "DO ditugaskan" dengan `status=assigned`. Tanpa `status`: semua DO yang belum selesai. Hanya DO milik driver yang login.',
       security: secured,
       parameters: [{
         name: 'status',
         in: 'query',
         required: false,
-        schema: { type: 'string', enum: ['assigned', 'accepted', 'in_transit'], example: 'assigned' },
+        schema: { type: 'string', enum: ['assigned', 'accepted', 'loading', 'in_transit', 'handover'], example: 'assigned' },
       }],
       responses: {
         200: jsonResponse(
@@ -129,7 +129,8 @@ module.exports = {
     post: {
       tags: ['Perjalanan'],
       summary: 'Foto muatan & surat jalan',
-      description: 'Jumlah foto mengikuti `photo_rules` di `/config`. Jika jumlah barang tidak sesuai DO, `quantity_note` wajib.',
+      description: 'DO harus berstatus `accepted`; setelahnya `loading`. Jumlah foto mengikuti `photo_rules` di `/config`. '
+        + 'Jika jumlah barang tidak sesuai DO, `quantity_note` wajib. Foto harus milik driver, berjenis `loading` / `delivery_note`, dan belum dipakai di data lain. Idempoten per `client_ref`.',
       security: secured,
       parameters: doId,
       requestBody: jsonBody(ref('LoadingRequest'), {
@@ -149,8 +150,9 @@ module.exports = {
     post: {
       tags: ['Perjalanan'],
       summary: 'Catat odometer awal / akhir',
-      description: '`type=start` setelah muat, `type=end` setelah serah terima. Jika nilai OCR dikoreksi, '
-        + '`correction_reason` wajib. Nilai `effective` = koreksi jika ada, selain itu OCR.',
+      description: '`type=start` setelah muat (DO `loading` -> `in_transit`), `type=end` setelah serah terima (DO `handover`). OCR dilakukan di HP dan hasilnya dikirim di `ocr`. Jika nilai OCR dikoreksi, '
+        + '`correction_reason` wajib. Nilai `effective` = koreksi jika ada, selain itu `ocr`; jika `ocr` kosong, `corrected.km` wajib. '
+        + 'Odometer akhir tidak boleh lebih kecil dari odometer awal.',
       security: secured,
       parameters: doId,
       requestBody: jsonBody(ref('OdometerRequest'), {
@@ -186,8 +188,8 @@ module.exports = {
     post: {
       tags: ['Perjalanan'],
       summary: 'Catat biaya (BBM dari struk / manual)',
-      description: '`category=bbm` memakai foto struk + hasil OCR. Kategori `tol`, `parkir`, `lainnya` diisi manual '
-        + '(`description` wajib untuk `lainnya`). Struk yang sama (hash foto/isi) tidak boleh dipakai di DO lain.',
+      description: 'Hanya saat DO `in_transit` atau `handover`. Kategori dibaca dari `/config` (`expense_categories`): `input=receipt_ocr` (BBM) memakai foto struk + hasil OCR dari HP '
+        + '(waktu struk memakai `captured_at`), `input=manual` memakai `amount` + `recorded_at`. Struk yang sama (hash foto atau isi struk) tidak boleh dipakai lagi (409 `DUPLICATE_RECEIPT`). Idempoten per `client_ref`.',
       security: secured,
       parameters: doId,
       requestBody: jsonBody({ oneOf: [ref('ExpenseBbmRequest'), ref('ExpenseManualRequest')] }, {
@@ -211,8 +213,10 @@ module.exports = {
     post: {
       tags: ['Perjalanan'],
       summary: 'Serah terima barang',
-      description: '`condition`: `lengkap` -> terkirim_lengkap, `masalah` -> terkirim_catatan (isi `issues`), '
-        + '`gagal_kirim` -> gagal_kirim (isi `failure_reason` + foto lokasi).',
+      description: 'Hanya saat DO `in_transit` (setelah itu `handover`). `condition`: `lengkap` -> terkirim_lengkap (foto bongkar, surat jalan bercap, penerima + tanda tangan), '
+        + '`masalah` -> terkirim_catatan (tambah `issues`, `received_quantity` <= jumlah DO, `receiver.acknowledges_issues`; foto masalah berjenis `damage`), '
+        + '`gagal_kirim` -> gagal_kirim (`failure_reason` + foto lokasi; `note` wajib jika alasan `lainnya`; tanpa data bongkar). '
+        + 'Hasil pengiriman ditentukan server. Setelah ini catat odometer akhir lalu selesaikan DO. Idempoten per `client_ref`.',
       security: secured,
       parameters: doId,
       requestBody: jsonBody(ref('HandoverRequest'), {
@@ -233,7 +237,8 @@ module.exports = {
     get: {
       tags: ['Perjalanan'],
       summary: 'Ringkasan perjalanan & selisih uang jalan',
-      description: '`settlement.type`: `refund_to_company` (sisa disetor), `payable_to_driver` (kurang bayar), `balanced`.',
+      description: 'Tersedia saat DO `handover` dan `completed`. `settlement.type`: `refund_to_company` (sisa disetor), `payable_to_driver` (kurang bayar), `balanced`. '
+        + 'Sebelum odometer akhir dicatat, `odometer.end` dan `distance_km` bernilai null.',
       security: secured,
       parameters: doId,
       responses: {
@@ -250,7 +255,8 @@ module.exports = {
     post: {
       tags: ['Perjalanan'],
       summary: 'Selesaikan DO',
-      description: 'Mengunci DO (`locked: true`). Setelah ini data perjalanan tidak bisa diubah dari aplikasi.',
+      description: 'Syarat: DO `handover` dan odometer akhir sudah dicatat (409 `INVALID_STATE` jika belum). Mengunci DO (`locked: true`) dan membekukan rekap keuangan; '
+        + 'setelah ini data perjalanan tidak bisa diubah dari aplikasi (409 `DO_LOCKED`). Idempoten per `client_ref`.',
       security: secured,
       parameters: doId,
       requestBody: jsonBody(ref('CompleteRequest'), '10-summary/POST.complete.request.json'),
@@ -268,8 +274,20 @@ module.exports = {
     post: {
       tags: ['Sync'],
       summary: 'Kirim antrean offline sekaligus',
-      description: 'Setiap item diproses seperti request biasa ke `path`, berurutan sesuai `client_created_at`. '
-        + 'Item dengan `client_ref` yang sudah pernah diproses dikembalikan sebagai `duplicate_ignored` beserta id aslinya.',
+      description: 'Antrean offline dari HP. Setiap item diproses seperti request biasa ke `path` (validasi dan aturan bisnis sama), '
+        + '**berurutan menurut `client_created_at`** (urutan asli di HP, bukan urutan kirim) supaya langkah yang bergantung (terima -> muat -> odometer -> biaya -> serah terima -> selesai) tetap benar. '
+        + `Hasil dikembalikan menurut urutan request. Satu item gagal tidak menghentikan item lain; response tetap 200.${
+          [
+            '',
+            '',
+            '- `created`: berhasil diproses. `duplicate_ignored`: `client_ref` sudah pernah diproses, dikembalikan id aslinya (aman dikirim ulang). '
+            + '`failed`: lihat `error` (4xx = permanen, perbaiki isinya; 5xx = coba lagi).',
+            '- Item gagal dicatat di server dan dihitung di `pending_sync` (bootstrap, layar Berjalan, `GET /me`, peringatan saat logout) '
+            + 'sampai berhasil dikirim ulang dengan `client_ref` yang sama.',
+            '- Endpoint yang boleh dikirim: `POST /units/{unitId}/p2h`, `POST /delivery-orders/{id}/accept|loading|odometer|expenses|handover|complete`, '
+            + '`PATCH /me/settings`. Upload foto (`POST /media`, multipart) harus dilakukan langsung dan berhasil dulu, lalu id fotonya dipakai di item.',
+            '- Maksimal 100 item per request, `client_ref` tidak boleh ganda dalam satu request.',
+          ].join('\n')}`,
       security: secured,
       requestBody: jsonBody(ref('SyncBatchRequest'), '13-sync/POST.sync.batch.request.json'),
       responses: {

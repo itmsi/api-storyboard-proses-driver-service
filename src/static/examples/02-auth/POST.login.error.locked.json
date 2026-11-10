@@ -1,0 +1,11 @@
+{
+  "success": false,
+  "error": {
+    "code": "ACCOUNT_LOCKED",
+    "message": "Akun dikunci sementara karena terlalu banyak percobaan masuk.",
+    "http_status": 423,
+    "details": {
+      "locked_until": "2026-11-05T14:45:00+07:00"
+    }
+  }
+}

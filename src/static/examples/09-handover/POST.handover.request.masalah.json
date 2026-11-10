@@ -1,5 +1,5 @@
 {
-  "client_ref": "c0de-...-uuid",
+  "client_ref": "565aab3d-751c-4bf1-95c2-c225c7966697",
   "condition": "masalah",
   "issues": [
     {
@@ -7,22 +7,22 @@
       "quantity": 1,
       "unit": "palet",
       "photo_ids": [
-        "med_dmg_01"
+        "c78ff07d-4d86-4778-b4cd-376d035075d7"
       ]
     }
   ],
   "received_quantity": 3,
   "unloading_photo_ids": [
-    "med_unl_01",
-    "med_unl_02",
-    "med_unl_03"
+    "2cdfeee1-0f8d-461a-802c-bd6faf452615",
+    "f38e818d-f3fd-4383-9f8f-7735bb2e736e",
+    "8cb13a91-53b6-4aa7-a8f5-a3dc817d2848"
   ],
   "stamped_delivery_note_ids": [
-    "med_sjc_01"
+    "9ae990be-7834-4e70-8cda-d58fa147b377"
   ],
   "receiver": {
     "name": "[NAMA PENERIMA]",
-    "signature_media_id": "med_sig_01",
+    "signature_media_id": "0ced184c-70cd-469c-b468-6514ee145ae5",
     "signed_at": "2026-11-05T16:52:00+07:00",
     "acknowledges_issues": true
   },

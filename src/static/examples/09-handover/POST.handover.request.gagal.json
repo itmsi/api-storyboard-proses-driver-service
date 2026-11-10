@@ -1,9 +1,9 @@
 {
-  "client_ref": "c0de-...-uuid",
+  "client_ref": "565aab3d-751c-4bf1-95c2-c225c7966697",
   "condition": "gagal_kirim",
   "failure_reason": "penerima_tidak_ada",
   "location_photo_ids": [
-    "med_loc_01"
+    "2cd20058-4e35-40e6-9aa4-e770a6836571"
   ],
   "note": "Sudah menunggu 30 menit",
   "receiver": null,

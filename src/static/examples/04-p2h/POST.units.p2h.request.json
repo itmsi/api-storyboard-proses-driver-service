@@ -1,5 +1,5 @@
 {
-  "client_ref": "0b2e-...-uuid",
+  "client_ref": "688152c4-ad32-48ee-ac12-6a5b6c0bd307",
   "checked_at": "2026-11-05T06:10:00+07:00",
   "gps": {
     "lat": -6.18,
@@ -26,10 +26,10 @@
     }
   ],
   "body_photo_ids": {
-    "depan": "med_p2h_depan",
-    "kanan": "med_p2h_kanan",
-    "kiri": "med_p2h_kiri",
-    "belakang": "med_p2h_belakang"
+    "depan": "2da8120e-5cf5-463e-817b-c5f58345b30f",
+    "kanan": "8dbcd49c-3409-4ffa-a79d-08b13e59634a",
+    "kiri": "de9dd961-0e38-4fbb-9d16-5fe3a4158e64",
+    "belakang": "be07aabf-a229-4cdb-8e0e-79c3f6c6b033"
   },
   "admin_confirmed_by_driver": true
 }

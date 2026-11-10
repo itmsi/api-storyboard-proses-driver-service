@@ -49,12 +49,20 @@ module.exports = {
     post: {
       tags: ['Auth'],
       summary: 'Login driver',
-      description: 'Login dengan kode driver atau No. HP. Dibatasi rate limit; setelah beberapa kali gagal akun dikunci sementara.',
+      description: 'Login dengan **client code** + ID driver atau No. HP + kata sandi. Client code memilih database perusahaan; '
+        + 'semua request berikutnya otomatis memakai database yang sama (client code tersimpan di token). '
+        + 'Dibatasi rate limit; setelah beberapa kali gagal akun dikunci sementara (`details.remaining_attempts` menunjukkan sisa percobaan).',
       requestBody: jsonBody(ref('LoginRequest'), '02-auth/POST.login.request.json'),
       responses: {
         200: jsonResponse('Login berhasil', envelope(ref('LoginResponse')), '02-auth/POST.login.response.json'),
-        401: jsonResponse('Kredensial salah', ref('Error'), '02-auth/POST.login.error.json'),
+        401: jsonResponse('Kredensial / client code salah', ref('Error'), {
+          INVALID_CREDENTIALS: '02-auth/POST.login.error.json',
+          INVALID_CLIENT_CODE: '02-auth/POST.login.error.client-code.json',
+        }),
+        403: jsonResponse('Akun atau perusahaan nonaktif (FORBIDDEN / CLIENT_INACTIVE)', ref('Error')),
         422: errorRef('ValidationError'),
+        423: jsonResponse('Akun terkunci sementara', ref('Error'), '02-auth/POST.login.error.locked.json'),
+        503: jsonResponse('Database perusahaan tidak dapat dihubungi (TENANT_UNAVAILABLE)', ref('Error')),
         429: errorRef('RateLimited'),
       },
     },

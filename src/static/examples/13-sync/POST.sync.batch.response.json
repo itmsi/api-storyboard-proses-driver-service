@@ -3,15 +3,35 @@
   "data": {
     "results": [
       {
-        "client_ref": "77ac-...-uuid",
+        "client_ref": "77ac1b0e-4d52-4c5e-9f4a-2a9c5d2e7b10",
         "status": "created",
-        "id": "exp_0144_03"
+        "id": "5f0c2a9e-7d41-4b83-9e6a-1c8d3b4a5e70"
       },
       {
-        "client_ref": "4b10-...-uuid",
+        "client_ref": "4b10c6d2-91a3-4f7e-8d3b-6f0e1a2c9d45",
         "status": "duplicate_ignored",
-        "id": "exp_0144_02"
+        "id": "2e8b4c1d-6a93-4f05-b7d2-9c0a3e5f1b84"
+      },
+      {
+        "client_ref": "9d3e7a52-0b6c-4e18-a7f1-3c5b8d2e4f60",
+        "status": "failed",
+        "error": {
+          "code": "ROUTE_NOT_FOUND",
+          "message": "Endpoint tidak ditemukan.",
+          "http_status": 404,
+          "details": {
+            "method": "POST",
+            "path": "/media",
+            "reason": "endpoint ini tidak bisa dikirim lewat sync"
+          }
+        }
       }
     ]
+  },
+  "meta": {
+    "processed_at": "2026-11-05T15:45:00+07:00",
+    "created": 1,
+    "duplicate_ignored": 1,
+    "failed": 1
   }
 }

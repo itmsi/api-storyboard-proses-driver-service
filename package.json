@@ -15,7 +15,11 @@
     "migrate:rollback": "knex --knexfile src/database/knexfile.js migrate:rollback",
     "migrate:make": "knex --knexfile src/database/knexfile.js migrate:make",
     "seed": "knex --knexfile src/database/knexfile.js seed:run",
-    "seed:make": "knex --knexfile src/database/knexfile.js seed:make"
+    "seed:make": "knex --knexfile src/database/knexfile.js seed:make",
+    "migrate:tenant": "node src/database/migrate-tenant.js",
+    "migrate:tenant:rollback": "node src/database/migrate-tenant.js --rollback",
+    "seed:tenant": "node src/database/migrate-tenant.js --seed",
+    "test": "node --require ./test/setup.js --test --test-concurrency=1 \"test/*.test.js\""
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -32,6 +36,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.7.3",
+    "sharp": "^0.35.5",
     "swagger-ui-express": "^4.4.0",
     "winston": "^3.17.0"
   },

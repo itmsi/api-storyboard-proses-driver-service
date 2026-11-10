@@ -1,5 +1,21 @@
 const { AppError } = require('../utils/errors')
 
+const OPTIONS = {
+  abortEarly: false,
+  stripUnknown: true,
+  convert: true,
+  errors: { wrap: { label: false } },
+}
+
+/** Validasi satu nilai (dipakai juga oleh sync batch). Mengembalikan { value, details }; details kosong jika valid. */
+const validateValue = (schema, input) => {
+  const { value, error } = schema.validate(input, OPTIONS)
+  return {
+    value,
+    details: error ? error.details.map((d) => ({ field: d.path.join('.'), message: d.message })) : [],
+  }
+}
+
 /**
  * Validasi request dengan Joi.
  *
@@ -13,16 +29,9 @@ const validate = (schemas) => (req, res, next) => {
   req.valid = req.valid || {}
 
   Object.entries(schemas).forEach(([source, schema]) => {
-    const { value, error } = schema.validate(req[source], {
-      abortEarly: false,
-      stripUnknown: true,
-      convert: true,
-      errors: { wrap: { label: false } },
-    })
-    if (error) {
-      error.details.forEach((d) => {
-        details.push({ field: d.path.join('.'), message: d.message })
-      })
+    const { value, details: found } = validateValue(schema, req[source])
+    if (found.length) {
+      details.push(...found)
     } else if (source === 'body') {
       req.body = value
     } else {
@@ -34,4 +43,4 @@ const validate = (schemas) => (req, res, next) => {
   return next()
 }
 
-module.exports = { validate }
+module.exports = { validate, validateValue }

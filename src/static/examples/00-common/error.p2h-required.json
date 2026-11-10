@@ -5,7 +5,7 @@
     "message": "Unit B 9123 KZ belum di-P2H hari ini. DO baru bisa diterima setelah P2H.",
     "http_status": 409,
     "details": {
-      "unit_id": "unit_9123",
+      "unit_id": "fc06e493-e9c6-429b-9529-bc07084818ee",
       "p2h_date": "2026-11-05"
     }
   }

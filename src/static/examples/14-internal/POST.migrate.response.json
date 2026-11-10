@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "client_code": "ACME",
+    "batch": 1,
+    "applied": [
+      "20261110000000_init_extensions.js",
+      "20261110000100_create_set_updated_at.js",
+      "20261110000200_create_auth_tables.js"
+    ]
+  }
+}

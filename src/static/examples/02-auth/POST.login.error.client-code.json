@@ -1,0 +1,8 @@
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_CLIENT_CODE",
+    "message": "Client code tidak dikenal.",
+    "http_status": 401
+  }
+}

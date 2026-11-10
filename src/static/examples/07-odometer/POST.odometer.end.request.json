@@ -1,7 +1,7 @@
 {
-  "client_ref": "aa20-...-uuid",
+  "client_ref": "a142bc1a-dfca-420d-accf-04a3daf1920c",
   "type": "end",
-  "media_id": "med_odo_end_01",
+  "media_id": "9616785f-9b06-4d28-a060-d8af75ac2f43",
   "ocr": {
     "km": 45278,
     "fuel_level": "quarter"

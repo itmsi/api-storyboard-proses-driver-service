@@ -1,12 +1,12 @@
 {
   "success": true,
   "data": {
-    "id": "drv_0021",
+    "id": "952975ba-bcf9-4a57-ac3b-be20940d8b25",
     "code": "DRV-0021",
     "name": "Andi",
     "phone": "[NO_HP]",
     "unit_today": {
-      "id": "unit_9123",
+      "id": "fc06e493-e9c6-429b-9529-bc07084818ee",
       "plate": "B 9123 KZ",
       "type": "CDD Bak"
     },
@@ -19,6 +19,16 @@
     "sync": {
       "pending": 0,
       "last_synced_at": "2026-11-05T07:29:00+07:00"
+    },
+    "created_at": "2026-10-01T09:00:00+07:00",
+    "created_by": {
+      "id": "e49366b5-7565-4723-8763-3c32177a4038",
+      "name": "Admin Perusahaan"
+    },
+    "updated_at": "2026-11-05T07:29:00+07:00",
+    "updated_by": {
+      "id": "ac123173-384b-422d-a88e-6f5838d5d29d",
+      "name": "Andi"
     }
   }
 }

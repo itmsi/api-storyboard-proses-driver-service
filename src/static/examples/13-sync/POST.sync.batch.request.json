@@ -2,16 +2,21 @@
   "device_id": "android-7f3a",
   "items": [
     {
-      "client_ref": "77ac-...-uuid",
+      "client_ref": "77ac1b0e-4d52-4c5e-9f4a-2a9c5d2e7b10",
       "method": "POST",
-      "path": "/delivery-orders/do_0144/expenses",
-      "body_ref": "08-expenses/POST.expenses.manual.parkir.request.json",
+      "path": "/delivery-orders/<id-do>/expenses",
+      "body": {
+        "category": "parkir",
+        "amount": 5000,
+        "description": "Parkir rest area KM 57",
+        "recorded_at": "2026-11-05T15:10:00+07:00"
+      },
       "client_created_at": "2026-11-05T15:10:00+07:00"
     },
     {
-      "client_ref": "4b10-...-uuid",
+      "client_ref": "4b10c6d2-91a3-4f7e-8d3b-6f0e1a2c9d45",
       "method": "POST",
-      "path": "/delivery-orders/do_0144/expenses",
+      "path": "/delivery-orders/<id-do>/expenses",
       "body": {
         "category": "tol",
         "amount": 54500,
@@ -19,6 +24,15 @@
         "recorded_at": "2026-11-05T15:40:00+07:00"
       },
       "client_created_at": "2026-11-05T15:40:00+07:00"
+    },
+    {
+      "client_ref": "9d3e7a52-0b6c-4e18-a7f1-3c5b8d2e4f60",
+      "method": "POST",
+      "path": "/media",
+      "body": {
+        "kind": "receipt"
+      },
+      "client_created_at": "2026-11-05T15:41:00+07:00"
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
   "success": true,
   "data": {
-    "id": "p2h_20261105_9123",
+    "id": "d6c681e9-d765-40c1-9b35-f8ad7f695743",
     "unit": {
-      "id": "unit_9123",
+      "id": "fc06e493-e9c6-429b-9529-bc07084818ee",
       "plate": "B 9123 KZ",
       "type": "CDD Bak"
     },
@@ -11,12 +11,12 @@
     "status": "layak",
     "can_operate": true,
     "checked_by": {
-      "id": "drv_0017",
+      "id": "c50b88db-1230-4b7c-9750-c6ee5687f32c",
       "name": "Budi"
     },
     "checked_at": "2026-11-05T06:10:00+07:00",
     "location": {
-      "name": "Depot OGO Cakung",
+      "name": "Depot Cakung",
       "gps": {
         "lat": -6.18,
         "lng": 106.94,
@@ -48,10 +48,10 @@
     ],
     "body_photos": [
       {
-        "id": "med_p2h_depan",
+        "id": "2da8120e-5cf5-463e-817b-c5f58345b30f",
         "kind": "p2h_body",
-        "url": "https://cdn.example.com/media/med_p2h_depan.jpg",
-        "thumb_url": "https://cdn.example.com/media/med_p2h_depan_thumb.jpg",
+        "url": "https://cdn.example.com/media/2da8120e-5cf5-463e-817b-c5f58345b30f.jpg",
+        "thumb_url": "https://cdn.example.com/media/2da8120e-5cf5-463e-817b-c5f58345b30f_thumb.jpg",
         "source": "camera",
         "captured_at": "2026-11-05T06:08:00+07:00",
         "server_received_at": "2026-11-05T06:08:00+07:00",
@@ -60,15 +60,15 @@
           "lng": 106.94,
           "accuracy_m": 8
         },
-        "captured_by": "drv_0017",
+        "captured_by": "c50b88db-1230-4b7c-9750-c6ee5687f32c",
         "sha256": "<sha256-hash>",
         "side": "depan"
       },
       {
-        "id": "med_p2h_kanan",
+        "id": "8dbcd49c-3409-4ffa-a79d-08b13e59634a",
         "kind": "p2h_body",
-        "url": "https://cdn.example.com/media/med_p2h_kanan.jpg",
-        "thumb_url": "https://cdn.example.com/media/med_p2h_kanan_thumb.jpg",
+        "url": "https://cdn.example.com/media/8dbcd49c-3409-4ffa-a79d-08b13e59634a.jpg",
+        "thumb_url": "https://cdn.example.com/media/8dbcd49c-3409-4ffa-a79d-08b13e59634a_thumb.jpg",
         "source": "camera",
         "captured_at": "2026-11-05T06:08:00+07:00",
         "server_received_at": "2026-11-05T06:08:00+07:00",
@@ -77,15 +77,15 @@
           "lng": 106.94,
           "accuracy_m": 8
         },
-        "captured_by": "drv_0017",
+        "captured_by": "c50b88db-1230-4b7c-9750-c6ee5687f32c",
         "sha256": "<sha256-hash>",
         "side": "kanan"
       },
       {
-        "id": "med_p2h_kiri",
+        "id": "de9dd961-0e38-4fbb-9d16-5fe3a4158e64",
         "kind": "p2h_body",
-        "url": "https://cdn.example.com/media/med_p2h_kiri.jpg",
-        "thumb_url": "https://cdn.example.com/media/med_p2h_kiri_thumb.jpg",
+        "url": "https://cdn.example.com/media/de9dd961-0e38-4fbb-9d16-5fe3a4158e64.jpg",
+        "thumb_url": "https://cdn.example.com/media/de9dd961-0e38-4fbb-9d16-5fe3a4158e64_thumb.jpg",
         "source": "camera",
         "captured_at": "2026-11-05T06:08:00+07:00",
         "server_received_at": "2026-11-05T06:08:00+07:00",
@@ -94,15 +94,15 @@
           "lng": 106.94,
           "accuracy_m": 8
         },
-        "captured_by": "drv_0017",
+        "captured_by": "c50b88db-1230-4b7c-9750-c6ee5687f32c",
         "sha256": "<sha256-hash>",
         "side": "kiri"
       },
       {
-        "id": "med_p2h_belakang",
+        "id": "be07aabf-a229-4cdb-8e0e-79c3f6c6b033",
         "kind": "p2h_body",
-        "url": "https://cdn.example.com/media/med_p2h_belakang.jpg",
-        "thumb_url": "https://cdn.example.com/media/med_p2h_belakang_thumb.jpg",
+        "url": "https://cdn.example.com/media/be07aabf-a229-4cdb-8e0e-79c3f6c6b033.jpg",
+        "thumb_url": "https://cdn.example.com/media/be07aabf-a229-4cdb-8e0e-79c3f6c6b033_thumb.jpg",
         "source": "camera",
         "captured_at": "2026-11-05T06:08:00+07:00",
         "server_received_at": "2026-11-05T06:08:00+07:00",
@@ -111,7 +111,7 @@
           "lng": 106.94,
           "accuracy_m": 8
         },
-        "captured_by": "drv_0017",
+        "captured_by": "c50b88db-1230-4b7c-9750-c6ee5687f32c",
         "sha256": "<sha256-hash>",
         "side": "belakang"
       }

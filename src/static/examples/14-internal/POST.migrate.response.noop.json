@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "data": {
+    "client_code": "ACME",
+    "batch": 1,
+    "applied": []
+  }
+}

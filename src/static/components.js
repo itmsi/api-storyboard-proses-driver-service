@@ -37,6 +37,15 @@ const clientRef = str('c1b7c7e2-4f0a-4d2b-9a51-3b6f2d1a8e10', {
   format: 'uuid',
   description: 'UUID buatan aplikasi untuk idempotensi. Request ulang dengan client_ref sama tidak membuat data ganda.',
 })
+// Blok audit standar: ada di setiap resource yang disimpan di database
+const person = nullable(obj({ id: str('e49366b5-7565-4723-8763-3c32177a4038'), name: nullable(str('Admin Perusahaan')) }))
+const auditProps = {
+  created_at: dt('2026-11-05T07:00:00+07:00'),
+  created_by: { ...person, description: 'Pembuat data (null jika dibuat sistem)' },
+  updated_at: dt('2026-11-05T07:29:00+07:00'),
+  updated_by: { ...person, description: 'Pengubah terakhir (null jika sistem)' },
+}
+
 const money = (example) => int(example, { description: 'Rupiah (IDR), bilangan bulat tanpa desimal' })
 
 const schemas = {
@@ -65,22 +74,40 @@ const schemas = {
     accuracy_m: num(8, { minimum: 0, description: 'Akurasi GPS (meter)' }),
   }, ['lat', 'lng']),
   DriverRef: obj({
-    id: str('drv_0021'), code: str('DRV-0021'), name: str('Andi'), phone: str('[NO_HP]'),
+    id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'), code: str('DRV-0021'), name: str('Andi'), phone: str('[NO_HP]'),
   }, ['id', 'code', 'name']),
-  UnitRef: obj({ id: str('unit_9123'), plate: str('B 9123 KZ'), type: str('CDD Bak') }, ['id', 'plate']),
+  UnitRef: obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ'), type: str('CDD Bak') }, ['id', 'plate']),
   Media: obj({
-    id: str('med_odo_start_01'),
+    id: str('c6c62ddb-ea60-4bb7-9d99-deeb455f5e75'),
     kind: enumOf(MEDIA_KINDS, 'odometer_start'),
-    url: str('https://cdn.example.com/media/med_odo_start_01.jpg', { format: 'uri' }),
-    thumb_url: str('https://cdn.example.com/media/med_odo_start_01_thumb.jpg', { format: 'uri' }),
+    url: str('https://cdn.example.com/media/c6c62ddb-ea60-4bb7-9d99-deeb455f5e75.jpg', { format: 'uri' }),
+    thumb_url: str('https://cdn.example.com/media/c6c62ddb-ea60-4bb7-9d99-deeb455f5e75_thumb.jpg', { format: 'uri' }),
     source: enumOf(['camera'], 'camera', { description: 'Hanya kamera aplikasi; galeri ditolak' }),
     captured_at: dt('2026-11-05T13:50:00+07:00', { description: 'Waktu foto di HP' }),
     server_received_at: dt('2026-11-05T13:50:00+07:00'),
     gps: ref('Gps'),
-    captured_by: str('drv_0021'),
+    captured_by: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'),
     sha256: str('<sha256-hash>', { description: 'Hash file, untuk deteksi foto/struk dipakai ulang' }),
     side: { ...enumOf(['depan', 'kanan', 'kiri', 'belakang']), description: 'Hanya untuk kind p2h_body' },
+    ...auditProps,
   }, ['id', 'kind', 'url', 'captured_at']),
+
+  // ---------- Umum ----------
+  AuditFields: obj(auditProps),
+
+  // ---------- Internal ----------
+  MigrationResult: obj({
+    client_code: str('ACME'),
+    batch: nullable(int(1, { description: 'Nomor batch migrasi' })),
+    applied: arr(str('20261110000200_create_auth_tables.js'), { description: 'Migrasi yang baru dijalankan; kosong jika sudah terbaru' }),
+  }),
+  MigrationStatus: obj({
+    client_code: str('ACME'),
+    up_to_date: bool(true),
+    current_version: nullable(str('20261110000600_create_p2h_tables.js')),
+    applied_count: int(7),
+    pending: arr(str('20261110000700_create_delivery_orders.js'), { description: 'Migrasi yang belum dijalankan' }),
+  }),
 
   // ---------- App ----------
   PublicConfig: obj({
@@ -90,12 +117,13 @@ const schemas = {
     latest_app_version: str('1.0.0'),
     update_url: nullable(str('https://play.google.com/store/apps/details?id=<package>')),
     maintenance: obj({ active: bool(false), message: nullable(str(null)) }),
-    support: obj({ label: str('Hubungi admin OGO'), phone: nullable(str('[NO_HP_ADMIN]')) }),
+    support: obj({ label: str('Hubungi admin'), phone: nullable(str('[NO_HP_ADMIN]')) }),
   }),
   AppConfig: obj({
     config_version: str('2026-11-01.1', { description: 'Simpan di HP; jika beda dengan bootstrap, ambil ulang /config' }),
-    client_id: str('cl_ogo'),
-    client_name: str('PT Owngo Logistics Indonesia'),
+    client_id: str('cl_acme'),
+    client_code: str('ACME', { description: 'Client code yang dipakai login' }),
+    client_name: str('PT Contoh Logistik'),
     languages: arr(str('id')),
     default_language: str('id'),
     modules: obj({
@@ -125,12 +153,14 @@ const schemas = {
     config_version: str('2026-11-01.1'),
     driver: ref('DriverRef'),
     unit_today: nullable(ref('UnitRef')),
-    p2h_today: obj({ status: enumOf(P2H_STATUS), p2h_id: str('p2h_20261105_9123') }),
+    p2h_today: nullable(obj({
+      status: enumOf(P2H_STATUS), p2h_id: str('d6c681e9-d765-40c1-9b35-f8ad7f695743'), recheck_requested: bool(true),
+    }, ['status'], { description: 'null jika driver belum punya unit hari ini' })),
     assigned_do_count: int(1),
-    active_do_id: nullable(str('do_0144')),
+    active_do_id: nullable(str('2fb9f57e-a6e7-4890-b957-30261a15b471')),
     pending_sync: obj({ count: int(2), oldest_client_created_at: dt('2026-11-05T06:58:00+07:00') }),
-    next_screen: enumOf(['P2H', 'DO_ASSIGNED', 'DO_ACTIVE', 'IDLE'], 'P2H', {
-      description: 'Layar yang dibuka aplikasi setelah splash',
+    next_screen: enumOf(['P2H', 'DO_ASSIGNED', 'DO_ACTIVE'], 'P2H', {
+      description: 'Layar yang dibuka aplikasi setelah splash. DO_ACTIVE jika ada DO berjalan; P2H jika unit hari ini belum di-P2H (belum / diminta ulang / tidak layak); selain itu DO_ASSIGNED.',
     }),
   }),
 
@@ -139,11 +169,14 @@ const schemas = {
     device_id: str('android-7f3a'), app_version: str('1.0.0'), os: str('Android 14'),
   }, ['device_id']),
   LoginRequest: obj({
-    username: str('DRV-0021', { description: 'Kode driver atau No. HP' }),
+    client_code: str('ACME', {
+      description: 'Kode perusahaan (client). Menentukan database yang dipakai; huruf besar/kecil tidak dibedakan.',
+    }),
+    username: str('DRV-0021', { description: 'ID driver atau No. HP (08…, 628…, atau +628…)' }),
     password: str('<password>', { format: 'password' }),
     device: ref('Device'),
     remember_me: bool(true),
-  }, ['username', 'password', 'device']),
+  }, ['client_code', 'username', 'password', 'device']),
   TokenPair: obj({
     access_token: str('<jwt>'),
     refresh_token: str('<refresh>', { description: 'Dirotasi setiap refresh; token lama langsung tidak berlaku' }),
@@ -158,7 +191,7 @@ const schemas = {
     pending_sync_warning: bool(false, { description: 'true jika server tahu masih ada data offline yang belum terkirim' }),
   }),
   Me: obj({
-    id: str('drv_0021'),
+    id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'),
     code: str('DRV-0021'),
     name: str('Andi'),
     phone: str('[NO_HP]'),
@@ -166,6 +199,7 @@ const schemas = {
     settings: obj({ language: enumOf(['id', 'en', 'zh']) }),
     app: obj({ version: str('1.0.0') }),
     sync: obj({ pending: int(0), last_synced_at: nullable(dt('2026-11-05T07:29:00+07:00')) }),
+    ...auditProps,
   }),
   SettingsRequest: obj({ language: enumOf(['id', 'en', 'zh'], 'en') }, ['language']),
   PushTokenRequest: obj({ device_id: str('android-7f3a'), fcm_token: str('<fcm-token>') }, ['device_id', 'fcm_token']),
@@ -195,18 +229,19 @@ const schemas = {
     description: str('Lampu sein kiri mati', { description: 'Wajib jika result = tidak_sesuai' }),
   }, ['code', 'result']),
   P2HInspection: obj({
-    id: str('p2h_20261105_9123'),
+    id: str('d6c681e9-d765-40c1-9b35-f8ad7f695743'),
     unit: ref('UnitRef'),
     date: date(),
     status: enumOf(P2H_STATUS, 'catatan'),
     can_operate: bool(true),
-    checked_by: obj({ id: str('drv_0017'), name: str('Budi') }),
+    checked_by: obj({ id: str('c50b88db-1230-4b7c-9750-c6ee5687f32c'), name: str('Budi') }),
     checked_at: dt('2026-11-05T06:10:00+07:00'),
-    location: obj({ name: str('Depot OGO Cakung'), gps: ref('Gps') }),
+    location: obj({ name: nullable(str('Depot Cakung')), gps: ref('Gps') }),
     items: arr(ref('P2HItemResult')),
     body_photos: arr(ref('Media')),
     admin_confirmed_by_driver: nullable(bool(true)),
     valid_until: dt('2026-11-05T23:59:00+07:00'),
+    ...auditProps,
   }),
   P2HToday: {
     description: 'Status P2H unit hari ini. status=belum -> p2h null (dan recheck_requested bila admin minta ulang). Status lain -> object P2HInspection.',
@@ -218,7 +253,7 @@ const schemas = {
         p2h: nullable(obj({})),
         recheck_requested: bool(true),
         previous: obj({
-          id: str('p2h_20261105_9123'), status: enumOf(P2H_STATUS, 'catatan'), checked_by: str('Budi'), checked_at: dt(),
+          id: str('d6c681e9-d765-40c1-9b35-f8ad7f695743'), status: enumOf(P2H_STATUS, 'catatan'), checked_by: str('Budi'), checked_at: dt(),
         }),
       }),
       ref('P2HInspection'),
@@ -232,12 +267,12 @@ const schemas = {
       code: str('lampu'), result: enumOf(['sesuai', 'tidak_sesuai']), description: str('Lampu sein kiri mati'),
     }, ['code', 'result'])),
     body_photo_ids: obj({
-      depan: str('med_p2h_depan'), kanan: str('med_p2h_kanan'), kiri: str('med_p2h_kiri'), belakang: str('med_p2h_belakang'),
+      depan: str('2da8120e-5cf5-463e-817b-c5f58345b30f'), kanan: str('8dbcd49c-3409-4ffa-a79d-08b13e59634a'), kiri: str('de9dd961-0e38-4fbb-9d16-5fe3a4158e64'), belakang: str('be07aabf-a229-4cdb-8e0e-79c3f6c6b033'),
     }, ['depan', 'kanan', 'kiri', 'belakang']),
     admin_confirmed_by_driver: bool(true, { description: 'Driver menyatakan sudah lapor admin (wajib jika ada item tidak_sesuai)' }),
   }, ['client_ref', 'checked_at', 'gps', 'items', 'body_photo_ids']),
   P2HSubmitResponse: obj({
-    id: str('p2h_20261105_9123'),
+    id: str('d6c681e9-d765-40c1-9b35-f8ad7f695743'),
     status: enumOf(P2H_STATUS, 'catatan'),
     can_operate: bool(true),
     valid_until: dt('2026-11-05T23:59:00+07:00'),
@@ -245,11 +280,11 @@ const schemas = {
 
   // ---------- Delivery Order ----------
   DeliveryOrder: obj({
-    id: str('do_0144'),
+    id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
     no: str('DO-0144'),
     status: enumOf(DO_STATUS),
     assigned_at: dt('2026-11-05T06:55:00+07:00'),
-    assigned_by: str('admin_01'),
+    assigned_by: str('f1b7c36a-1eae-4b3b-8ee4-9434fcfeff2f'),
     unit: ref('UnitRef'),
     driver: ref('DriverRef'),
     origin: obj({
@@ -269,8 +304,14 @@ const schemas = {
     travel_allowance: obj({
       amount: money(600000), currency: str('IDR'), received_confirmed: bool(false),
     }),
-    p2h_today: obj({ status: enumOf(P2H_STATUS, 'catatan'), checked_by: str('Budi'), checked_at: dt() }),
-    can_accept: bool(true, { description: 'false jika P2H belum ada / unit tidak layak' }),
+    p2h_today: obj({
+      status: enumOf(P2H_STATUS, 'catatan'),
+      checked_by: str('Budi'),
+      checked_at: dt(),
+      recheck_requested: bool(true, { description: 'Hanya ada jika status belum dan admin meminta P2H ulang' }),
+    }, ['status'], { description: 'Hanya untuk DO berstatus assigned' }),
+    can_accept: bool(true, { description: 'false jika P2H belum ada / unit tidak layak / masih ada DO berjalan. Hanya untuk DO assigned' }),
+    ...auditProps,
   }),
   AcceptRequest: obj({
     client_ref: clientRef,
@@ -279,7 +320,7 @@ const schemas = {
     travel_allowance_received: bool(true),
   }, ['client_ref', 'accepted_at', 'gps']),
   AcceptResponse: obj({
-    id: str('do_0144'),
+    id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
     status: enumOf(DO_STATUS, 'accepted'),
     travel_allowance: obj({ amount: money(600000), received_confirmed: bool(true), confirmed_at: dt() }),
     next_step: enumOf(NEXT_STEP),
@@ -290,16 +331,16 @@ const schemas = {
     client_ref: clientRef,
     loaded_at: dt('2026-11-05T13:06:00+07:00'),
     gps: ref('Gps'),
-    cargo_photo_ids: arr(str('med_load_01'), { minItems: 2, maxItems: 10 }),
+    cargo_photo_ids: arr(str('285f21fc-c60e-44fe-a019-2a71bda2424b'), { minItems: 2, maxItems: 10 }),
     quantity_matches_do: bool(true),
     quantity_note: nullable(str('Gudang hanya siapkan 3 palet, 1 palet menyusul', {
       description: 'Wajib jika quantity_matches_do = false',
     })),
-    delivery_note_pages: arr(obj({ page: int(1), media_id: str('med_sj_01') }, ['page', 'media_id']), { minItems: 1, maxItems: 5 }),
+    delivery_note_pages: arr(obj({ page: int(1), media_id: str('540c0a4e-0e55-4111-819b-7a1b43afeafd') }, ['page', 'media_id']), { minItems: 1, maxItems: 5 }),
   }, ['client_ref', 'loaded_at', 'gps', 'cargo_photo_ids', 'quantity_matches_do', 'delivery_note_pages']),
   LoadingResponse: obj({
-    id: str('load_0144'),
-    delivery_order_id: str('do_0144'),
+    id: str('299c209e-2f21-484b-b328-f2dbfae18f4e'),
+    delivery_order_id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
     photo_count: int(3),
     photo_rule: obj({ min: int(2), max: int(10), satisfied: bool(true) }),
     next_step: enumOf(NEXT_STEP, 'odometer_start'),
@@ -307,18 +348,11 @@ const schemas = {
 
   // ---------- Odometer ----------
   FuelLevel: enumOf(FUEL_LEVELS, 'half'),
-  OcrMediaRequest: obj({ media_id: str('med_odo_start_01') }, ['media_id']),
-  OcrOdometerResponse: obj({
-    media_id: str('med_odo_start_01'),
-    km: int(45210),
-    fuel_level: ref('FuelLevel'),
-    confidence: obj({ km: num(0.96), fuel_level: num(0.81) }),
-  }),
   OdometerValue: obj({ km: int(45210), fuel_level: ref('FuelLevel') }),
   OdometerRequest: obj({
     client_ref: clientRef,
     type: enumOf(['start', 'end']),
-    media_id: str('med_odo_start_01'),
+    media_id: str('c6c62ddb-ea60-4bb7-9d99-deeb455f5e75'),
     ocr: ref('OdometerValue'),
     corrected: nullable(ref('OdometerValue')),
     correction_reason: nullable(str('Angka terakhir buram, OCR baca 0 seharusnya 6', {
@@ -328,7 +362,7 @@ const schemas = {
     gps: ref('Gps'),
   }, ['client_ref', 'type', 'media_id', 'captured_at', 'gps']),
   OdometerResponse: obj({
-    id: str('odo_0144_start'),
+    id: str('29ca88d6-4787-4e65-b668-333896c80041'),
     type: enumOf(['start', 'end']),
     media: ref('Media'),
     ocr: ref('OdometerValue'),
@@ -345,18 +379,10 @@ const schemas = {
     price_per_liter: money(6300),
     total: money(204000),
   }),
-  OcrReceiptResponse: obj({
-    media_id: str('med_rcpt_01'),
-    merchant: str('SPBU KM 30'),
-    fields: ref('ReceiptFields'),
-    confidence: obj({
-      time: num(0.97), liters: num(0.95), price_per_liter: num(0.62), total: num(0.98)
-    }),
-  }),
   ExpenseBbmRequest: obj({
     client_ref: clientRef,
     category: enumOf(['bbm']),
-    media_id: str('med_rcpt_01'),
+    media_id: str('f97ceecd-7d4d-48ab-bd9f-ddb0e518b8fc'),
     ocr: ref('ReceiptFields'),
     corrected: nullable({ ...ref('ReceiptFields'), description: 'Hanya field yang dikoreksi' }),
     correction_reason: nullable(str('OCR salah baca harga, di struk tertulis 6.800')),
@@ -368,12 +394,12 @@ const schemas = {
     category: enumOf(['tol', 'parkir', 'lainnya'], 'parkir'),
     amount: money(5000),
     description: str('Parkir rest area KM 57', { description: 'Wajib untuk kategori lainnya' }),
-    proof_media_id: nullable(str('med_proof_01')),
+    proof_media_id: nullable(str('82766895-18fb-4659-a84b-1b58279fb73e')),
     recorded_at: dt('2026-11-05T15:10:00+07:00'),
     gps: ref('Gps'),
   }, ['client_ref', 'category', 'amount', 'recorded_at']),
   ExpenseBbmResponse: obj({
-    id: str('exp_0144_01'),
+    id: str('bff89c85-7925-4a48-903d-436609daf0cf'),
     category: enumOf(['bbm']),
     amount: money(204000),
     ocr: ref('ReceiptFields'),
@@ -389,7 +415,7 @@ const schemas = {
     media: ref('Media'),
   }),
   ExpenseManualResponse: obj({
-    id: str('exp_0144_03'),
+    id: str('2056d3fc-36ca-4f04-ac84-b6df4da91296'),
     category: enumOf(EXPENSE_CATEGORY, 'parkir'),
     amount: money(5000),
     description: str('Parkir rest area KM 57'),
@@ -398,7 +424,7 @@ const schemas = {
     gps: ref('Gps'),
   }),
   ExpenseListItem: obj({
-    id: str('exp_0144_01'),
+    id: str('bff89c85-7925-4a48-903d-436609daf0cf'),
     category: enumOf(EXPENSE_CATEGORY),
     label: str('Solar 30 L'),
     amount: money(204000),
@@ -412,33 +438,33 @@ const schemas = {
   // ---------- Handover ----------
   Receiver: obj({
     name: str('[NAMA PENERIMA]'),
-    signature_media_id: str('med_sig_01'),
+    signature_media_id: str('0ced184c-70cd-469c-b468-6514ee145ae5'),
     signed_at: dt('2026-11-05T16:52:00+07:00'),
     acknowledges_issues: bool(true, { description: 'Untuk condition = masalah' }),
   }, ['name', 'signature_media_id', 'signed_at']),
   HandoverRequest: obj({
     client_ref: clientRef,
     condition: enumOf(['lengkap', 'masalah', 'gagal_kirim']),
-    unloading_photo_ids: arr(str('med_unl_01'), { description: 'Wajib untuk lengkap / masalah' }),
-    stamped_delivery_note_ids: arr(str('med_sjc_01'), { description: 'Wajib untuk lengkap / masalah' }),
+    unloading_photo_ids: arr(str('2cdfeee1-0f8d-461a-802c-bd6faf452615'), { description: 'Wajib untuk lengkap / masalah' }),
+    stamped_delivery_note_ids: arr(str('9ae990be-7834-4e70-8cda-d58fa147b377'), { description: 'Wajib untuk lengkap / masalah' }),
     receiver: nullable(ref('Receiver')),
     issues: arr(obj({
       type: enumOf(['rusak', 'kurang', 'salah_kirim', 'lainnya'], 'rusak'),
       quantity: num(1),
       unit: str('palet'),
-      photo_ids: arr(str('med_dmg_01')),
+      photo_ids: arr(str('c78ff07d-4d86-4778-b4cd-376d035075d7')),
     }), { description: 'Wajib untuk condition = masalah' }),
     received_quantity: num(3, { description: 'Untuk condition = masalah' }),
     failure_reason: enumOf(['penerima_tidak_ada', 'alamat_tidak_ditemukan', 'ditolak_penerima', 'lainnya'], 'penerima_tidak_ada', {
       description: 'Wajib untuk condition = gagal_kirim',
     }),
-    location_photo_ids: arr(str('med_loc_01'), { description: 'Wajib untuk condition = gagal_kirim' }),
+    location_photo_ids: arr(str('2cd20058-4e35-40e6-9aa4-e770a6836571'), { description: 'Wajib untuk condition = gagal_kirim' }),
     note: nullable(str('Sudah menunggu 30 menit')),
     gps: ref('Gps'),
     recorded_at: dt('2026-11-05T16:50:00+07:00'),
   }, ['client_ref', 'condition', 'gps']),
   HandoverResponse: obj({
-    id: str('hov_0144'),
+    id: str('e9c174a7-a937-4a36-992c-978f6fd48bf6'),
     condition: enumOf(['lengkap', 'masalah', 'gagal_kirim']),
     delivery_status: enumOf(DELIVERY_STATUS),
     next_step: enumOf(NEXT_STEP, 'odometer_end'),
@@ -446,15 +472,15 @@ const schemas = {
 
   // ---------- Summary ----------
   Summary: obj({
-    delivery_order_id: str('do_0144'),
+    delivery_order_id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
     no: str('DO-0144'),
     delivery_status: enumOf(DELIVERY_STATUS),
     odometer: obj({
       start: obj({ km: int(45210), source: enumOf(['ocr', 'corrected']) }),
-      end: obj({ km: int(45278), source: enumOf(['ocr', 'corrected']) }),
-      distance_km: num(68),
+      end: nullable(obj({ km: int(45278), source: enumOf(['ocr', 'corrected']) }), { description: 'null sebelum odometer akhir dicatat' }),
+      distance_km: nullable(num(68)),
     }),
-    duration_minutes: int(183),
+    duration_minutes: nullable(int(183, { description: 'Dari odometer awal sampai selesai (atau odometer akhir bila belum selesai)' })),
     expenses: arr(ref('ExpenseListItem')),
     expense_total: money(263500),
     travel_allowance: money(600000),
@@ -468,16 +494,17 @@ const schemas = {
     client_ref: clientRef, completed_at: dt('2026-11-05T16:56:00+07:00'), gps: ref('Gps'),
   }, ['client_ref', 'completed_at', 'gps']),
   CompleteResponse: obj({
-    id: str('do_0144'),
+    id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
     status: enumOf(DO_STATUS, 'completed'),
     locked: bool(true),
     sync: enumOf(SYNC_STATE, 'sent'),
+    completed_at: dt('2026-11-05T16:56:00+07:00'),
     message: str('DO selesai dicatat dan terkirim ke admin.'),
   }),
 
   // ---------- Active & History ----------
   ActiveDeliveryOrder: obj({
-    id: str('do_0144'),
+    id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
     no: str('DO-0144'),
     route: str('Cakung → PT Contoh Jaya, Karawang'),
     status: enumOf(DO_STATUS, 'in_transit'),
@@ -489,7 +516,7 @@ const schemas = {
     })),
   }),
   HistoryItem: obj({
-    id: str('do_0139'),
+    id: str('693d2472-b0ca-4705-a03b-45731c79f241'),
     no: str('DO-0139'),
     date: date('2026-11-04'),
     route: str('Cakung → Bekasi'),
@@ -513,8 +540,10 @@ const schemas = {
     items: arr(obj({
       client_ref: clientRef,
       method: enumOf(['POST', 'PATCH']),
-      path: str('/delivery-orders/do_0144/expenses', { description: 'Path relatif terhadap /api/v1' }),
-      body: { type: 'object', additionalProperties: true, description: 'Body request asli' },
+      path: str('/delivery-orders/<id-do>/expenses', { description: 'Path relatif terhadap /api/v1 (awalan /api/v1 boleh disertakan)' }),
+      body: {
+        type: 'object', additionalProperties: true, description: 'Body request asli. `client_ref` boleh dihilangkan (diisi dari item); jika ada harus sama dengan `client_ref` item.',
+      },
       client_created_at: dt('2026-11-05T15:10:00+07:00'),
     }, ['client_ref', 'method', 'path', 'body', 'client_created_at']), { maxItems: 100 }),
   }, ['device_id', 'items']),
@@ -522,8 +551,10 @@ const schemas = {
     results: arr(obj({
       client_ref: clientRef,
       status: enumOf(['created', 'duplicate_ignored', 'failed']),
-      id: str('exp_0144_03'),
-      error: { ...ref('Error'), description: 'Hanya jika status = failed' },
+      id: nullable(str('5f0c2a9e-7d41-4b83-9e6a-1c8d3b4a5e70', { description: 'Id resource yang dibuat / yang sudah ada (duplicate_ignored)' })),
+      error: obj({
+        code: str('VALIDATION_ERROR'), message: str('Data tidak lengkap.'), http_status: int(422), details: { description: 'Rincian error (opsional)' },
+      }, ['code', 'message', 'http_status'], { description: 'Hanya jika status = failed. Bentuknya sama dengan `error` di response error biasa.' }),
     })),
   }),
 
@@ -531,7 +562,7 @@ const schemas = {
   PushDoAssigned: {
     ...obj({
       type: enumOf(['do_assigned']),
-      delivery_order_id: str('do_0144'),
+      delivery_order_id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
       no: str('DO-0144'),
       assigned_at: dt(),
     }),
@@ -540,12 +571,12 @@ const schemas = {
   PushP2hRecheckRequested: {
     ...obj({
       type: enumOf(['p2h_recheck_requested']),
-      unit_id: str('unit_9123'),
+      unit_id: str('fc06e493-e9c6-429b-9529-bc07084818ee'),
       unit_plate: str('B 9123 KZ'),
-      requested_by: str('admin_01'),
+      requested_by: str('f1b7c36a-1eae-4b3b-8ee4-9434fcfeff2f'),
       requested_at: dt(),
       note: str('Lampu sein sudah diganti, mohon P2H ulang'),
-      previous_p2h_id: str('p2h_20261105_9123'),
+      previous_p2h_id: str('d6c681e9-d765-40c1-9b35-f8ad7f695743'),
     }),
     example: ex('04-p2h/PUSH.p2h-recheck-requested.payload.json')
   },
@@ -617,10 +648,10 @@ const responses = {
 
 const parameters = {
   DeliveryOrderId: {
-    name: 'id', in: 'path', required: true, description: 'ID delivery order', schema: { type: 'string', example: 'do_0144' },
+    name: 'id', in: 'path', required: true, description: 'ID delivery order', schema: { type: 'string', example: '2fb9f57e-a6e7-4890-b957-30261a15b471' },
   },
   UnitId: {
-    name: 'unitId', in: 'path', required: true, description: 'ID unit (kendaraan)', schema: { type: 'string', example: 'unit_9123' },
+    name: 'unitId', in: 'path', required: true, description: 'ID unit (kendaraan)', schema: { type: 'string', example: 'fc06e493-e9c6-429b-9529-bc07084818ee' },
   },
 }
 
@@ -630,5 +661,8 @@ module.exports = {
   parameters,
   securitySchemes: {
     bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+    internalKey: {
+      type: 'apiKey', in: 'header', name: 'X-Internal-Key', description: 'Kunci antar-layanan (INTERNAL_API_KEY) untuk project manage company',
+    },
   },
 }

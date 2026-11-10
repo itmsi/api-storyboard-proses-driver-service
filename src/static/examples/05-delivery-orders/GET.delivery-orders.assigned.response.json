@@ -2,18 +2,18 @@
   "success": true,
   "data": [
     {
-      "id": "do_0144",
+      "id": "2fb9f57e-a6e7-4890-b957-30261a15b471",
       "no": "DO-0144",
       "status": "assigned",
       "assigned_at": "2026-11-05T06:55:00+07:00",
-      "assigned_by": "admin_01",
+      "assigned_by": "f1b7c36a-1eae-4b3b-8ee4-9434fcfeff2f",
       "unit": {
-        "id": "unit_9123",
+        "id": "fc06e493-e9c6-429b-9529-bc07084818ee",
         "plate": "B 9123 KZ",
         "type": "CDD Bak"
       },
       "driver": {
-        "id": "drv_0021",
+        "id": "952975ba-bcf9-4a57-ac3b-be20940d8b25",
         "code": "DRV-0021",
         "name": "Andi",
         "phone": "[NO_HP]"

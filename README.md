@@ -47,6 +47,22 @@ src/
     └── logger.js
 ```
 
+## Multi-tenant (database per client)
+
+Satu API melayani banyak perusahaan; tiap perusahaan punya database sendiri. Kredensial database dikelola project
+"manage company" dan dipilih lewat **client code** saat login.
+
+- Login membawa `client_code` → `src/database/tenant` mengambil kredensial (`TenantRegistry`) → koneksi dibuat & di-cache.
+- Client code ikut di JWT; `authenticate` mengisi `req.db` (knex milik client), repository selalu memakai `req.db`.
+- Sementara (`TENANT_REGISTRY=env`): satu tenant dev memakai `DB_*` di `.env`, kode `TENANT_DEV_CODE` (default `OGO`),
+  atau beberapa tenant lewat `TENANTS_JSON`. Adapter project manage company menyusul di `src/database/tenant/registry.js`.
+- Migrasi per tenant: `npm run migrate:tenant -- --client=OGO` atau `-- --all`; rollback `npm run migrate:tenant:rollback -- --client=OGO`;
+  seed dev `npm run seed:tenant -- --client=OGO` (driver DRV-0021 / password `Passw0rd!`, jangan di production).
+- Endpoint internal untuk project manage company (header `X-Internal-Key` = `INTERNAL_API_KEY`; kosong = nonaktif):
+  `POST /api/v1/internal/tenants/{clientCode}/migrate` (idempoten, sinkron, boleh untuk client yang belum aktif) dan
+  `GET /api/v1/internal/tenants/{clientCode}/migration-status`. Dokumentasi di Swagger, tag **Internal**.
+- Test: `npm test` (tanpa DB). Test end-to-end DB: `RUN_DB_TESTS=1 npm test`. Test **menghapus isi database** (rollback semua migrasi), jadi selalu diarahkan ke database terpisah `ogo_driver_test` (ubah lewat `TEST_DB_NAME`, nama wajib berakhiran `_test`), apa pun isi `DB_NAME` di `.env`. Database dev (`DB_NAME`) tidak tersentuh.
+
 ## Menjalankan tanpa Docker
 
 Butuh Node.js 20+ dan PostgreSQL.
@@ -54,7 +70,7 @@ Butuh Node.js 20+ dan PostgreSQL.
 ```bash
 cp .env.example .env        # isi DB_* dan JWT_SECRET
 npm install
-npm run migrate
+npm run migrate:tenant -- --client=OGO
 npm run dev                 # auto-reload (nodemon)
 # atau
 npm start
@@ -180,4 +196,9 @@ Usulan skema lengkap ada di `src/database/schema.draft.sql`. Setelah disepakati,
 | Kerangka server, config, error handling, auth JWT, validasi, upload, storage | Siap |
 | Swagger seluruh kontrak OGO Driver (28 endpoint) | Siap |
 | `GET /config/public` | Berjalan |
-| Endpoint lain (auth, P2H, DO, perjalanan, sync) | Menunggu skema DB final |
+| Fase 1: `POST /auth/login` (client code), `/auth/refresh`, `/auth/logout`, `GET /me`, `PATCH /me/settings`, `POST /devices/push-token`, `GET /config` | Siap (menunggu uji dengan DB) |
+| Fase 2: `POST /media` (foto + thumbnail), `GET /p2h/template`, `GET /units/{unitId}/p2h/today`, `POST /units/{unitId}/p2h` | Siap (teruji dengan DB) |
+| Fase 3: `GET /app/bootstrap`, `GET /delivery-orders` (+ `/active`, `/history`, `/{id}`), `POST /delivery-orders/{id}/accept` | Siap (teruji dengan DB) |
+| Fase 4: `POST /delivery-orders/{id}/loading`, `/odometer`, `GET|POST /delivery-orders/{id}/expenses` | Siap (teruji dengan DB). OCR dilakukan di aplikasi HP; server menyimpan hasil `ocr`, koreksi, dan nilai efektif |
+| Fase 5: `POST /delivery-orders/{id}/handover`, `GET /delivery-orders/{id}/summary`, `POST /delivery-orders/{id}/complete` | Siap (teruji dengan DB) |
+| Fase 6: `POST /sync/batch` (+ `pending_sync` di bootstrap, layar Berjalan, `GET /me`, logout) | Siap (teruji dengan DB) |

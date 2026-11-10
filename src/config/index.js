@@ -54,13 +54,32 @@ const config = {
     },
   },
 
+  // Multi-tenant: satu database per client (client code). Kredensial dikelola project "manage company".
+  tenant: {
+    // env = daftar tenant dari .env (dev); remote = ambil dari project manage company (menunggu kontraknya)
+    registry: str('TENANT_REGISTRY', 'env'),
+    devCode: str('TENANT_DEV_CODE', 'OGO'),
+    devName: str('TENANT_DEV_NAME', 'PT Owngo Logistics Indonesia'),
+    devTenantsJson: str('TENANTS_JSON'), // opsional: JSON array tenant dev lebih dari satu
+    resolveTtlMs: num('TENANT_RESOLVE_TTL', 300) * 1000, // cache hasil resolve kredensial
+    poolMax: num('TENANT_POOL_MAX', 5), // koneksi maksimum per tenant
+    maxPools: num('TENANT_MAX_POOLS', 50), // jumlah tenant yang boleh terkoneksi bersamaan
+  },
+
+  // Kunci antar-layanan (project manage company -> API ini) untuk endpoint /internal. Kosong = endpoint internal mati.
+  internal: {
+    apiKey: str('INTERNAL_API_KEY'),
+  },
+
   jwt: {
     secret: str('JWT_SECRET'),
     accessTokenTtl: num('JWT_ACCESS_TTL', 86400), // detik (24 jam)
-    refreshTokenTtl: num('JWT_REFRESH_TTL', 2592000), // detik (30 hari)
+    refreshTokenTtl: num('JWT_REFRESH_TTL', 2592000), // detik (30 hari), remember_me = true
+    refreshTokenTtlShort: num('JWT_REFRESH_TTL_SHORT', 86400), // detik (1 hari), remember_me = false
   },
 
   auth: {
+    lockMinutes: num('AUTH_LOCK_MINUTES', 15),
     maxLoginAttempts: num('AUTH_MAX_LOGIN_ATTEMPTS', 5),
     bcryptRounds: num('BCRYPT_ROUNDS', 12),
   },
@@ -93,7 +112,7 @@ const config = {
     updateUrl: str('MOBILE_UPDATE_URL', ''),
     maintenance: bool('MAINTENANCE_MODE', false),
     maintenanceMessage: str('MAINTENANCE_MESSAGE', '') || null,
-    supportLabel: str('SUPPORT_LABEL', 'Hubungi admin OGO'),
+    supportLabel: str('SUPPORT_LABEL', 'Hubungi admin'),
     supportPhone: str('SUPPORT_PHONE', ''),
   },
 }

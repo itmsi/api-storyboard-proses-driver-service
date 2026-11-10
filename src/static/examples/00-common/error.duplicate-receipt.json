@@ -5,7 +5,7 @@
     "message": "Struk ini sudah pernah dipakai di DO lain.",
     "http_status": 409,
     "details": {
-      "existing_expense_id": "exp_0098",
+      "existing_expense_id": "da34ac9b-2397-4c1c-89e1-fb63c4d12dcb",
       "delivery_order_no": "DO-0131"
     }
   }

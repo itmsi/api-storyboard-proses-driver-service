@@ -1,10 +1,10 @@
 {
   "success": true,
   "data": {
-    "id": "med_odo_start_01",
+    "id": "c6c62ddb-ea60-4bb7-9d99-deeb455f5e75",
     "kind": "odometer_start",
-    "url": "https://cdn.example.com/media/med_odo_start_01.jpg",
-    "thumb_url": "https://cdn.example.com/media/med_odo_start_01_thumb.jpg",
+    "url": "https://cdn.example.com/media/c6c62ddb-ea60-4bb7-9d99-deeb455f5e75.jpg",
+    "thumb_url": "https://cdn.example.com/media/c6c62ddb-ea60-4bb7-9d99-deeb455f5e75_thumb.jpg",
     "source": "camera",
     "captured_at": "2026-11-05T13:50:00+07:00",
     "server_received_at": "2026-11-05T13:50:00+07:00",
@@ -13,7 +13,7 @@
       "lng": 106.94,
       "accuracy_m": 8
     },
-    "captured_by": "drv_0021",
+    "captured_by": "952975ba-bcf9-4a57-ac3b-be20940d8b25",
     "sha256": "<sha256-hash>"
   }
 }

@@ -2,8 +2,9 @@
   "success": true,
   "data": {
     "config_version": "2026-11-01.1",
-    "client_id": "cl_ogo",
-    "client_name": "PT Owngo Logistics Indonesia",
+    "client_id": "cl_acme",
+    "client_code": "ACME",
+    "client_name": "PT Contoh Logistik",
     "languages": [
       "id",
       "en",

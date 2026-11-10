@@ -4,13 +4,13 @@
     "server_time": "2026-11-05T07:30:00+07:00",
     "config_version": "2026-11-01.1",
     "driver": {
-      "id": "drv_0021",
+      "id": "952975ba-bcf9-4a57-ac3b-be20940d8b25",
       "code": "DRV-0021",
       "name": "Andi",
       "phone": "[NO_HP]"
     },
     "unit_today": {
-      "id": "unit_9123",
+      "id": "fc06e493-e9c6-429b-9529-bc07084818ee",
       "plate": "B 9123 KZ",
       "type": "CDD Bak"
     },

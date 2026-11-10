@@ -1,6 +1,6 @@
 const config = require('./config')
 const logger = require('./utils/logger')
-const db = require('./database')
+const tenant = require('./database/tenant')
 const app = require('./app')
 
 const server = app.listen(config.app.port, () => {
@@ -17,7 +17,7 @@ const shutdown = (signal, exitCode = 0) => {
   logger.info(`${signal} diterima, menutup server...`)
 
   server.close(async () => {
-    await db.destroy().catch(() => {})
+    await tenant.closeAll().catch(() => {})
     logger.info('Server ditutup')
     process.exit(exitCode)
   })

@@ -1,7 +1,6 @@
 const express = require('express')
 const swaggerUi = require('swagger-ui-express')
 const config = require('../config')
-const db = require('../database')
 const { ok } = require('../utils/response')
 const { index: openApiSpec } = require('../static')
 const v1 = require('./v1')
@@ -16,19 +15,10 @@ router.get('/', (req, res) => ok(res, {
   documentation: config.app.swaggerEnabled ? '/documentation' : null,
 }))
 
-// Dipakai healthcheck Docker / load balancer. 503 jika DB tidak bisa dihubungi.
-router.get('/health', async (req, res) => {
-  let database = 'up'
-  try {
-    await db.raw('select 1')
-  } catch (err) {
-    database = 'down'
-  }
-  const healthy = database === 'up'
-  res.status(healthy ? 200 : 503).json({
-    success: healthy,
-    data: { status: healthy ? 'ok' : 'degraded', database, uptime_seconds: Math.round(process.uptime()) },
-  })
+// Dipakai healthcheck Docker / load balancer. Database tiap client dicek saat dipakai
+// (error TENANT_UNAVAILABLE), bukan di sini, karena server melayani banyak database.
+router.get('/health', (req, res) => {
+  res.json({ success: true, data: { status: 'ok', uptime_seconds: Math.round(process.uptime()) } })
 })
 
 if (config.app.swaggerEnabled) {
