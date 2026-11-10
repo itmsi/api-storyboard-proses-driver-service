@@ -1,0 +1,58 @@
+{
+  "success": true,
+  "data": {
+    "id": "do_0144",
+    "no": "DO-0144",
+    "status": "assigned",
+    "assigned_at": "2026-11-05T06:55:00+07:00",
+    "assigned_by": "admin_01",
+    "unit": {
+      "id": "unit_9123",
+      "plate": "B 9123 KZ",
+      "type": "CDD Bak"
+    },
+    "driver": {
+      "id": "drv_0021",
+      "code": "DRV-0021",
+      "name": "Andi",
+      "phone": "[NO_HP]"
+    },
+    "origin": {
+      "name": "Gudang Cakung",
+      "address": "[ALAMAT GUDANG]",
+      "gps": {
+        "lat": -6.18,
+        "lng": 106.94,
+        "accuracy_m": 8
+      },
+      "load_time": "2026-11-05T13:00:00+07:00"
+    },
+    "destination": {
+      "name": "PT Contoh Jaya",
+      "city": "Karawang",
+      "address": "[ALAMAT LENGKAP TUJUAN]",
+      "gps": {
+        "lat": -6.3,
+        "lng": 107.29,
+        "accuracy_m": 8
+      },
+      "operating_hours": "08:00-17:00",
+      "pic": {
+        "name": "[NAMA PIC]",
+        "phone": "[NO_HP_PIC]"
+      },
+      "maps_url": "https://maps.google.com/?q=-6.30,107.29"
+    },
+    "cargo": {
+      "description": "4 palet",
+      "quantity": 4,
+      "unit": "palet"
+    },
+    "estimated_distance_km": 70,
+    "travel_allowance": {
+      "amount": 600000,
+      "currency": "IDR",
+      "received_confirmed": false
+    }
+  }
+}

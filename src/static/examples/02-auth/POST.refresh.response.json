@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "data": {
+    "access_token": "<jwt-baru>",
+    "refresh_token": "<refresh-baru>",
+    "expires_in": 86400
+  }
+}

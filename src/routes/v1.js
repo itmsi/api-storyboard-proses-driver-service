@@ -1,0 +1,32 @@
+const express = require('express')
+const { apiLimiter } = require('../middlewares/rate-limit')
+
+const router = express.Router()
+
+router.use(apiLimiter)
+
+/*
+ * Semua endpoint aplikasi driver ada di bawah /api/v1.
+ * Kontrak lengkap: /documentation (src/static/index.js).
+ *
+ * Satu modul = satu folder di src/modules/<nama>/ berisi:
+ *   index.js       -> router (path + middleware)
+ *   validation.js  -> skema Joi
+ *   controller.js  -> baca req, panggil service, kirim response
+ *   service.js     -> aturan bisnis, lempar AppError
+ *   repository.js  -> query knex
+ */
+
+router.use(require('../modules/app'))
+
+// Didaftarkan setelah skema DB final (urutan sesuai alur aplikasi):
+// router.use('/auth', require('../modules/auth'))
+// router.use('/me', require('../modules/me'))
+// router.use('/devices', require('../modules/devices'))
+// router.use('/media', require('../modules/media'))
+// router.use('/ocr', require('../modules/ocr'))
+// router.use(require('../modules/p2h'))              // /p2h/template, /units/:unitId/p2h...
+// router.use('/delivery-orders', require('../modules/delivery-orders'))
+// router.use('/sync', require('../modules/sync'))
+
+module.exports = router

@@ -1,0 +1,122 @@
+{
+  "success": true,
+  "data": {
+    "id": "p2h_20261105_9123",
+    "unit": {
+      "id": "unit_9123",
+      "plate": "B 9123 KZ",
+      "type": "CDD Bak"
+    },
+    "date": "2026-11-05",
+    "status": "catatan",
+    "can_operate": true,
+    "checked_by": {
+      "id": "drv_0017",
+      "name": "Budi"
+    },
+    "checked_at": "2026-11-05T06:10:00+07:00",
+    "location": {
+      "name": "Depot OGO Cakung",
+      "gps": {
+        "lat": -6.18,
+        "lng": 106.94,
+        "accuracy_m": 8
+      }
+    },
+    "items": [
+      {
+        "code": "ban",
+        "label": "Ban",
+        "result": "sesuai"
+      },
+      {
+        "code": "oli",
+        "label": "Oli",
+        "result": "sesuai"
+      },
+      {
+        "code": "lampu",
+        "label": "Lampu",
+        "result": "tidak_sesuai",
+        "description": "Lampu sein kiri mati"
+      },
+      {
+        "code": "rem",
+        "label": "Rem",
+        "result": "sesuai"
+      }
+    ],
+    "body_photos": [
+      {
+        "id": "med_p2h_depan",
+        "kind": "p2h_body",
+        "url": "https://cdn.example.com/media/med_p2h_depan.jpg",
+        "thumb_url": "https://cdn.example.com/media/med_p2h_depan_thumb.jpg",
+        "source": "camera",
+        "captured_at": "2026-11-05T06:08:00+07:00",
+        "server_received_at": "2026-11-05T06:08:00+07:00",
+        "gps": {
+          "lat": -6.18,
+          "lng": 106.94,
+          "accuracy_m": 8
+        },
+        "captured_by": "drv_0017",
+        "sha256": "<sha256-hash>",
+        "side": "depan"
+      },
+      {
+        "id": "med_p2h_kanan",
+        "kind": "p2h_body",
+        "url": "https://cdn.example.com/media/med_p2h_kanan.jpg",
+        "thumb_url": "https://cdn.example.com/media/med_p2h_kanan_thumb.jpg",
+        "source": "camera",
+        "captured_at": "2026-11-05T06:08:00+07:00",
+        "server_received_at": "2026-11-05T06:08:00+07:00",
+        "gps": {
+          "lat": -6.18,
+          "lng": 106.94,
+          "accuracy_m": 8
+        },
+        "captured_by": "drv_0017",
+        "sha256": "<sha256-hash>",
+        "side": "kanan"
+      },
+      {
+        "id": "med_p2h_kiri",
+        "kind": "p2h_body",
+        "url": "https://cdn.example.com/media/med_p2h_kiri.jpg",
+        "thumb_url": "https://cdn.example.com/media/med_p2h_kiri_thumb.jpg",
+        "source": "camera",
+        "captured_at": "2026-11-05T06:08:00+07:00",
+        "server_received_at": "2026-11-05T06:08:00+07:00",
+        "gps": {
+          "lat": -6.18,
+          "lng": 106.94,
+          "accuracy_m": 8
+        },
+        "captured_by": "drv_0017",
+        "sha256": "<sha256-hash>",
+        "side": "kiri"
+      },
+      {
+        "id": "med_p2h_belakang",
+        "kind": "p2h_body",
+        "url": "https://cdn.example.com/media/med_p2h_belakang.jpg",
+        "thumb_url": "https://cdn.example.com/media/med_p2h_belakang_thumb.jpg",
+        "source": "camera",
+        "captured_at": "2026-11-05T06:08:00+07:00",
+        "server_received_at": "2026-11-05T06:08:00+07:00",
+        "gps": {
+          "lat": -6.18,
+          "lng": 106.94,
+          "accuracy_m": 8
+        },
+        "captured_by": "drv_0017",
+        "sha256": "<sha256-hash>",
+        "side": "belakang"
+      }
+    ],
+    "admin_confirmed_by_driver": true,
+    "valid_until": "2026-11-05T23:59:00+07:00"
+  }
+}

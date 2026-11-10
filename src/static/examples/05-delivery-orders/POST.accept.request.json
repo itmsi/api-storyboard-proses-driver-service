@@ -1,0 +1,10 @@
+{
+  "client_ref": "5a1d-...-uuid",
+  "accepted_at": "2026-11-05T07:32:00+07:00",
+  "gps": {
+    "lat": -6.18,
+    "lng": 106.94,
+    "accuracy_m": 8
+  },
+  "travel_allowance_received": true
+}

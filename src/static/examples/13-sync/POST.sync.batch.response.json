@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "data": {
+    "results": [
+      {
+        "client_ref": "77ac-...-uuid",
+        "status": "created",
+        "id": "exp_0144_03"
+      },
+      {
+        "client_ref": "4b10-...-uuid",
+        "status": "duplicate_ignored",
+        "id": "exp_0144_02"
+      }
+    ]
+  }
+}

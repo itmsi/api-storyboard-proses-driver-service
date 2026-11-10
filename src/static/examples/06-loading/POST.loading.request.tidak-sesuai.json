@@ -1,0 +1,21 @@
+{
+  "client_ref": "9c4f-...-uuid",
+  "loaded_at": "2026-11-05T13:06:00+07:00",
+  "gps": {
+    "lat": -6.18,
+    "lng": 106.94,
+    "accuracy_m": 8
+  },
+  "cargo_photo_ids": [
+    "med_load_01",
+    "med_load_02"
+  ],
+  "quantity_matches_do": false,
+  "quantity_note": "Gudang hanya siapkan 3 palet, 1 palet menyusul",
+  "delivery_note_pages": [
+    {
+      "page": 1,
+      "media_id": "med_sj_01"
+    }
+  ]
+}

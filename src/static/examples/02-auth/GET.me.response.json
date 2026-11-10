@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "data": {
+    "id": "drv_0021",
+    "code": "DRV-0021",
+    "name": "Andi",
+    "phone": "[NO_HP]",
+    "unit_today": {
+      "id": "unit_9123",
+      "plate": "B 9123 KZ",
+      "type": "CDD Bak"
+    },
+    "settings": {
+      "language": "id"
+    },
+    "app": {
+      "version": "1.0.0"
+    },
+    "sync": {
+      "pending": 0,
+      "last_synced_at": "2026-11-05T07:29:00+07:00"
+    }
+  }
+}

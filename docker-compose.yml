@@ -1,0 +1,52 @@
+services:
+  api:
+    container_name: api-ogo-service
+    image: api-ogo-service:latest
+    build: .
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      APP_PORT: 9060
+    ports:
+      - "127.0.0.1:9060:9060" # hanya dari host (nginx / cloudflare tunnel). Ganti ke "9060:9060" agar terbuka ke jaringan.
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # agar DB_HOST=host.docker.internal menjangkau Postgres di host (Linux)
+    volumes:
+      - ./storage:/app/storage # foto jika STORAGE_DRIVER=local
+    restart: unless-stopped
+    networks:
+      - infra_net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+
+  # Postgres opsional untuk lokal: docker compose --profile local-db up -d
+  # Lalu set DB_HOST=ogo-db dan DB_PORT=5432 di .env
+  db:
+    profiles: ["local-db"]
+    container_name: ogo-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-ogo_service}
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ogo-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - infra_net
+
+volumes:
+  ogo-db-data:
+
+networks:
+  infra_net:
+    external: true # network bersama nginx / cloudflare tunnel; buat sekali: docker network create infra_net
+    name: infra_net

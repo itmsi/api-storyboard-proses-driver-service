@@ -1,0 +1,22 @@
+{
+  "client_ref": "3f9d-...-uuid",
+  "category": "bbm",
+  "media_id": "med_rcpt_01",
+  "ocr": {
+    "time": "14:32",
+    "fuel_type": "Solar",
+    "liters": 30.0,
+    "price_per_liter": 6300,
+    "total": 204000
+  },
+  "corrected": {
+    "price_per_liter": 6800
+  },
+  "correction_reason": "OCR salah baca harga, di struk tertulis 6.800",
+  "captured_at": "2026-11-05T14:33:00+07:00",
+  "gps": {
+    "lat": -6.29,
+    "lng": 107.03,
+    "accuracy_m": 8
+  }
+}

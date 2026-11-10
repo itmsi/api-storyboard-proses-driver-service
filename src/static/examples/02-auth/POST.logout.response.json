@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "data": {
+    "logged_out": true,
+    "pending_sync_warning": false
+  }
+}

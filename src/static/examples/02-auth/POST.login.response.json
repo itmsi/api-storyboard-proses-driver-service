@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "data": {
+    "access_token": "<jwt>",
+    "refresh_token": "<refresh>",
+    "expires_in": 86400,
+    "driver": {
+      "id": "drv_0021",
+      "code": "DRV-0021",
+      "name": "Andi",
+      "phone": "[NO_HP]"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "success": true,
+  "data": {
+    "id": "exp_0144_01",
+    "category": "bbm",
+    "amount": 204000,
+    "ocr": {
+      "time": "14:32",
+      "fuel_type": "Solar",
+      "liters": 30.0,
+      "price_per_liter": 6300,
+      "total": 204000
+    },
+    "corrected": {
+      "price_per_liter": 6800
+    },
+    "effective": {
+      "time": "14:32",
+      "fuel_type": "Solar",
+      "liters": 30.0,
+      "price_per_liter": 6800,
+      "total": 204000
+    },
+    "corrected_fields": [
+      "price_per_liter"
+    ],
+    "correction_reason": "OCR salah baca harga, di struk tertulis 6.800",
+    "checks": {
+      "liters_x_price_matches_total": true,
+      "receipt_time_within_do": true,
+      "receipt_not_used_before": true
+    },
+    "media": {
+      "id": "med_rcpt_01",
+      "kind": "receipt",
+      "url": "https://cdn.example.com/media/med_rcpt_01.jpg",
+      "thumb_url": "https://cdn.example.com/media/med_rcpt_01_thumb.jpg",
+      "source": "camera",
+      "captured_at": "2026-11-05T14:33:00+07:00",
+      "server_received_at": "2026-11-05T14:33:00+07:00",
+      "gps": {
+        "lat": -6.29,
+        "lng": 107.03,
+        "accuracy_m": 8
+      },
+      "captured_by": "drv_0021",
+      "sha256": "<sha256-hash>"
+    }
+  }
+}

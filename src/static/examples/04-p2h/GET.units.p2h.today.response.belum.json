@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "data": {
+    "unit": {
+      "id": "unit_9123",
+      "plate": "B 9123 KZ",
+      "type": "CDD Bak"
+    },
+    "date": "2026-11-05",
+    "status": "belum",
+    "p2h": null
+  }
+}

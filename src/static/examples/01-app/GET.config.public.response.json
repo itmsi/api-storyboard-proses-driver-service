@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "data": {
+    "languages": [
+      "id",
+      "en",
+      "zh"
+    ],
+    "default_language": "id",
+    "min_app_version": "1.0.0",
+    "latest_app_version": "1.0.0",
+    "update_url": "https://play.google.com/store/apps/details?id=<package>",
+    "maintenance": {
+      "active": false,
+      "message": null
+    },
+    "support": {
+      "label": "Hubungi admin OGO",
+      "phone": "[NO_HP_ADMIN]"
+    }
+  }
+}

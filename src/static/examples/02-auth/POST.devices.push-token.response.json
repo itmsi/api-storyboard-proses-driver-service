@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "data": {
+    "registered": true,
+    "topics": [
+      "do_assigned",
+      "p2h_recheck_requested"
+    ]
+  }
+}

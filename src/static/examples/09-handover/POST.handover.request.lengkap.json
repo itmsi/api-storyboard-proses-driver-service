@@ -1,0 +1,23 @@
+{
+  "client_ref": "c0de-...-uuid",
+  "condition": "lengkap",
+  "unloading_photo_ids": [
+    "med_unl_01",
+    "med_unl_02",
+    "med_unl_03",
+    "med_unl_04"
+  ],
+  "stamped_delivery_note_ids": [
+    "med_sjc_01"
+  ],
+  "receiver": {
+    "name": "[NAMA PENERIMA]",
+    "signature_media_id": "med_sig_01",
+    "signed_at": "2026-11-05T16:52:00+07:00"
+  },
+  "gps": {
+    "lat": -6.3,
+    "lng": 107.29,
+    "accuracy_m": 8
+  }
+}

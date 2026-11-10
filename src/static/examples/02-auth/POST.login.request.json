@@ -1,0 +1,10 @@
+{
+  "username": "DRV-0021",
+  "password": "<password>",
+  "device": {
+    "device_id": "android-7f3a",
+    "app_version": "1.0.0",
+    "os": "Android 14"
+  },
+  "remember_me": true
+}

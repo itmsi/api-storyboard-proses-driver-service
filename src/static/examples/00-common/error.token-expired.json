@@ -1,0 +1,11 @@
+{
+  "success": false,
+  "error": {
+    "code": "TOKEN_EXPIRED",
+    "message": "Sesi kedaluwarsa, memperbarui sesi…",
+    "http_status": 401,
+    "details": {
+      "refresh": true
+    }
+  }
+}

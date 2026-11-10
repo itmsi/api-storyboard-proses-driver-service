@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "data": {
+    "media_id": "med_rcpt_01",
+    "merchant": "SPBU KM 30",
+    "fields": {
+      "time": "14:32",
+      "fuel_type": "Solar",
+      "liters": 30.0,
+      "price_per_liter": 6300,
+      "total": 204000
+    },
+    "confidence": {
+      "time": 0.97,
+      "liters": 0.95,
+      "price_per_liter": 0.62,
+      "total": 0.98
+    }
+  }
+}

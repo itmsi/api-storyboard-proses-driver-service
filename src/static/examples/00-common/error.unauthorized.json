@@ -1,0 +1,8 @@
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Sesi berakhir, silakan masuk lagi.",
+    "http_status": 401
+  }
+}

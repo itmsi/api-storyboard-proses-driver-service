@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "do_0127",
+      "no": "DO-0127",
+      "date": "2026-11-02",
+      "route": "Cakung → Karawang",
+      "distance_km": 69,
+      "unit_plate": "B 9041 KZ",
+      "expense_total": 266000,
+      "delivery_status": "terkirim_lengkap"
+    },
+    {
+      "id": "do_0126",
+      "no": "DO-0126",
+      "date": "2026-11-02",
+      "route": "Karawang → Cakung",
+      "distance_km": 0,
+      "unit_plate": "B 9041 KZ",
+      "expense_total": 0,
+      "delivery_status": "gagal_kirim"
+    }
+  ],
+  "meta": {
+    "from": "2026-11-01",
+    "to": "2026-11-05",
+    "limit": 2,
+    "next_cursor": null,
+    "has_more": false,
+    "summary": {
+      "do_count": 4,
+      "distance_km": 167,
+      "expense_total": 679500
+    }
+  }
+}

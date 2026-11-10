@@ -1,0 +1,14 @@
+{
+  "_note": "multipart/form-data, kamera aplikasi saja (galeri ditolak)",
+  "fields": {
+    "file": "<binary jpg>",
+    "kind": "odometer_start | odometer_end | receipt | loading | delivery_note | unloading | p2h_body | damage | location",
+    "client_ref": "c1b7c7e2-...-uuid",
+    "captured_at": "2026-11-05T13:50:00+07:00",
+    "gps": {
+      "lat": -6.18,
+      "lng": 106.94,
+      "accuracy_m": 8
+    }
+  }
+}

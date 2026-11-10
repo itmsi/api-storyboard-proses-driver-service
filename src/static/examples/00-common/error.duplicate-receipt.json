@@ -1,0 +1,12 @@
+{
+  "success": false,
+  "error": {
+    "code": "DUPLICATE_RECEIPT",
+    "message": "Struk ini sudah pernah dipakai di DO lain.",
+    "http_status": 409,
+    "details": {
+      "existing_expense_id": "exp_0098",
+      "delivery_order_no": "DO-0131"
+    }
+  }
+}

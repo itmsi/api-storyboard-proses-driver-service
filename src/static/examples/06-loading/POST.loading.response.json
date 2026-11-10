@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "data": {
+    "id": "load_0144",
+    "delivery_order_id": "do_0144",
+    "photo_count": 3,
+    "photo_rule": {
+      "min": 2,
+      "max": 10,
+      "satisfied": true
+    },
+    "next_step": "odometer_start"
+  }
+}

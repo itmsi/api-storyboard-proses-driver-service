@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "exp_0144_01",
+      "category": "bbm",
+      "label": "Solar 30 L",
+      "amount": 204000,
+      "has_proof": true,
+      "corrected": true,
+      "recorded_at": "2026-11-05T14:33:00+07:00",
+      "sync": "sent"
+    },
+    {
+      "id": "exp_0144_02",
+      "category": "tol",
+      "label": "Tol Cikampek",
+      "amount": 54500,
+      "has_proof": false,
+      "corrected": false,
+      "recorded_at": "2026-11-05T15:40:00+07:00",
+      "sync": "sent"
+    },
+    {
+      "id": "exp_0144_03",
+      "category": "parkir",
+      "label": "Parkir rest area",
+      "amount": 5000,
+      "has_proof": false,
+      "corrected": false,
+      "recorded_at": "2026-11-05T15:10:00+07:00",
+      "sync": "sent"
+    }
+  ],
+  "meta": {
+    "total": 263500,
+    "travel_allowance": 600000,
+    "remaining": 336500
+  }
+}

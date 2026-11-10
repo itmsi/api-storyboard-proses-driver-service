@@ -1,0 +1,26 @@
+{
+  "client_ref": "9c4f-...-uuid",
+  "loaded_at": "2026-11-05T13:06:00+07:00",
+  "gps": {
+    "lat": -6.18,
+    "lng": 106.94,
+    "accuracy_m": 8
+  },
+  "cargo_photo_ids": [
+    "med_load_01",
+    "med_load_02",
+    "med_load_03"
+  ],
+  "quantity_matches_do": true,
+  "quantity_note": null,
+  "delivery_note_pages": [
+    {
+      "page": 1,
+      "media_id": "med_sj_01"
+    },
+    {
+      "page": 2,
+      "media_id": "med_sj_02"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "do_0144",
+      "no": "DO-0144",
+      "route": "Cakung → PT Contoh Jaya, Karawang",
+      "status": "in_transit",
+      "started_at": "2026-11-05T13:52:00+07:00",
+      "odometer_start_km": 45210,
+      "expense_total": 263500,
+      "steps": [
+        {
+          "code": "loading",
+          "label": "Muat",
+          "state": "done"
+        },
+        {
+          "code": "odometer_start",
+          "label": "Odometer awal",
+          "state": "done"
+        },
+        {
+          "code": "in_transit",
+          "label": "Perjalanan",
+          "state": "current"
+        },
+        {
+          "code": "handover",
+          "label": "Serah terima",
+          "state": "todo"
+        },
+        {
+          "code": "odometer_end",
+          "label": "Odometer akhir",
+          "state": "todo"
+        },
+        {
+          "code": "complete",
+          "label": "Selesai",
+          "state": "todo"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "pending_sync": [
+      {
+        "type": "expense",
+        "label": "Tol 54.500",
+        "client_created_at": "2026-11-05T15:40:00+07:00"
+      }
+    ]
+  }
+}

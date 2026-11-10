@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "data": {
+    "id": "hov_0144",
+    "condition": "lengkap",
+    "delivery_status": "terkirim_lengkap",
+    "next_step": "odometer_end"
+  }
+}

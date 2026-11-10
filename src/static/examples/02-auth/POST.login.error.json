@@ -1,0 +1,11 @@
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "No. HP / ID atau kata sandi salah.",
+    "http_status": 401,
+    "details": {
+      "remaining_attempts": 4
+    }
+  }
+}

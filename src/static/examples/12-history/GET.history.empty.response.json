@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "data": [],
+  "meta": {
+    "from": "2026-10-01",
+    "to": "2026-10-05",
+    "limit": 20,
+    "next_cursor": null,
+    "has_more": false,
+    "summary": {
+      "do_count": 0,
+      "distance_km": 0,
+      "expense_total": 0
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "data": {
+    "server_time": "2026-11-05T07:30:00+07:00",
+    "config_version": "2026-11-01.1",
+    "driver": {
+      "id": "drv_0021",
+      "code": "DRV-0021",
+      "name": "Andi",
+      "phone": "[NO_HP]"
+    },
+    "unit_today": {
+      "id": "unit_9123",
+      "plate": "B 9123 KZ",
+      "type": "CDD Bak"
+    },
+    "p2h_today": {
+      "status": "belum"
+    },
+    "assigned_do_count": 1,
+    "active_do_id": null,
+    "pending_sync": {
+      "count": 2,
+      "oldest_client_created_at": "2026-11-05T06:58:00+07:00"
+    },
+    "next_screen": "P2H"
+  }
+}

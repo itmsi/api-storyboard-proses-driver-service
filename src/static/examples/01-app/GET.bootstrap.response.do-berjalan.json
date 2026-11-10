@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "data": {
+    "server_time": "2026-11-05T15:05:00+07:00",
+    "config_version": "2026-11-01.1",
+    "driver": {
+      "id": "drv_0021",
+      "code": "DRV-0021",
+      "name": "Andi",
+      "phone": "[NO_HP]"
+    },
+    "unit_today": {
+      "id": "unit_9123",
+      "plate": "B 9123 KZ",
+      "type": "CDD Bak"
+    },
+    "p2h_today": {
+      "status": "catatan",
+      "p2h_id": "p2h_20261105_9123"
+    },
+    "assigned_do_count": 0,
+    "active_do_id": "do_0144",
+    "pending_sync": {
+      "count": 1,
+      "oldest_client_created_at": "2026-11-05T14:58:00+07:00"
+    },
+    "next_screen": "DO_ACTIVE"
+  }
+}

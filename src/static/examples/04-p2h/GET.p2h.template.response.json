@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "code": "ban",
+        "label": "Ban",
+        "hint": "Tekanan dan kondisi tapak"
+      },
+      {
+        "code": "oli",
+        "label": "Oli",
+        "hint": "Level mesin dan rembesan"
+      },
+      {
+        "code": "lampu",
+        "label": "Lampu",
+        "hint": "Utama, sein, rem, mundur"
+      },
+      {
+        "code": "rem",
+        "label": "Rem",
+        "hint": "Rem kaki dan tangan"
+      }
+    ],
+    "body_photo_sides": [
+      "depan",
+      "kanan",
+      "kiri",
+      "belakang"
+    ]
+  }
+}

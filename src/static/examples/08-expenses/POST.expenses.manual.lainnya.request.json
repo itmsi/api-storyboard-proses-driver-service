@@ -1,0 +1,13 @@
+{
+  "client_ref": "81de-...-uuid",
+  "category": "lainnya",
+  "amount": 40000,
+  "description": "Uang kuli bongkar 2 orang",
+  "proof_media_id": null,
+  "recorded_at": "2026-11-05T16:45:00+07:00",
+  "gps": {
+    "lat": -6.3,
+    "lng": 107.29,
+    "accuracy_m": 8
+  }
+}

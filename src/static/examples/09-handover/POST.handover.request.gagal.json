@@ -1,0 +1,16 @@
+{
+  "client_ref": "c0de-...-uuid",
+  "condition": "gagal_kirim",
+  "failure_reason": "penerima_tidak_ada",
+  "location_photo_ids": [
+    "med_loc_01"
+  ],
+  "note": "Sudah menunggu 30 menit",
+  "receiver": null,
+  "gps": {
+    "lat": -6.3,
+    "lng": 107.29,
+    "accuracy_m": 8
+  },
+  "recorded_at": "2026-11-05T16:50:00+07:00"
+}

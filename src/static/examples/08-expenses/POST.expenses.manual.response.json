@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "data": {
+    "id": "exp_0144_03",
+    "category": "parkir",
+    "amount": 5000,
+    "description": "Parkir rest area KM 57",
+    "has_proof": false,
+    "recorded_at": "2026-11-05T15:10:00+07:00",
+    "gps": {
+      "lat": -6.33,
+      "lng": 107.12,
+      "accuracy_m": 8
+    }
+  }
+}

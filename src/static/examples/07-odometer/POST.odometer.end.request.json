@@ -1,0 +1,17 @@
+{
+  "client_ref": "aa20-...-uuid",
+  "type": "end",
+  "media_id": "med_odo_end_01",
+  "ocr": {
+    "km": 45278,
+    "fuel_level": "quarter"
+  },
+  "corrected": null,
+  "correction_reason": null,
+  "captured_at": "2026-11-05T16:54:00+07:00",
+  "gps": {
+    "lat": -6.3,
+    "lng": 107.29,
+    "accuracy_m": 8
+  }
+}

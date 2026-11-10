@@ -1,0 +1,71 @@
+{
+  "success": true,
+  "data": {
+    "config_version": "2026-11-01.1",
+    "client_id": "cl_ogo",
+    "client_name": "PT Owngo Logistics Indonesia",
+    "languages": [
+      "id",
+      "en",
+      "zh"
+    ],
+    "default_language": "id",
+    "modules": {
+      "route_tracking": false,
+      "receipt_ocr": true,
+      "odometer_ocr": true,
+      "travel_allowance": true,
+      "incident_report": false
+    },
+    "photo_rules": {
+      "loading": {
+        "min": 2,
+        "max": 10
+      },
+      "unloading": {
+        "min": 1,
+        "max": 10
+      },
+      "delivery_note_pages": {
+        "min": 1,
+        "max": 5
+      },
+      "p2h_body": {
+        "required_sides": [
+          "depan",
+          "kanan",
+          "kiri",
+          "belakang"
+        ]
+      }
+    },
+    "expense_categories": [
+      {
+        "code": "bbm",
+        "label": "BBM",
+        "input": "receipt_ocr"
+      },
+      {
+        "code": "tol",
+        "label": "Tol",
+        "input": "manual"
+      },
+      {
+        "code": "parkir",
+        "label": "Parkir",
+        "input": "manual"
+      },
+      {
+        "code": "lainnya",
+        "label": "Lainnya",
+        "input": "manual",
+        "description_required": true
+      }
+    ],
+    "correction_reason_required": true,
+    "p2h": {
+      "frequency": "daily_per_unit",
+      "valid_until_local": "23:59"
+    }
+  }
+}

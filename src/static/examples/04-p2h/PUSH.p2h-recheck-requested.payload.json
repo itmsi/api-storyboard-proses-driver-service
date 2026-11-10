@@ -1,0 +1,9 @@
+{
+  "type": "p2h_recheck_requested",
+  "unit_id": "unit_9123",
+  "unit_plate": "B 9123 KZ",
+  "requested_by": "admin_01",
+  "requested_at": "2026-11-05T10:15:00+07:00",
+  "note": "Lampu sein sudah diganti, mohon P2H ulang",
+  "previous_p2h_id": "p2h_20261105_9123"
+}

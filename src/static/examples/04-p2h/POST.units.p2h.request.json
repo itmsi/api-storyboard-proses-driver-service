@@ -1,0 +1,35 @@
+{
+  "client_ref": "0b2e-...-uuid",
+  "checked_at": "2026-11-05T06:10:00+07:00",
+  "gps": {
+    "lat": -6.18,
+    "lng": 106.94,
+    "accuracy_m": 8
+  },
+  "items": [
+    {
+      "code": "ban",
+      "result": "sesuai"
+    },
+    {
+      "code": "oli",
+      "result": "sesuai"
+    },
+    {
+      "code": "lampu",
+      "result": "tidak_sesuai",
+      "description": "Lampu sein kiri mati"
+    },
+    {
+      "code": "rem",
+      "result": "sesuai"
+    }
+  ],
+  "body_photo_ids": {
+    "depan": "med_p2h_depan",
+    "kanan": "med_p2h_kanan",
+    "kiri": "med_p2h_kiri",
+    "belakang": "med_p2h_belakang"
+  },
+  "admin_confirmed_by_driver": true
+}

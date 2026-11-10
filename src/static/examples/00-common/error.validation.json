@@ -1,0 +1,14 @@
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Data tidak lengkap.",
+    "http_status": 422,
+    "details": [
+      {
+        "field": "reason",
+        "message": "Alasan koreksi wajib diisi jika ada nilai yang dikoreksi."
+      }
+    ]
+  }
+}

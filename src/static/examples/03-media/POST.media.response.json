@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "data": {
+    "id": "med_odo_start_01",
+    "kind": "odometer_start",
+    "url": "https://cdn.example.com/media/med_odo_start_01.jpg",
+    "thumb_url": "https://cdn.example.com/media/med_odo_start_01_thumb.jpg",
+    "source": "camera",
+    "captured_at": "2026-11-05T13:50:00+07:00",
+    "server_received_at": "2026-11-05T13:50:00+07:00",
+    "gps": {
+      "lat": -6.18,
+      "lng": 106.94,
+      "accuracy_m": 8
+    },
+    "captured_by": "drv_0021",
+    "sha256": "<sha256-hash>"
+  }
+}

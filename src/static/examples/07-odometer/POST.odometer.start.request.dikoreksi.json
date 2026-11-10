@@ -1,0 +1,20 @@
+{
+  "client_ref": "e71b-...-uuid",
+  "type": "start",
+  "media_id": "med_odo_start_01",
+  "ocr": {
+    "km": 45210,
+    "fuel_level": "half"
+  },
+  "corrected": {
+    "km": 45216,
+    "fuel_level": "half"
+  },
+  "correction_reason": "Angka terakhir buram, OCR baca 0 seharusnya 6",
+  "captured_at": "2026-11-05T13:50:00+07:00",
+  "gps": {
+    "lat": -6.18,
+    "lng": 106.94,
+    "accuracy_m": 8
+  }
+}
