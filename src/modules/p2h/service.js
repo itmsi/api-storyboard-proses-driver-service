@@ -1,5 +1,6 @@
 const { AppError } = require('../../utils/errors')
 const { auditFields } = require('../../utils/audit')
+const pagination = require('../../utils/pagination')
 const { toWib, wibDate, endOfWibDay } = require('../../utils/date')
 const { resolveSettings } = require('../app/settings')
 const { serializeMedia } = require('../media/serializer')
@@ -234,6 +235,87 @@ const recheck = async (db, admin, unitId, { note }) => {
   }
 }
 
+// ---------- Admin: daftar, detail, koreksi, hapus lunak ----------
+
+const SORTABLE = {
+  inspection_date: 'p2h_inspections.inspection_date', checked_at: 'p2h_inspections.checked_at', status: 'p2h_inspections.status', created_at: 'p2h_inspections.created_at',
+}
+
+const unitOf = (row) => ({ id: row.unit_id, plate: row.plate, type: row.unit_type })
+
+const serializeListItem = (row) => ({
+  id: row.id,
+  unit: unitOf(row),
+  date: row.inspection_date_text,
+  status: row.status,
+  can_operate: row.can_operate,
+  checked_by: { id: row.checked_by, name: row.checked_by_name },
+  checked_at: toWib(row.checked_at),
+  superseded: Boolean(row.superseded_at),
+  recheck_requested: Boolean(row.recheck_requested_at),
+  ...auditFields(row),
+})
+
+const list = async (db, query) => {
+  const paging = pagination.parse(query, SORTABLE, '-inspection_date')
+  const { rows, total } = await repo.listAdmin(db, {
+    filters: query, search: query.search, paging,
+  })
+  return { data: rows.map(serializeListItem), meta: pagination.meta(paging, total) }
+}
+
+const loadAdmin = async (db, id) => {
+  const row = await repo.findById(db, id)
+  if (!row) throw new AppError('NOT_FOUND', { details: { p2h_id: id } })
+  return row
+}
+
+const getById = async (db, id) => {
+  const row = await loadAdmin(db, id)
+  return {
+    ...(await describe(db, unitOf(row), row)),
+    superseded: Boolean(row.superseded_at),
+    recheck_requested: Boolean(row.recheck_requested_at),
+    recheck_note: row.recheck_note,
+  }
+}
+
+/** Admin mengoreksi jawaban item. Status dan can_operate dihitung ulang dari definisi checklist (item kritis). */
+const update = async (db, admin, id, { items }) => {
+  await loadAdmin(db, id)
+  const existing = await repo.getItemRows(db, id)
+  const byCode = new Map(existing.map((i) => [i.item_code, i]))
+
+  const details = []
+  const seen = new Set()
+  items.forEach((i, index) => {
+    if (!byCode.has(i.code)) details.push({ field: `items.${index}.code`, message: `Item "${i.code}" tidak ada di P2H ini.` })
+    else if (seen.has(i.code)) details.push({ field: `items.${index}.code`, message: `Item "${i.code}" terkirim lebih dari sekali.` })
+    seen.add(i.code)
+  })
+  if (details.length) throw new AppError('VALIDATION_ERROR', { details })
+
+  const critical = new Set(await repo.getCriticalCodes(db))
+  await db.transaction(async (trx) => {
+    await Promise.all(items.map((i) => repo.updateItem(trx, id, i.code, {
+      result: i.result,
+      description: i.result === 'tidak_sesuai' ? i.description : null,
+    })))
+    const finalItems = await repo.getItemRows(trx, id)
+    const failed = finalItems.filter((i) => i.result === 'tidak_sesuai')
+    let status = 'layak'
+    if (failed.length) status = failed.some((i) => critical.has(i.item_code)) ? 'tidak_layak' : 'catatan'
+    await repo.updateInspection(trx, id, { status, can_operate: status !== 'tidak_layak', updated_by: admin.id })
+  })
+  return getById(db, id)
+}
+
+const remove = async (db, admin, id) => {
+  await loadAdmin(db, id)
+  await repo.softDelete(db, id, admin.id)
+  return { deleted: true }
+}
+
 module.exports = {
-  getTemplate, getToday, getStatus, submit, summarize, recheck,
+  getTemplate, getToday, getStatus, submit, summarize, recheck, list, getById, update, remove,
 }

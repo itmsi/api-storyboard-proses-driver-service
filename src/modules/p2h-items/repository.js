@@ -1,7 +1,7 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
 
-const base = (db) => db('p2h_check_items')
+const base = (db) => db('p2h_check_items').where('p2h_check_items.is_delete', false)
 
 const select = (query) => query.select(
   'p2h_check_items.code',
@@ -33,15 +33,22 @@ const list = async (db, { search, isActive, paging }) => {
 
 const findByCode = (db, code) => withAuditNames(select(base(db)).where('p2h_check_items.code', code), 'p2h_check_items').first()
 
+/** Termasuk yang sudah dihapus: kode tetap dipakai (rujukan jawaban P2H lama), jadi tidak bisa dibuat ulang. */
+const findAnyByCode = (db, code) => db('p2h_check_items').where({ code }).first('code', 'is_delete')
+
 const insert = (db, row) => db('p2h_check_items').insert(row)
 
 const update = (db, code, fields) => db('p2h_check_items').where({ code }).update(fields)
 
 /** Jumlah item aktif selain `exceptCode` (P2H wajib punya minimal satu item aktif). */
 const countOtherActive = async (db, exceptCode) => {
-  const [{ count }] = await db('p2h_check_items').where({ is_active: true }).whereNot({ code: exceptCode }).count('code as count')
+  const [{ count }] = await db('p2h_check_items').where({ is_active: true, is_delete: false }).whereNot({ code: exceptCode }).count('code as count')
   return Number(count)
 }
+
+const softDelete = (db, code, actorId) => db('p2h_check_items').where({ code }).update({
+  is_delete: true, is_active: false, deleted_at: db.fn.now(), deleted_by: actorId, updated_by: actorId,
+})
 
 const nextSortOrder = async (db) => {
   const [{ max }] = await db('p2h_check_items').max('sort_order as max')
@@ -49,5 +56,5 @@ const nextSortOrder = async (db) => {
 }
 
 module.exports = {
-  list, findByCode, insert, update, countOtherActive, nextSortOrder,
+  list, findByCode, findAnyByCode, insert, update, softDelete, countOtherActive, nextSortOrder,
 }

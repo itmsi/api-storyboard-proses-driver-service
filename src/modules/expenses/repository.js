@@ -2,7 +2,7 @@ const withCategory = (db) => db('expenses')
   .join('expense_categories', 'expense_categories.code', 'expenses.category_code')
   .select('expenses.*', 'expense_categories.input as category_input', 'expense_categories.label as category_label')
 
-const findCategory = (db, code) => db('expense_categories').where({ code, is_active: true }).first()
+const findCategory = (db, code) => db('expense_categories').where({ code, is_active: true, is_delete: false }).first()
 
 const findByClientRef = (db, userId, clientRef) => withCategory(db)
   .where({ 'expenses.created_by': userId, 'expenses.client_ref': clientRef })

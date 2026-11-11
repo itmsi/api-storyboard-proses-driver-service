@@ -1,7 +1,7 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
 
-const base = (db) => db('expense_categories')
+const base = (db) => db('expense_categories').where('expense_categories.is_delete', false)
 
 // expense_count = jumlah biaya yang memakai kategori ini (membantu admin sebelum mengubah/menonaktifkan)
 const select = (db, query) => query.select(
@@ -36,14 +36,21 @@ const list = async (db, { search, isActive, paging }) => {
 
 const findByCode = (db, code) => withAuditNames(select(db, base(db)).where('expense_categories.code', code), 'expense_categories').first()
 
+/** Termasuk yang sudah dihapus: kode tetap dipakai (rujukan biaya lama), jadi tidak bisa dibuat ulang. */
+const findAnyByCode = (db, code) => db('expense_categories').where({ code }).first('code', 'is_delete')
+
 const insert = (db, row) => db('expense_categories').insert(row)
 
 const update = (db, code, fields) => db('expense_categories').where({ code }).update(fields)
 
 const countOtherActive = async (db, exceptCode) => {
-  const [{ count }] = await db('expense_categories').where({ is_active: true }).whereNot({ code: exceptCode }).count('code as count')
+  const [{ count }] = await db('expense_categories').where({ is_active: true, is_delete: false }).whereNot({ code: exceptCode }).count('code as count')
   return Number(count)
 }
+
+const softDelete = (db, code, actorId) => db('expense_categories').where({ code }).update({
+  is_delete: true, is_active: false, deleted_at: db.fn.now(), deleted_by: actorId, updated_by: actorId,
+})
 
 const nextSortOrder = async (db) => {
   const [{ max }] = await db('expense_categories').max('sort_order as max')
@@ -51,5 +58,5 @@ const nextSortOrder = async (db) => {
 }
 
 module.exports = {
-  list, findByCode, insert, update, countOtherActive, nextSortOrder,
+  list, findByCode, findAnyByCode, insert, update, softDelete, countOtherActive, nextSortOrder,
 }

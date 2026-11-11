@@ -12,6 +12,8 @@ const create = async (req, res) => ok(res, await service.create(req.db, req.admi
 
 const update = async (req, res) => ok(res, await service.update(req.db, req.admin, req.valid.params.code, req.body))
 
+const remove = async (req, res) => ok(res, await service.remove(req.db, req.admin, req.valid.params.code))
+
 module.exports = {
-  list, get, create, update,
+  list, get, create, update, remove,
 }

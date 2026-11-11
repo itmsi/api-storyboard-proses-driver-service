@@ -1,4 +1,5 @@
 const Joi = require('joi')
+const { listQuery } = require('../../utils/pagination')
 
 const KINDS = [
   'odometer_start', 'odometer_end', 'receipt', 'loading', 'delivery_note',
@@ -39,4 +40,20 @@ const upload = Joi.object({
   side: Joi.string().valid(...SIDES).when('kind', { is: 'p2h_body', then: Joi.required(), otherwise: Joi.forbidden() }),
 })
 
-module.exports = { upload, KINDS, SIDES }
+const idParams = Joi.object({
+  id: Joi.string().guid().required(),
+})
+
+const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).messages({ 'string.pattern.base': 'Format tanggal harus YYYY-MM-DD.' })
+
+// Daftar media untuk admin: POST /media/get
+const list = listQuery.keys({
+  kind: Joi.string().valid(...KINDS),
+  captured_by: Joi.string().guid(),
+  from: date,
+  to: date,
+})
+
+module.exports = {
+  upload, KINDS, SIDES, idParams, list,
+}

@@ -33,4 +33,10 @@ router.post(
   asyncHandler(controller.recheck)
 )
 
+// Admin: kelola P2H (daftar, detail, koreksi, hapus lunak). Router di-mount di root, jadi guard dipasang per route.
+router.post('/p2h/get', adminGuard, validate({ body: schema.list }), asyncHandler(controller.list))
+router.get('/p2h/:id', adminGuard, validate({ params: schema.idParams }), asyncHandler(controller.get))
+router.put('/p2h/:id', adminGuard, validate({ params: schema.idParams, body: schema.update }), asyncHandler(controller.update))
+router.delete('/p2h/:id', adminGuard, validate({ params: schema.idParams }), asyncHandler(controller.remove))
+
 module.exports = router

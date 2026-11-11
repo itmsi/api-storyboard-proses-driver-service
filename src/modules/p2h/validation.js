@@ -1,4 +1,5 @@
 const Joi = require('joi')
+const { listQuery } = require('../../utils/pagination')
 const { SIDES } = require('../media/validation')
 
 const unitParams = Joi.object({
@@ -37,4 +38,33 @@ const recheck = Joi.object({
     .required(),
 })
 
-module.exports = { unitParams, submit, recheck }
+const idParams = Joi.object({
+  id: Joi.string().guid().required(),
+})
+
+const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).messages({ 'string.pattern.base': 'Format tanggal harus YYYY-MM-DD.' })
+
+// Daftar P2H untuk admin: POST /p2h/get
+const list = listQuery.keys({
+  unit_id: Joi.string().guid(),
+  driver_id: Joi.string().guid(),
+  status: Joi.string().valid('layak', 'catatan', 'tidak_layak'),
+  from: date,
+  to: date,
+})
+
+// Koreksi hasil P2H oleh admin: hanya jawaban item yang sudah ada; status dihitung ulang server
+const update = Joi.object({
+  items: Joi.array().min(1).max(50).items(Joi.object({
+    code: Joi.string().trim().max(32).required(),
+    result: Joi.string().valid('sesuai', 'tidak_sesuai').required(),
+    description: Joi.string().trim().max(500)
+      .when('result', { is: 'tidak_sesuai', then: Joi.required(), otherwise: Joi.optional() })
+      .messages({ 'any.required': 'Keterangan wajib diisi jika item tidak sesuai.' }),
+  }))
+    .required(),
+})
+
+module.exports = {
+  unitParams, submit, recheck, idParams, list, update,
+}

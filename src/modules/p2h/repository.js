@@ -1,4 +1,5 @@
 const { withAuditNames } = require('../../utils/audit')
+const { searchColumns } = require('../../utils/pagination')
 
 const findUnit = (db, unitId) => db('units')
   .join('unit_types', 'unit_types.id', 'units.unit_type_id')
@@ -15,7 +16,7 @@ const hasAssignment = async (db, driverId, unitId, workDate) => {
 }
 
 const getCheckItems = (db) => db('p2h_check_items')
-  .where({ is_active: true })
+  .where({ is_active: true, is_delete: false })
   .orderBy('sort_order')
   .select('code', 'label', 'hint', 'is_critical')
 
@@ -23,7 +24,7 @@ const findCurrent = (db, unitId, date) => withAuditNames(
   db('p2h_inspections')
     .join('drivers', 'drivers.id', 'p2h_inspections.checked_by')
     .join('users', 'users.id', 'drivers.user_id')
-    .where({ 'p2h_inspections.unit_id': unitId, 'p2h_inspections.inspection_date': date })
+    .where({ 'p2h_inspections.unit_id': unitId, 'p2h_inspections.inspection_date': date, 'p2h_inspections.is_delete': false })
     .whereNull('p2h_inspections.superseded_at')
     .select(
       'p2h_inspections.*',
@@ -37,7 +38,7 @@ const findCurrent = (db, unitId, date) => withAuditNames(
 const findSuperseded = (db, unitId, date) => db('p2h_inspections')
   .join('drivers', 'drivers.id', 'p2h_inspections.checked_by')
   .join('users', 'users.id', 'drivers.user_id')
-  .where({ 'p2h_inspections.unit_id': unitId, 'p2h_inspections.inspection_date': date })
+  .where({ 'p2h_inspections.unit_id': unitId, 'p2h_inspections.inspection_date': date, 'p2h_inspections.is_delete': false })
   .whereNotNull('p2h_inspections.superseded_at')
   .whereNotNull('p2h_inspections.recheck_requested_at')
   .orderBy('p2h_inspections.superseded_at', 'desc')
@@ -47,6 +48,68 @@ const findSuperseded = (db, unitId, date) => db('p2h_inspections')
 const findByClientRef = (db, driverId, clientRef) => db('p2h_inspections')
   .where({ checked_by: driverId, client_ref: clientRef })
   .first()
+
+/** Daftar P2H untuk admin (tanpa yang dihapus). */
+const listAdmin = async (db, { filters, search, paging }) => {
+  const filtered = () => {
+    const q = db('p2h_inspections')
+      .join('units', 'units.id', 'p2h_inspections.unit_id')
+      .join('unit_types', 'unit_types.id', 'units.unit_type_id')
+      .join('drivers', 'drivers.id', 'p2h_inspections.checked_by')
+      .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
+      .where('p2h_inspections.is_delete', false)
+    if (filters.unit_id) q.where('p2h_inspections.unit_id', filters.unit_id)
+    if (filters.driver_id) q.where('p2h_inspections.checked_by', filters.driver_id)
+    if (filters.status) q.where('p2h_inspections.status', filters.status)
+    if (filters.from) q.where('p2h_inspections.inspection_date', '>=', filters.from)
+    if (filters.to) q.where('p2h_inspections.inspection_date', '<=', filters.to)
+    return searchColumns(q, search, ['units.plate', 'driver_user.name', 'drivers.code'])
+  }
+  const [{ count }] = await filtered().count('p2h_inspections.id as count')
+  const rows = await withAuditNames(filtered(), 'p2h_inspections')
+    .select(
+      'p2h_inspections.*',
+      'units.plate',
+      'unit_types.name as unit_type',
+      'driver_user.name as checked_by_name',
+      db.raw('p2h_inspections.inspection_date::text as inspection_date_text')
+    )
+    .orderBy(paging.column, paging.direction)
+    .orderBy('p2h_inspections.id')
+    .limit(paging.limit)
+    .offset(paging.offset)
+  return { rows, total: Number(count) }
+}
+
+/** Satu P2H berdasarkan id (tanpa yang dihapus), beserta unit dan pemeriksa. */
+const findById = (db, id) => withAuditNames(
+  db('p2h_inspections')
+    .join('units', 'units.id', 'p2h_inspections.unit_id')
+    .join('unit_types', 'unit_types.id', 'units.unit_type_id')
+    .join('drivers', 'drivers.id', 'p2h_inspections.checked_by')
+    .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
+    .where({ 'p2h_inspections.id': id, 'p2h_inspections.is_delete': false })
+    .select(
+      'p2h_inspections.*',
+      'units.plate',
+      'unit_types.name as unit_type',
+      'driver_user.name as checked_by_name',
+      db.raw('p2h_inspections.inspection_date::text as inspection_date_text')
+    ),
+  'p2h_inspections'
+).first()
+
+const getItemRows = (db, inspectionId) => db('p2h_inspection_items').where({ inspection_id: inspectionId })
+
+const updateItem = (db, inspectionId, code, fields) => db('p2h_inspection_items').where({ inspection_id: inspectionId, item_code: code }).update(fields)
+
+const updateInspection = (db, id, fields) => db('p2h_inspections').where({ id }).update(fields)
+
+const softDelete = (db, id, actorId) => db('p2h_inspections').where({ id }).update({
+  is_delete: true, deleted_at: db.fn.now(), deleted_by: actorId, updated_by: actorId,
+})
+
+const getCriticalCodes = (db) => db('p2h_check_items').where({ is_critical: true }).pluck('code')
 
 const getItems = (db, inspectionId) => db('p2h_inspection_items')
   .join('p2h_check_items', 'p2h_check_items.code', 'p2h_inspection_items.item_code')
@@ -85,6 +148,13 @@ const markRecheck = (db, inspectionId, adminId, note) => db('p2h_inspections')
   })
 
 module.exports = {
+  listAdmin,
+  findById,
+  getItemRows,
+  updateItem,
+  updateInspection,
+  softDelete,
+  getCriticalCodes,
   markRecheck,
   findUnit,
   hasAssignment,

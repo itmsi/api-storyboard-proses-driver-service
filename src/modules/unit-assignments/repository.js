@@ -51,7 +51,9 @@ const findByDriverDate = (db, driverId, date) => db('driver_unit_assignments').w
  */
 const hasStartedWork = async (db, driverId, unitId, date) => {
   const [p2h, openDo] = await Promise.all([
-    db('p2h_inspections').where({ checked_by: driverId, unit_id: unitId, inspection_date: date }).first('id'),
+    db('p2h_inspections').where({
+      checked_by: driverId, unit_id: unitId, inspection_date: date, is_delete: false
+    }).first('id'),
     db('delivery_orders').where({ driver_id: driverId, unit_id: unitId }).whereIn('status', ['accepted', 'loading', 'in_transit', 'handover']).first('id', 'no'),
   ])
   return { p2h: Boolean(p2h), openDo: openDo || null }

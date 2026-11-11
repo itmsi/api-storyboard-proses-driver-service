@@ -12,6 +12,17 @@ const submit = async (req, res) => {
 
 const recheck = async (req, res) => ok(res, await service.recheck(req.db, req.admin, req.valid.params.unitId, req.body))
 
+const list = async (req, res) => {
+  const { data, meta } = await service.list(req.db, req.body)
+  return ok(res, data, { meta })
+}
+
+const get = async (req, res) => ok(res, await service.getById(req.db, req.valid.params.id))
+
+const update = async (req, res) => ok(res, await service.update(req.db, req.admin, req.valid.params.id, req.body))
+
+const remove = async (req, res) => ok(res, await service.remove(req.db, req.admin, req.valid.params.id))
+
 module.exports = {
-  getTemplate, getToday, submit, recheck,
+  getTemplate, getToday, submit, recheck, list, get, update, remove,
 }

@@ -40,7 +40,7 @@ const page = [
 module.exports = {
   '/units/{unitId}/p2h/recheck': {
     post: {
-      tags: ['Admin - P2H'],
+      tags: ['P2H'],
       summary: 'Minta P2H ulang (admin)',
       description: [
         'Menandai P2H unit hari ini sebagai digantikan. Di aplikasi driver status unit kembali `belum` dengan `recheck_requested: true` dan data P2H sebelumnya (`previous`); '

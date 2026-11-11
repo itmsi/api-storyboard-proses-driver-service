@@ -1,7 +1,7 @@
 const getSettings = (db) => db('app_settings').select('key', 'value')
 
 const getExpenseCategories = (db) => db('expense_categories')
-  .where({ is_active: true })
+  .where({ is_active: true, is_delete: false })
   .orderBy('sort_order')
   .select('code', 'label', 'input', 'description_required', 'proof_required')
 

@@ -40,7 +40,8 @@ const list = async (db, query) => {
 const get = async (db, code) => serialize(await load(db, code))
 
 const create = async (db, admin, body) => {
-  if (await repo.findByCode(db, body.code)) throw fail('code', 'Kode kategori sudah dipakai.')
+  const existing = await repo.findAnyByCode(db, body.code)
+  if (existing) throw fail('code', existing.is_delete ? 'Kode kategori ini pernah dipakai dan sudah dihapus. Pakai kode lain.' : 'Kode kategori sudah dipakai.')
   const sortOrder = body.sort_order ?? await repo.nextSortOrder(db)
   await db.transaction(async (trx) => {
     await repo.insert(trx, {
@@ -87,6 +88,21 @@ const update = async (db, admin, code, body) => {
   return get(db, code)
 }
 
+const remove = async (db, admin, code) => {
+  const current = await load(db, code)
+  if (current.is_active && (await repo.countOtherActive(db, code)) === 0) {
+    throw new AppError('CONFLICT', {
+      message: 'Harus tersisa minimal satu kategori biaya yang aktif.',
+      details: { reason: 'kategori_aktif_terakhir' },
+    })
+  }
+  await db.transaction(async (trx) => {
+    await repo.softDelete(trx, code, admin.id)
+    await bumpConfigVersion(trx, admin.id)
+  })
+  return { deleted: true }
+}
+
 module.exports = {
-  list, get, create, update,
+  list, get, create, update, remove,
 }

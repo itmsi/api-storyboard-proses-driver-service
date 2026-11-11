@@ -3,6 +3,8 @@ const sharp = require('sharp')
 const storage = require('../../utils/storage')
 const { AppError } = require('../../utils/errors')
 const { wibDate } = require('../../utils/date')
+const pagination = require('../../utils/pagination')
+const { serializeMedia } = require('./serializer')
 const repo = require('./repository')
 
 const THUMB_WIDTH = 320
@@ -84,4 +86,40 @@ const claim = async (db, auth, ids, kinds, field) => {
   return ids.map((id) => byId.get(id))
 }
 
-module.exports = { upload, claim }
+// ---------- Ambil, daftar (admin), hapus lunak (admin) ----------
+
+const SORTABLE = { captured_at: 'media.captured_at', created_at: 'media.created_at', kind: 'media.kind' }
+
+const serialize = (row) => ({ ...serializeMedia(row), captured_by_name: row.captured_by_name })
+
+/** Admin boleh melihat semua media; driver hanya foto miliknya (selain itu dianggap tidak ada). */
+const get = async (db, auth, id) => {
+  const row = await repo.findById(db, id)
+  if (!row || (auth.role !== 'admin' && row.captured_by !== auth.sub)) throw new AppError('NOT_FOUND', { details: { media_id: id } })
+  return serialize(row)
+}
+
+const list = async (db, query) => {
+  const paging = pagination.parse(query, SORTABLE, '-captured_at')
+  const { rows, total } = await repo.listAdmin(db, { filters: query, search: query.search, paging })
+  return { data: rows.map(serialize), meta: pagination.meta(paging, total) }
+}
+
+/** Media yang masih dirujuk data lain (P2H, DO, odometer, biaya) tidak boleh dihapus. */
+const remove = async (db, admin, id) => {
+  const row = await repo.findById(db, id)
+  if (!row) throw new AppError('NOT_FOUND', { details: { media_id: id } })
+  const used = await repo.findInUse(db, [id])
+  if (used.has(id)) {
+    throw new AppError('CONFLICT', {
+      message: 'Foto masih dipakai data lain (P2H, DO, odometer, atau biaya) sehingga tidak bisa dihapus.',
+      details: { reason: 'masih_dipakai', media_id: id },
+    })
+  }
+  await repo.softDelete(db, id, admin.id)
+  return { deleted: true }
+}
+
+module.exports = {
+  upload, claim, get, list, remove,
+}

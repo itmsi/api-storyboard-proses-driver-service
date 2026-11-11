@@ -16,6 +16,7 @@ const errors = {
 }
 const withValidation = { ...errors, 422: errorRef('ValidationError') }
 const notFound = { 404: errorRef('NotFound') }
+const deleted = envelope({ type: 'object', properties: { deleted: { type: 'boolean', example: true } } })
 const paged = (item) => envelope({ type: 'array', items: ref(item) }, ref('PageMeta'))
 
 const listParams = (sortHint) => [
@@ -68,7 +69,7 @@ module.exports = {
       tags: ['Admin - Konfigurasi'],
       summary: 'Ubah item checklist P2H',
       description: [
-        'Kirim hanya field yang ingin diubah. Kode tidak bisa diubah. **Tidak ada hapus**: item dinonaktifkan lewat `is_active: false` (jawaban P2H lama tetap utuh).',
+        'Kirim hanya field yang ingin diubah. Kode tidak bisa diubah. Untuk menyembunyikan sementara pakai `is_active: false`; untuk menghapus pakai `DELETE`.',
         'Item aktif terakhir tidak bisa dinonaktifkan (409 `CONFLICT`, `details.reason = item_aktif_terakhir`). Menaikkan `config_version`.',
       ].join('\n'),
       security: secured,
@@ -76,6 +77,19 @@ module.exports = {
       requestBody: jsonBody(ref('AdminP2HItemUpdate')),
       responses: {
         200: jsonResponse('OK', envelope(ref('AdminP2HItem'))),
+        409: jsonResponse('Item aktif terakhir', ref('Error')),
+        ...withValidation,
+        ...notFound,
+      },
+    },
+    delete: {
+      tags: ['Admin - Konfigurasi'],
+      summary: 'Hapus item checklist P2H (soft delete)',
+      description: 'Item hilang dari checklist dan daftar, tetapi jawaban P2H lama tetap utuh. Kode yang sudah dihapus tidak bisa dibuat ulang. Item aktif terakhir tidak bisa dihapus (409 `CONFLICT`, `details.reason = item_aktif_terakhir`). Menaikkan `config_version`.',
+      security: secured,
+      parameters: codePath('item'),
+      responses: {
+        200: jsonResponse('OK', deleted),
         409: jsonResponse('Item aktif terakhir', ref('Error')),
         ...withValidation,
         ...notFound,
@@ -112,7 +126,7 @@ module.exports = {
       tags: ['Admin - Konfigurasi'],
       summary: 'Ubah kategori biaya',
       description: [
-        'Kirim hanya field yang ingin diubah. Kode tidak bisa diubah. **Tidak ada hapus**: nonaktifkan lewat `is_active: false`.',
+        'Kirim hanya field yang ingin diubah. Kode tidak bisa diubah. Untuk menyembunyikan sementara pakai `is_active: false`; untuk menghapus pakai `DELETE`.',
         '409 `CONFLICT`: `input` diubah padahal sudah ada biaya dengan kategori ini (`details.expense_count`), atau menonaktifkan kategori aktif terakhir. Menaikkan `config_version`.',
       ].join('\n'),
       security: secured,
@@ -121,6 +135,19 @@ module.exports = {
       responses: {
         200: jsonResponse('OK', envelope(ref('AdminExpenseCategory'))),
         409: jsonResponse('Kategori sudah dipakai / kategori aktif terakhir', ref('Error')),
+        ...withValidation,
+        ...notFound,
+      },
+    },
+    delete: {
+      tags: ['Admin - Konfigurasi'],
+      summary: 'Hapus kategori biaya (soft delete)',
+      description: 'Kategori hilang dari daftar dan dari `GET /config` driver, tetapi biaya lama tetap merujuknya. Kode yang sudah dihapus tidak bisa dibuat ulang. Kategori aktif terakhir tidak bisa dihapus (409 `CONFLICT`, `details.reason = kategori_aktif_terakhir`). Menaikkan `config_version`.',
+      security: secured,
+      parameters: codePath('kategori'),
+      responses: {
+        200: jsonResponse('OK', deleted),
+        409: jsonResponse('Kategori aktif terakhir', ref('Error')),
         ...withValidation,
         ...notFound,
       },

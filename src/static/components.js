@@ -671,6 +671,37 @@ const schemas = {
     phone: nullable(str('0812-3456-7890')),
     status: { ...enumOf(['active', 'suspended']), description: 'Tidak bisa menonaktifkan diri sendiri' },
   }),
+  // ---------- Admin - P2H & Media ----------
+  AdminP2HListItem: obj({
+    id: str('8f2c1a64-5b3d-4e7a-9c10-6d2e4f8a1b35'),
+    unit: obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ'), type: str('CDD Bak') }),
+    date: str('2026-11-05'),
+    status: enumOf(['layak', 'catatan', 'tidak_layak']),
+    can_operate: bool(true),
+    checked_by: obj({ id: str('3b9e6f10-5c4d-4a72-8e1b-7d2c9a0f4e55'), name: str('Andi Pratama') }),
+    checked_at: str('2026-11-05T06:30:00+07:00'),
+    superseded: bool(false, { description: 'true jika P2H ini sudah digantikan karena admin meminta P2H ulang' }),
+    recheck_requested: bool(false),
+    ...auditProps,
+  }),
+  AdminP2HUpdateRequest: obj({
+    items: arr(obj({
+      code: str('ban'),
+      result: enumOf(['sesuai', 'tidak_sesuai']),
+      description: str('Tapak aus', { description: 'Wajib jika result = tidak_sesuai' }),
+    }, ['code', 'result']), { description: 'Jawaban item yang dikoreksi (kode harus sudah ada di P2H ini). Status dan can_operate dihitung ulang server.' }),
+  }, ['items']),
+  AdminMedia: obj({
+    id: str('0c8e2f61-7a4d-4b93-8d15-2e6f9a3b7c48'),
+    kind: str('receipt'),
+    url: str('https://example.com/media/OGO/2026/11/05/0c8e2f61.jpg'),
+    thumb_url: nullable(str('https://example.com/media/OGO/2026/11/05/0c8e2f61_thumb.jpg')),
+    captured_at: str('2026-11-05T09:12:00+07:00'),
+    captured_by: str('3b9e6f10-5c4d-4a72-8e1b-7d2c9a0f4e55'),
+    captured_by_name: str('Andi Pratama'),
+    ...auditProps,
+  }),
+
   // ---------- Admin - Master Data ----------
   AdminUnitType: obj({
     id: str('3b9e6f10-5c4d-4a72-8e1b-7d2c9a0f4e55'),
