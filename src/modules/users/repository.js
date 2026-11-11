@@ -1,7 +1,8 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
 
-const base = (db) => db('users').where({ 'users.role': 'admin', 'users.is_delete': false })
+// Akun sistem MSI (is_system) sengaja tidak termasuk: tidak tampil, tidak bisa diubah/dihapus, dan tidak dihitung sebagai admin perusahaan
+const base = (db) => db('users').where({ 'users.role': 'admin', 'users.is_delete': false, 'users.is_system': false })
 
 const SELECT = [
   'users.id',

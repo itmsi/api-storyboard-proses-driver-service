@@ -4,13 +4,18 @@ const config = require('../../config')
  * TenantRegistry = sumber kredensial database per client (client code).
  *
  * Kontrak (apa pun implementasinya):
- *   resolve(code)  -> { code, name, status: 'active' | 'inactive', connection: { host, port, user, password, database, ssl? } }
- *                     atau null jika client code tidak dikenal
- *   listCodes()    -> string[]   (dipakai script migrasi --all)
+ *   resolve(code)
+ *     -> { code, name, status: 'active' | 'inactive', connection: { host, port, user, password, database, ssl? },
+ *          poolMax?, clientId?, schemaVersion? }  atau null jika client code tidak dikenal / tidak aktif.
+ *        Ini kredensial role APP (hanya DML) untuk request biasa.
+ *   resolveProvisioning(clientId)
+ *     -> { code, name, owner: connection, app: connection, systemUser: { username, password } | null }  atau null.
+ *        Ini untuk migrasi/seeder: role OWNER (boleh DDL), terhubung langsung ke Postgres, dan akun sistem MSI.
+ *   listCodes()   -> string[]   (script migrasi --all; tidak tersedia di mode remote)
  *
- * Sumber aslinya adalah project "manage company". Sebelum kontraknya jelas dipakai adapter `env`.
- * Saat adapter `remote` dibuat, cukup tambahkan file registry.remote.js dan daftarkan di bawah;
- * sisa kode (tenant/index.js, auth) tidak berubah.
+ * Adapter:
+ *   env    - daftar tenant dari .env, satu koneksi untuk semua peran (dev & test)
+ *   remote - saas-api (control plane), kredensial terenkripsi AES-256-GCM (produksi)
  */
 
 const buildEnvRegistry = () => {
@@ -30,12 +35,25 @@ const buildEnvRegistry = () => {
 
   return {
     resolve: async (code) => byCode.get(code) || null,
+    // Di dev id client = kode client, dan satu koneksi dipakai untuk semua peran
+    resolveProvisioning: async (clientId) => {
+      const tenant = byCode.get(String(clientId).toUpperCase())
+      if (!tenant) return null
+      return {
+        code: String(tenant.code).toUpperCase(),
+        name: tenant.name,
+        owner: tenant.connection,
+        app: tenant.connection,
+        systemUser: { username: config.tenant.devSystemUsername, password: config.tenant.devSystemPassword },
+      }
+    },
     listCodes: async () => [...byCode.keys()],
   }
 }
 
 const registries = {
   env: buildEnvRegistry,
+  remote: () => require('./registry.remote').buildRemoteRegistry(),
 }
 
 const createRegistry = () => {

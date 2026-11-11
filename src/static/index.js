@@ -60,7 +60,7 @@ const index = {
     { name: 'Admin - Konfigurasi', description: 'Checklist P2H, kategori biaya, dan pengaturan aplikasi per perusahaan (hanya admin); setiap perubahan menaikkan config_version' },
     { name: 'Admin - Master Data', description: 'Tipe unit, unit, customer, lokasi (hanya admin)' },
     { name: 'Admin - Driver', description: 'Kelola akun driver (hanya admin): buat, ubah, nonaktifkan, reset password, buka kunci' },
-    { name: 'Internal', description: 'Antar-layanan (project manage company): migrasi database client. Header X-Internal-Key.' },
+    { name: 'Internal', description: 'Antar-layanan (saas-worker), di root /internal (bukan /api/v1): migrasi, seed, verifikasi database client. Header X-Internal-Key.' },
   ],
   paths,
   components: {

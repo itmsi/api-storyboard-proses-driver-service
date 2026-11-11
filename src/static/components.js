@@ -95,20 +95,33 @@ const schemas = {
   // ---------- Umum ----------
   AuditFields: obj(auditProps),
 
-  // ---------- Internal ----------
+  // ---------- Internal (saas-worker) ----------
   MigrationResult: obj({
-    client_code: str('ACME'),
-    batch: nullable(int(1, { description: 'Nomor batch migrasi' })),
-    applied: arr(str('20261110000200_create_auth_tables.js'), { description: 'Migrasi yang baru dijalankan; kosong jika sudah terbaru' }),
+    schema_version: nullable(str('20261110001500_system_user', { description: 'Nama file migrasi terakhir yang sudah jalan, tanpa .js' })),
+    applied: arr(str('20261110001500_system_user'), { description: 'Migrasi yang baru dijalankan; kosong jika sudah terbaru' }),
+    duration_ms: int(840),
   }),
-  MigrationStatus: obj({
-    client_code: str('ACME'),
-    up_to_date: bool(true),
-    current_version: nullable(str('20261110000600_create_p2h_tables.js')),
-    applied_count: int(7),
-    pending: arr(str('20261110000700_create_delivery_orders.js'), { description: 'Migrasi yang belum dijalankan' }),
+  SeedResult: obj({
+    seeded: arr(str('system_user:created'), { description: 'Yang disiapkan; system_user:created | system_user:updated' }),
+    duration_ms: int(120),
   }),
-
+  VerifyResult: obj({
+    ok: bool(true),
+    schema_version: nullable(str('20261110001500_system_user')),
+    checks: obj({
+      app_role_login: bool(true, { description: 'Role app bisa login' }),
+      migrations_up_to_date: bool(true),
+      tables: bool(true, { description: 'Semua tabel inti ada' }),
+      system_user: {
+        type: 'boolean', nullable: true, example: true, description: 'null jika client tidak punya system user'
+      },
+    }),
+  }),
+  MigrationCatalog: obj({
+    latest_version: nullable(str('20261110001500_system_user')),
+    count: int(16),
+    migrations: arr(str('20261110000000_init_extensions')),
+  }),
   // ---------- App ----------
   PublicConfig: obj({
     languages: arr(str('id'), { example: ['id', 'en', 'zh'] }),
@@ -658,17 +671,6 @@ const schemas = {
     phone: nullable(str('0812-3456-7890')),
     status: { ...enumOf(['active', 'suspended']), description: 'Tidak bisa menonaktifkan diri sendiri' },
   }),
-  BootstrapAdminRequest: obj({
-    username: str('owner'),
-    name: str('Pemilik Perusahaan'),
-    email: str('owner@contoh.co.id'),
-    password: str('<password>', { format: 'password', description: 'Minimal 8 karakter, mengandung huruf dan angka' }),
-  }, ['username', 'name', 'email', 'password']),
-  BootstrapAdminResponse: obj({
-    created: bool(true, { description: 'false jika admin dengan username itu sudah ada (tidak ada yang diubah)' }),
-    admin: obj({ id: str('4f1a8c52-9d3e-4b7a-8e61-2c5d7f90a1b3'), username: str('owner') }),
-  }),
-
   // ---------- Admin - Master Data ----------
   AdminUnitType: obj({
     id: str('3b9e6f10-5c4d-4a72-8e1b-7d2c9a0f4e55'),
@@ -1199,7 +1201,7 @@ module.exports = {
   securitySchemes: {
     bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
     internalKey: {
-      type: 'apiKey', in: 'header', name: 'X-Internal-Key', description: 'Kunci antar-layanan (INTERNAL_API_KEY) untuk project manage company',
+      type: 'apiKey', in: 'header', name: 'X-Internal-Key', description: 'Kunci antar-layanan (INTERNAL_PROVISIONING_KEY), dipegang saas-worker',
     },
   },
 }

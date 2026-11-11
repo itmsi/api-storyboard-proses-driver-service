@@ -49,7 +49,8 @@ const connect = async (code, tenant) => {
   const db = knex({
     client: 'pg',
     connection: { application_name: 'api-ogo-service', ...tenant.connection },
-    pool: { min: 0, max: config.tenant.poolMax },
+    // pool_max dari saas-api (per client) jika ada; selain itu bawaan
+    pool: { min: 0, max: tenant.poolMax || config.tenant.poolMax },
   })
   try {
     await db.raw('select 1')
@@ -121,12 +122,22 @@ const getTenantName = async (clientCode) => {
   return tenant ? tenant.name : null
 }
 
+/**
+ * Kredensial untuk migrasi/seeder: role OWNER (boleh DDL, koneksi langsung ke Postgres), role app (untuk verifikasi),
+ * dan akun sistem MSI. Tidak di-cache dan tidak boleh dipakai untuk request biasa.
+ * @returns {Promise<object|null>} null jika client tidak dikenal
+ */
+const resolveProvisioning = (clientId) => getRegistry().resolveProvisioning(String(clientId))
+
 const listCodes = () => getRegistry().listCodes()
+
+/** Tutup pool tenant (mis. setelah migrasi/rotasi password) supaya koneksi berikutnya memakai kredensial terbaru. */
+const closePool = (clientCode) => destroyPool(normalizeCode(clientCode))
 
 const closeAll = async () => {
   await Promise.all([...pools.keys()].map(destroyPool))
 }
 
 module.exports = {
-  getDb, getTenantName, listCodes, closeAll, normalizeCode,
+  getDb, getTenantName, resolveProvisioning, listCodes, closePool, closeAll, normalizeCode,
 }

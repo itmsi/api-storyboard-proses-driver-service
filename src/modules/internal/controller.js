@@ -1,25 +1,16 @@
-const migrator = require('../../database/tenant/migrator')
-const { AppError } = require('../../utils/errors')
+const provisioner = require('../../database/tenant/provisioner')
 const { ok } = require('../../utils/response')
-const { bootstrapAdmin } = require('./bootstrap-admin')
 
-// Untuk pemanggil internal, client code yang salah = 404 (bukan 401 seperti di login)
-const notFoundIfUnknown = async (fn) => {
-  try {
-    return await fn()
-  } catch (err) {
-    if (err.code === 'INVALID_CLIENT_CODE') throw new AppError('NOT_FOUND', { details: { reason: 'client_code tidak dikenal' } })
-    throw err
-  }
+const migrate = async (req, res) => ok(res, await provisioner.migrate(req.valid.params.client_id))
+
+const seed = async (req, res) => ok(res, await provisioner.seed(req.valid.params.client_id, { includeSystemUser: req.body.include_system_user }))
+
+const verify = async (req, res) => ok(res, await provisioner.verify(req.valid.params.client_id))
+
+const resetSystemUser = async (req, res) => ok(res, await provisioner.resetSystemUser(req.valid.params.client_id))
+
+const migrationStatus = async (req, res) => ok(res, provisioner.status())
+
+module.exports = {
+  migrate, seed, verify, resetSystemUser, migrationStatus,
 }
-
-const migrate = async (req, res) => ok(res, await notFoundIfUnknown(() => migrator.migrateLatest(req.valid.params.clientCode)))
-
-const migrationStatus = async (req, res) => ok(res, await notFoundIfUnknown(() => migrator.getStatus(req.valid.params.clientCode)))
-
-const createFirstAdmin = async (req, res) => {
-  const result = await notFoundIfUnknown(() => bootstrapAdmin(req.valid.params.clientCode, req.body))
-  return ok(res, result, { status: result.created ? 201 : 200 })
-}
-
-module.exports = { migrate, migrationStatus, createFirstAdmin }

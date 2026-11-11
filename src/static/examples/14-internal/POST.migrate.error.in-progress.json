@@ -1,8 +1,0 @@
-{
-  "success": false,
-  "error": {
-    "code": "MIGRATION_IN_PROGRESS",
-    "message": "Migrasi database client ini sedang berjalan.",
-    "http_status": 409
-  }
-}

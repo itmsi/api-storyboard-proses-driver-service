@@ -29,6 +29,8 @@ if (config.app.swaggerEnabled) {
   }))
 }
 
+router.use('/internal', require('../modules/internal'))
+// dipanggil saas-worker (X-Internal-Key = INTERNAL_PROVISIONING_KEY)
 router.use('/api/v1', v1)
 
 module.exports = router

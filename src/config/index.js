@@ -54,10 +54,16 @@ const config = {
     },
   },
 
-  // Multi-tenant: satu database per client (client code). Kredensial dikelola project "manage company".
+  // Multi-tenant: satu database per client (client code). Kredensial dikelola saas-api (control plane).
   tenant: {
-    // env = daftar tenant dari .env (dev); remote = ambil dari project manage company (menunggu kontraknya)
+    // env = daftar tenant dari .env (dev/test); remote = resolve ke saas-api (produksi)
     registry: str('TENANT_REGISTRY', 'env'),
+    // Password DB tenant dari saas-api terenkripsi AES-256-GCM; key HARUS sama dengan TENANT_DB_ENC_KEY di saas-api
+    encKey: str('TENANT_DB_ENC_KEY'),
+    encKeyVersion: num('TENANT_DB_ENC_KEY_VERSION', 1),
+    // Akun admin bawaan MSI (mode env/dev saja; di mode remote username dan password dari saas-api)
+    devSystemUsername: str('TENANT_DEV_SYSTEM_USERNAME', 'msi.support'),
+    devSystemPassword: str('TENANT_DEV_SYSTEM_PASSWORD', 'DevSupport-1234'),
     devCode: str('TENANT_DEV_CODE', 'OGO'),
     devName: str('TENANT_DEV_NAME', 'PT Owngo Logistics Indonesia'),
     devTenantsJson: str('TENANTS_JSON'), // opsional: JSON array tenant dev lebih dari satu
@@ -66,9 +72,19 @@ const config = {
     maxPools: num('TENANT_MAX_POOLS', 50), // jumlah tenant yang boleh terkoneksi bersamaan
   },
 
-  // Kunci antar-layanan (project manage company -> API ini) untuk endpoint /internal. Kosong = endpoint internal mati.
+  // saas-api (control plane): sumber kredensial DB tiap client
+  saas: {
+    apiUrl: str('SAAS_API_INTERNAL_URL', 'http://localhost:9061/internal').replace(/\/$/, ''),
+    timeoutMs: num('SAAS_TIMEOUT_MS', 5000),
+  },
+
+  // Kunci antar-layanan (sama dengan di saas-api).
+  //   apiKey          -> dikirim API ini ke saas-api untuk resolve tenant biasa (role app)
+  //   provisioningKey -> dikirim ke saas-api untuk resolve scope=provisioning (role owner), DAN kunci yang
+  //                      wajib dibawa saas-worker saat memanggil endpoint /internal API ini. Kosong = /internal mati.
   internal: {
     apiKey: str('INTERNAL_API_KEY'),
+    provisioningKey: str('INTERNAL_PROVISIONING_KEY'),
   },
 
   jwt: {

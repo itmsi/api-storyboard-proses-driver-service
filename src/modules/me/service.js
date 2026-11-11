@@ -71,7 +71,10 @@ const updateSettings = async (db, auth, { language }) => {
 
 /** Ganti password sendiri. Sesi di perangkat lain dicabut; sesi yang sedang dipakai tetap hidup. */
 const changePassword = async (db, auth, { current_password: current, new_password: next }) => {
-  const row = await db('users').where({ id: auth.sub }).first('password_hash')
+  const row = await db('users').where({ id: auth.sub }).first('password_hash', 'is_system')
+  if (row.is_system) {
+    throw new AppError('FORBIDDEN', { message: 'Password akun sistem dikelola oleh MSI dan tidak bisa diubah dari sini.' })
+  }
   if (!(await bcrypt.compare(current, row.password_hash))) {
     throw new AppError('VALIDATION_ERROR', { details: [{ field: 'current_password', message: 'Password saat ini salah.' }] })
   }

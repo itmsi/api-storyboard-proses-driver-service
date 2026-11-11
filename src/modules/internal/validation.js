@@ -1,18 +1,11 @@
 const Joi = require('joi')
-const { passwordRule } = require('../../utils/password')
 
 const clientParams = Joi.object({
-  clientCode: Joi.string().trim().uppercase().pattern(/^[A-Z0-9_-]{2,32}$/)
-    .required(),
+  client_id: Joi.string().trim().pattern(/^[A-Za-z0-9_-]{1,64}$/).required(),
 })
 
-const bootstrapAdmin = Joi.object({
-  username: Joi.string().trim().pattern(/^[A-Za-z0-9._-]{3,60}$/).required(),
-  name: Joi.string().trim().min(2).max(120)
-    .required(),
-  email: Joi.string().trim().email().max(150)
-    .required(),
-  password: passwordRule.required(),
-})
+const seedBody = Joi.object({
+  include_system_user: Joi.boolean().default(true),
+}).default({ include_system_user: true })
 
-module.exports = { clientParams, bootstrapAdmin }
+module.exports = { clientParams, seedBody }

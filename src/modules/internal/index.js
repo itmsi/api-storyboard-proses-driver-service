@@ -9,17 +9,11 @@ const router = express.Router()
 
 router.use(internalAuth)
 
-// POST /api/v1/internal/tenants/:clientCode/migrate
-router.post('/tenants/:clientCode/migrate', validate({ params: schema.clientParams }), asyncHandler(controller.migrate))
-
-// GET /api/v1/internal/tenants/:clientCode/migration-status
-router.get('/tenants/:clientCode/migration-status', validate({ params: schema.clientParams }), asyncHandler(controller.migrationStatus))
-
-// POST /api/v1/internal/tenants/:clientCode/bootstrap-admin  (admin pertama perusahaan)
-router.post(
-  '/tenants/:clientCode/bootstrap-admin',
-  validate({ params: schema.clientParams, body: schema.bootstrapAdmin }),
-  asyncHandler(controller.createFirstAdmin)
-)
+// Dipanggil saas-worker (di-mount di /internal, tanpa /api/v1)
+router.get('/migrations/status', asyncHandler(controller.migrationStatus))
+router.post('/tenants/:client_id/migrate', validate({ params: schema.clientParams }), asyncHandler(controller.migrate))
+router.post('/tenants/:client_id/seed', validate({ params: schema.clientParams, body: schema.seedBody }), asyncHandler(controller.seed))
+router.get('/tenants/:client_id/verify', validate({ params: schema.clientParams }), asyncHandler(controller.verify))
+router.post('/tenants/:client_id/system-user/reset', validate({ params: schema.clientParams }), asyncHandler(controller.resetSystemUser))
 
 module.exports = router
