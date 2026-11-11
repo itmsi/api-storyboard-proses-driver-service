@@ -43,7 +43,7 @@ module.exports = {
   // ===================== Driver =====================
   '/drivers': {
     get: {
-      tags: ['Admin - Driver'],
+      tags: ['Pengguna'],
       summary: 'Daftar driver',
       security: secured,
       parameters: listParams(['name', 'code', 'created_at', 'last_login_at'], 'Cari nama, kode, atau No. HP (sebagian)'),
@@ -53,7 +53,7 @@ module.exports = {
       },
     },
     post: {
-      tags: ['Admin - Driver'],
+      tags: ['Pengguna'],
       summary: 'Buat akun driver',
       description: 'Membuat login + profil driver dalam satu langkah. Kode driver otomatis (`DRV-0001`, …) jika `code` kosong. '
         + 'Jika `password` kosong, dibuatkan password sementara dan **dikembalikan sekali** di `initial_password`. '
@@ -68,7 +68,7 @@ module.exports = {
   },
   '/drivers/{id}': {
     get: {
-      tags: ['Admin - Driver'],
+      tags: ['Pengguna'],
       summary: 'Detail driver',
       description: 'Termasuk DO yang sedang berjalan (`active_do`) dan jumlah gagal login.',
       security: secured,
@@ -76,7 +76,7 @@ module.exports = {
       responses: { 200: jsonResponse('OK', envelope(ref('AdminDriverDetail'))), ...withValidation, ...notFound },
     },
     put: {
-      tags: ['Admin - Driver'],
+      tags: ['Pengguna'],
       summary: 'Ubah data driver',
       description: '`status=suspended` mencabut semua sesi driver dan menolak login berikutnya (403). Isi minimal satu field.',
       security: secured,
@@ -85,7 +85,7 @@ module.exports = {
       responses: { 200: jsonResponse('OK', envelope(ref('AdminDriverDetail'))), ...withValidation, ...notFound },
     },
     delete: {
-      tags: ['Admin - Driver'],
+      tags: ['Pengguna'],
       summary: 'Hapus driver (soft delete)',
       description: 'Ditolak 409 `INVALID_STATE` jika driver masih punya DO berjalan. Data lama tetap ada; kode driver yang sudah dihapus tidak dipakai ulang.',
       security: secured,
@@ -100,7 +100,7 @@ module.exports = {
   },
   '/drivers/{id}/reset-password': {
     post: {
-      tags: ['Admin - Driver'],
+      tags: ['Pengguna'],
       summary: 'Reset password driver',
       description: 'Semua sesi driver habis dan akun dibuka kuncinya. Tanpa `password` dibuatkan password sementara (dikembalikan sekali).',
       security: secured,
@@ -111,7 +111,7 @@ module.exports = {
   },
   '/drivers/{id}/unlock': {
     post: {
-      tags: ['Admin - Driver'],
+      tags: ['Pengguna'],
       summary: 'Buka kunci akun driver',
       description: 'Untuk akun yang terkunci sementara karena salah password berkali-kali.',
       security: secured,
@@ -123,14 +123,14 @@ module.exports = {
   // ===================== Akun admin =====================
   '/users': {
     get: {
-      tags: ['Admin - Pengguna'],
+      tags: ['Pengguna'],
       summary: 'Daftar akun admin perusahaan',
       security: secured,
       parameters: listParams(['name', 'username', 'created_at', 'last_login_at'], 'Cari nama, username, atau email (sebagian)'),
       responses: { 200: jsonResponse('OK', paged('AdminUser')), ...withValidation },
     },
     post: {
-      tags: ['Admin - Pengguna'],
+      tags: ['Pengguna'],
       summary: 'Buat akun admin',
       description: 'Username dan email unik (tidak membedakan huruf besar/kecil). Tanpa `password` dibuatkan password sementara (dikembalikan sekali).',
       security: secured,
@@ -140,14 +140,14 @@ module.exports = {
   },
   '/users/{id}': {
     get: {
-      tags: ['Admin - Pengguna'],
+      tags: ['Pengguna'],
       summary: 'Detail akun admin',
       security: secured,
       parameters: idPath,
       responses: { 200: jsonResponse('OK', envelope(ref('AdminUser'))), ...withValidation, ...notFound },
     },
     put: {
-      tags: ['Admin - Pengguna'],
+      tags: ['Pengguna'],
       summary: 'Ubah akun admin',
       description: 'Menonaktifkan akun mencabut semua sesinya dan berlaku seketika (token yang belum kedaluwarsa pun ditolak). '
         + 'Tidak bisa menonaktifkan diri sendiri (409 `CONFLICT`).',
@@ -162,7 +162,7 @@ module.exports = {
       },
     },
     delete: {
-      tags: ['Admin - Pengguna'],
+      tags: ['Pengguna'],
       summary: 'Hapus akun admin (soft delete)',
       description: 'Tidak bisa menghapus diri sendiri. Username dan email boleh dipakai lagi setelah dihapus.',
       security: secured,
@@ -177,7 +177,7 @@ module.exports = {
   },
   '/users/{id}/reset-password': {
     post: {
-      tags: ['Admin - Pengguna'],
+      tags: ['Pengguna'],
       summary: 'Reset password akun admin',
       description: 'Sesi akun itu dicabut (kecuali mereset akun sendiri). Tanpa `password` dibuatkan password sementara (dikembalikan sekali).',
       security: secured,

@@ -22,7 +22,7 @@ const paged = (item) => envelope(arr(ref(item)), ref('PageMeta'))
 module.exports = {
   '/delivery-orders': {
     post: {
-      tags: ['Admin - Delivery Order'],
+      tags: ['Delivery Order'],
       summary: 'Buat dan tugaskan DO (admin)',
       description: [
         'Nomor DO otomatis (`DO-0001`, …). Alamat asal dan tujuan **disalin** ke DO, jadi mengubah lokasi master tidak mengubah DO.',
@@ -36,7 +36,7 @@ module.exports = {
   },
   '/delivery-orders/{id}': {
     put: {
-      tags: ['Admin - Delivery Order'],
+      tags: ['Delivery Order'],
       summary: 'Ubah DO (admin)',
       description: [
         'Hanya saat DO masih `assigned` (belum diterima driver). Kirim hanya field yang ingin diubah; `cargo` juga boleh sebagian.',
@@ -56,7 +56,7 @@ module.exports = {
   },
   '/delivery-orders/{id}/cancel': {
     post: {
-      tags: ['Admin - Delivery Order'],
+      tags: ['Delivery Order'],
       summary: 'Batalkan DO (admin)',
       description: [
         'Dari status mana pun selain `completed`. Foto, biaya, dan jejak yang sudah ada tidak dihapus.',
@@ -78,7 +78,7 @@ module.exports = {
   // ===================== Penugasan unit harian =====================
   '/unit-assignments': {
     get: {
-      tags: ['Admin - Penugasan Unit'],
+      tags: ['Master Data'],
       summary: 'Daftar penugasan unit pada satu tanggal',
       description: 'Tanpa `date`: hari ini. Satu driver satu unit per hari; satu unit boleh dipakai beberapa driver di hari yang sama.',
       security: secured,
@@ -104,7 +104,7 @@ module.exports = {
       responses: { 200: jsonResponse('OK', paged('UnitAssignment')), ...withValidation },
     },
     put: {
-      tags: ['Admin - Penugasan Unit'],
+      tags: ['Master Data'],
       summary: 'Tugaskan unit ke driver (buat atau ganti)',
       description: [
         'Membuat penugasan (201), atau mengganti unit penugasan yang sudah ada untuk driver dan tanggal yang sama (200). Memanggil ulang dengan data yang sama aman (200).',
@@ -123,14 +123,14 @@ module.exports = {
   },
   '/unit-assignments/{id}': {
     get: {
-      tags: ['Admin - Penugasan Unit'],
+      tags: ['Master Data'],
       summary: 'Detail penugasan unit',
       security: secured,
       parameters: idPath,
       responses: { 200: jsonResponse('OK', envelope(ref('UnitAssignment'))), ...withValidation, ...notFound },
     },
     delete: {
-      tags: ['Admin - Penugasan Unit'],
+      tags: ['Master Data'],
       summary: 'Cabut penugasan unit',
       description: 'Ditolak 409 `CONFLICT` jika driver sudah mulai bekerja dengan unit itu (P2H sudah dibuat atau DO sedang berjalan).',
       security: secured,

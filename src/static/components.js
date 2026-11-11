@@ -14,7 +14,7 @@ const dt = (example = '2026-11-05T07:30:00+07:00', extra = {}) => ({
 const date = (example = '2026-11-05') => ({ type: 'string', format: 'date', example })
 const arr = (items, extra = {}) => ({ type: 'array', items, ...extra })
 const obj = (properties, required, extra = {}) => ({
-  type: 'object', properties, ...(required ? { required } : {}), ...extra,
+  type: 'object', properties, ...(required && required.length ? { required } : {}), ...extra,
 })
 const nullable = (schema) => ({ ...schema, nullable: true })
 const enumOf = (values, example = values[0], extra = {}) => ({
@@ -593,6 +593,8 @@ const schemas = {
     name: str('Budi Admin'),
     settings: obj({ language: enumOf(['id', 'en', 'zh']) }),
     status: enumOf(['active', 'suspended']),
+    role: nullable(obj({ id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90'), name: str('Administrator'), is_system: bool(true) })),
+    permissions: obj({}, [], { description: 'Hak akses dari role: { <modul>: [read, create, update, delete] }. Dipakai FE untuk menyembunyikan menu; server tetap memeriksa di setiap request.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read', 'create', 'update', 'delete'] } }),
     last_login_at: nullable(dt('2026-11-05T07:00:00+07:00')),
     ...auditProps,
   }),
@@ -653,6 +655,7 @@ const schemas = {
     phone: nullable(str('+6281234567890')),
     name: str('Budi Admin'),
     status: enumOf(['active', 'suspended']),
+    role: nullable(obj({ id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90'), name: str('Administrator'), is_system: bool(true) })),
     last_login_at: nullable(dt('2026-11-05T07:00:00+07:00')),
     locked: bool(false),
     initial_password: str('Kp7mQ3xZ9t', { description: 'Hanya di response pembuatan, dan hanya jika `password` tidak diisi' }),
@@ -663,6 +666,7 @@ const schemas = {
     username: str('budi.admin', { description: 'Huruf, angka, ".", "_", "-" (3-60 karakter); tidak membedakan huruf besar/kecil' }),
     email: str('budi@contoh.co.id'),
     phone: nullable(str('0812-3456-7890')),
+    role_id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90', { format: 'uuid', description: 'Role hak akses (lihat /roles). Kosong = role Administrator, yang hanya boleh diberikan admin dengan hak setara.' }),
     password: str('<password>', { format: 'password', description: 'Kosong = dibuatkan password sementara' }),
   }, ['name', 'username', 'email']),
   AdminUserUpdate: obj({
@@ -670,7 +674,38 @@ const schemas = {
     email: str('budi@contoh.co.id'),
     phone: nullable(str('0812-3456-7890')),
     status: { ...enumOf(['active', 'suspended']), description: 'Tidak bisa menonaktifkan diri sendiri' },
+    role_id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90', { format: 'uuid', description: 'Pindah role. Tidak boleh melebihi hak admin yang mengubah, dan Administrator aktif terakhir tidak bisa dipindah.' }),
   }),
+  // ---------- Admin - Role & Hak Akses ----------
+  AdminRole: obj({
+    id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90'),
+    code: str('operasional'),
+    name: str('Staf Operasional'),
+    description: nullable(str('Mengelola unit dan customer')),
+    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
+    is_system: bool(false, { description: 'true = role bawaan Administrator: semua hak, tidak bisa diubah atau dihapus' }),
+    is_active: bool(true, { description: 'Role nonaktif: akun yang memakainya ditolak (403 role_nonaktif)' }),
+    user_count: int(2, { description: 'Jumlah akun admin yang memakai role ini' }),
+    ...auditProps,
+  }),
+  AdminRoleCreate: obj({
+    name: str('Staf Operasional'),
+    code: str('operasional', { description: 'Huruf kecil, angka, "_", "-" (2-40). Kosong = dibuat dari nama.' }),
+    description: nullable(str('Mengelola unit dan customer')),
+    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
+    is_active: bool(true),
+  }, ['name', 'permissions']),
+  AdminRoleUpdate: obj({
+    name: str('Staf Operasional'),
+    description: nullable(str('Mengelola unit dan customer')),
+    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
+    is_active: bool(true),
+  }),
+  PermissionCatalog: obj({
+    actions: arr(str('read'), { example: ['read', 'create', 'update', 'delete'] }),
+    resources: arr(obj({ key: str('delivery_orders'), label: str('Delivery order'), actions: arr(str('read')) })),
+  }),
+
   // ---------- Admin - P2H & Media ----------
   AdminP2HListItem: obj({
     id: str('8f2c1a64-5b3d-4e7a-9c10-6d2e4f8a1b35'),

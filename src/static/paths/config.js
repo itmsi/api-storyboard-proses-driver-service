@@ -42,14 +42,14 @@ const listParams = (sortHint) => [
 module.exports = {
   '/p2h-items': {
     get: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Daftar item checklist P2H',
       security: secured,
       parameters: listParams('sort_order (default), label, code, created_at; awalan `-` = menurun'),
       responses: { 200: jsonResponse('OK', paged('AdminP2HItem')), ...withValidation },
     },
     post: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Tambah item checklist P2H',
       description: 'Berlaku untuk P2H yang dibuat sesudahnya: semua item aktif wajib dijawab driver. Menaikkan `config_version`.',
       security: secured,
@@ -59,14 +59,14 @@ module.exports = {
   },
   '/p2h-items/{code}': {
     get: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Detail item checklist P2H',
       security: secured,
       parameters: codePath('item'),
       responses: { 200: jsonResponse('OK', envelope(ref('AdminP2HItem'))), ...withValidation, ...notFound },
     },
     put: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Ubah item checklist P2H',
       description: [
         'Kirim hanya field yang ingin diubah. Kode tidak bisa diubah. Untuk menyembunyikan sementara pakai `is_active: false`; untuk menghapus pakai `DELETE`.',
@@ -83,7 +83,7 @@ module.exports = {
       },
     },
     delete: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Hapus item checklist P2H (soft delete)',
       description: 'Item hilang dari checklist dan daftar, tetapi jawaban P2H lama tetap utuh. Kode yang sudah dihapus tidak bisa dibuat ulang. Item aktif terakhir tidak bisa dihapus (409 `CONFLICT`, `details.reason = item_aktif_terakhir`). Menaikkan `config_version`.',
       security: secured,
@@ -99,14 +99,14 @@ module.exports = {
 
   '/expense-categories': {
     get: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Daftar kategori biaya',
       security: secured,
       parameters: listParams('sort_order (default), label, code, created_at; awalan `-` = menurun'),
       responses: { 200: jsonResponse('OK', paged('AdminExpenseCategory')), ...withValidation },
     },
     post: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Tambah kategori biaya',
       description: 'Kategori aktif langsung muncul di `expense_categories` pada `GET /config` driver. Menaikkan `config_version`.',
       security: secured,
@@ -116,14 +116,14 @@ module.exports = {
   },
   '/expense-categories/{code}': {
     get: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Detail kategori biaya',
       security: secured,
       parameters: codePath('kategori'),
       responses: { 200: jsonResponse('OK', envelope(ref('AdminExpenseCategory'))), ...withValidation, ...notFound },
     },
     put: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Ubah kategori biaya',
       description: [
         'Kirim hanya field yang ingin diubah. Kode tidak bisa diubah. Untuk menyembunyikan sementara pakai `is_active: false`; untuk menghapus pakai `DELETE`.',
@@ -140,7 +140,7 @@ module.exports = {
       },
     },
     delete: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Hapus kategori biaya (soft delete)',
       description: 'Kategori hilang dari daftar dan dari `GET /config` driver, tetapi biaya lama tetap merujuknya. Kode yang sudah dihapus tidak bisa dibuat ulang. Kategori aktif terakhir tidak bisa dihapus (409 `CONFLICT`, `details.reason = kategori_aktif_terakhir`). Menaikkan `config_version`.',
       security: secured,
@@ -156,14 +156,14 @@ module.exports = {
 
   '/settings': {
     get: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Pengaturan aplikasi yang berlaku',
       description: 'Nilai bawaan ditambah perubahan perusahaan ini. Kategori biaya dikelola lewat `/expense-categories`, checklist P2H lewat `/p2h-items`.',
       security: secured,
       responses: { 200: jsonResponse('OK', envelope(ref('AdminSettings'))), ...errors },
     },
     put: {
-      tags: ['Admin - Konfigurasi'],
+      tags: ['Konfigurasi'],
       summary: 'Ubah pengaturan aplikasi',
       description: [
         'Kirim hanya yang ingin diubah; tiap kelompok digabung dengan nilai sekarang (mis. `modules: { receipt_ocr: false }` tidak mengubah flag lain). Kunci yang tidak dikenal ditolak 422.',

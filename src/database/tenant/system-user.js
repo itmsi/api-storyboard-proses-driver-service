@@ -24,6 +24,10 @@ const upsertSystemUser = async (db, { username, password }) => {
     await db('users').where({ id: existing.id }).update({
       username, password_hash: passwordHash, status: 'active', failed_login_count: 0, locked_until: null,
     })
+    // Akun sistem selalu Administrator (juga untuk akun yang dibuat sebelum ada role)
+    await db('users').where({ id: existing.id }).whereNull('role_id').update({
+      role_id: db('roles').where({ is_system: true, is_delete: false }).select('id').limit(1),
+    })
     // Password berganti: semua sesi lama akun ini tidak boleh hidup terus
     await db('refresh_tokens').where({ user_id: existing.id }).whereNull('revoked_at').update({ revoked_at: db.fn.now() })
     return { action: 'updated', id: existing.id }
@@ -32,10 +36,12 @@ const upsertSystemUser = async (db, { username, password }) => {
   const clash = await db('users').whereRaw('lower(username) = lower(?)', [username]).where({ is_delete: false }).first('id')
   if (clash) throw new AppError('CONFLICT', { message: `Username "${username}" sudah dipakai akun perusahaan.`, details: { reason: 'system_user_bentrok' } })
 
+  const administrator = await db('roles').where({ is_system: true, is_delete: false }).first('id')
   const [created] = await db('users').insert({
     username,
     name: 'MSI Support',
     role: 'admin',
+    role_id: administrator ? administrator.id : null,
     status: 'active',
     is_system: true,
     password_hash: passwordHash,

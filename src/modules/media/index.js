@@ -1,6 +1,7 @@
 const express = require('express')
 const { authenticate, authorize } = require('../../middlewares/auth')
 const { adminGuard, activeAdminOnly } = require('../../middlewares/admin-guard')
+const { can, adminCan } = require('../../middlewares/permit')
 const { imageUpload } = require('../../middlewares/upload')
 const { validate } = require('../../middlewares/validate')
 const { asyncHandler } = require('../../utils/response')
@@ -21,12 +22,12 @@ router.post(
 )
 
 // POST /api/v1/media/get  (admin: daftar dengan filter di body)
-router.post('/get', adminGuard, validate({ body: schema.list }), asyncHandler(controller.list))
+router.post('/get', adminGuard, can('media', 'read'), validate({ body: schema.list }), asyncHandler(controller.list))
 
 // GET /api/v1/media/:id  (admin: semua; driver: foto miliknya)
-router.get('/:id', authenticate, authorize('driver', 'admin'), activeAdminOnly, validate({ params: schema.idParams }), asyncHandler(controller.get))
+router.get('/:id', authenticate, authorize('driver', 'admin'), activeAdminOnly, adminCan('media', 'read'), validate({ params: schema.idParams }), asyncHandler(controller.get))
 
 // DELETE /api/v1/media/:id  (admin, hapus lunak; ditolak jika masih dipakai)
-router.delete('/:id', adminGuard, validate({ params: schema.idParams }), asyncHandler(controller.remove))
+router.delete('/:id', adminGuard, can('media', 'delete'), validate({ params: schema.idParams }), asyncHandler(controller.remove))
 
 module.exports = router

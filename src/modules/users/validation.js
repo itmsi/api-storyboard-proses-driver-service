@@ -8,6 +8,7 @@ const idParams = Joi.object({
 
 const list = listQuery.keys({
   status: Joi.string().valid('active', 'suspended'),
+  role_id: Joi.string().guid(),
 })
 
 const email = Joi.string().trim().email().max(150)
@@ -20,6 +21,8 @@ const create = Joi.object({
     .messages({ 'string.pattern.base': 'Username hanya boleh huruf, angka, ".", "_", "-" (3-60 karakter).' }),
   email: email.required(),
   phone: Joi.string().trim().max(30).allow(null, ''),
+  // Role menentukan hak akses (lihat /roles). Kosong = role Administrator (hanya boleh oleh admin dengan hak setara)
+  role_id: Joi.string().guid(),
   // Kosong = dibuatkan password sementara (dikembalikan sekali di response)
   password: passwordRule,
 })
@@ -29,6 +32,7 @@ const update = Joi.object({
   email,
   phone: Joi.string().trim().max(30).allow(null, ''),
   status: Joi.string().valid('active', 'suspended'),
+  role_id: Joi.string().guid(),
 }).min(1)
 
 const resetPassword = Joi.object({

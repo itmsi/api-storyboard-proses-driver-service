@@ -3,6 +3,7 @@ const { AppError } = require('../../utils/errors')
 const { auditFields, withAuditNames } = require('../../utils/audit')
 const { wibDate, toWib } = require('../../utils/date')
 const password = require('../../utils/password')
+const permissions = require('../../utils/permissions')
 const { getPending } = require('../sync/pending')
 const authRepo = require('../auth/repository')
 const repo = require('./repository')
@@ -30,8 +31,14 @@ const getDriverProfile = async (db, auth) => {
 /** Profil admin (web). */
 const getAdminProfile = async (db, auth) => {
   const row = await withAuditNames(
-    db('users').where({ 'users.id': auth.sub, 'users.role': 'admin', 'users.is_delete': false })
+    db('users')
+      .leftJoin('roles', 'roles.id', 'users.role_id')
+      .where({ 'users.id': auth.sub, 'users.role': 'admin', 'users.is_delete': false })
       .select(
+        'roles.name as role_name',
+        'roles.is_system as role_is_system',
+        'roles.permissions as role_permissions',
+        'users.role_id',
         'users.id',
         'users.username',
         'users.email',
@@ -56,6 +63,9 @@ const getAdminProfile = async (db, auth) => {
     name: row.name,
     settings: { language: row.language },
     status: row.status,
+    // Hak akses dari role (dipakai FE untuk menyembunyikan menu); server tetap memeriksa di setiap request
+    role: row.role_id ? { id: row.role_id, name: row.role_name, is_system: Boolean(row.role_is_system) } : null,
+    permissions: row.role_is_system ? permissions.all() : (row.role_permissions || {}),
     last_login_at: toWib(row.last_login_at),
     ...auditFields(row),
   }

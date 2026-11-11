@@ -41,12 +41,12 @@ const paged = (item) => envelope({ type: 'array', items: ref(item) }, ref('PageM
 
 /** Lima operasi CRUD standar untuk satu resource. */
 const crud = ({
-  tag, base, schemaName, sortValues, searchHint, listExtra, createDesc, deleteDesc, deleteGuard, updateDesc,
+  tag, label, base, schemaName, sortValues, searchHint, listExtra, createDesc, deleteDesc, deleteGuard, updateDesc,
 }) => ({
   [base]: {
     get: {
       tags: [tag],
-      summary: `Daftar ${tag.replace('Admin - ', '').toLowerCase()}`,
+      summary: `Daftar ${label}`,
       security: secured,
       parameters: listParams(sortValues, searchHint, listExtra),
       responses: { 200: jsonResponse('OK', paged(schemaName)), ...withValidation },
@@ -92,7 +92,8 @@ const crud = ({
 
 module.exports = {
   ...crud({
-    tag: 'Admin - Master Data',
+    tag: 'Master Data',
+    label: 'tipe unit',
     base: '/unit-types',
     schemaName: 'AdminUnitType',
     sortValues: ['name', 'code', 'max_load_kg', 'created_at'],
@@ -102,7 +103,8 @@ module.exports = {
     deleteGuard: 'Tipe unit masih dipakai unit',
   }),
   ...crud({
-    tag: 'Admin - Master Data',
+    tag: 'Master Data',
+    label: 'unit',
     base: '/units',
     schemaName: 'AdminUnit',
     sortValues: ['plate', 'status', 'type', 'year', 'created_at'],
@@ -118,7 +120,8 @@ module.exports = {
     deleteGuard: 'Unit masih dipakai DO atau penugasan',
   }),
   ...crud({
-    tag: 'Admin - Master Data',
+    tag: 'Master Data',
+    label: 'customer',
     base: '/customers',
     schemaName: 'AdminCustomer',
     sortValues: ['name', 'code', 'created_at'],
@@ -128,7 +131,8 @@ module.exports = {
     deleteGuard: 'Customer masih dipakai DO atau punya lokasi',
   }),
   ...crud({
-    tag: 'Admin - Master Data',
+    tag: 'Master Data',
+    label: 'lokasi',
     base: '/locations',
     schemaName: 'AdminLocation',
     sortValues: ['name', 'type', 'city', 'created_at'],

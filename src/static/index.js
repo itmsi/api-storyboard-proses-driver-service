@@ -73,10 +73,15 @@ const paths = addAssignmentPost(convertListEndpoints(mergePaths(
   require('./paths/accounts'),
   require('./paths/master-data'),
   require('./paths/admin-crud'),
+  require('./paths/roles'),
   require('./paths/internal')
 )))
 
-const description = 'API backend aplikasi OGO Driver (Android): P2H unit, delivery order, foto muat/bongkar, odometer, biaya perjalanan, serah terima, dan sync offline.'
+const description = [
+  'API backend aplikasi OGO Driver (Android): P2H unit, delivery order, foto muat/bongkar, odometer, biaya perjalanan, serah terima, dan sync offline.',
+  '',
+  'Catatan hak akses: endpoint pengelolaan (admin) hanya bisa dipakai akun admin yang rolenya punya hak modul dan aksi terkait; jika tidak, 403 dengan details.required = modul:aksi. Lihat tag Pengguna (role dan permissions).',
+].join('\n')
 
 const index = {
   openapi: '3.0.3',
@@ -95,17 +100,12 @@ const index = {
     { name: 'Akun', description: 'Profil, pengaturan, perangkat' },
     { name: 'Media', description: 'Upload foto dari kamera (driver); daftar, detail, dan hapus lunak (admin)' },
     { name: 'P2H', description: 'Pemeriksaan harian unit (driver); daftar, detail, koreksi, hapus lunak, dan minta ulang (admin)' },
-    { name: 'Delivery Order', description: 'DO ditugaskan, berjalan, riwayat, terima DO' },
-    { name: 'Perjalanan', description: 'Muat, odometer, biaya, serah terima, ringkasan, selesai' },
+    { name: 'Delivery Order', description: 'DO milik driver (ditugaskan, berjalan, riwayat, terima) dan pengelolaan DO oleh admin (daftar, detail, buat, ubah, batalkan). Isi daftar dan detail mengikuti akun yang login.' },
+    { name: 'Perjalanan', description: 'Muat, odometer, biaya, serah terima, ringkasan, selesai (driver); biaya perjalanan dan rekap uang jalan (admin)' },
     { name: 'Sync', description: 'Antrean offline' },
-    { name: 'Admin - Pengguna', description: 'Kelola akun admin perusahaan (hanya admin)' },
-    { name: 'Admin - Delivery Order', description: 'Buat, ubah, dan batalkan DO oleh admin (daftar dan detail memakai endpoint DO yang sama, isinya mengikuti peran)' },
-    { name: 'Admin - Penugasan Unit', description: 'Penugasan unit harian per driver (hanya admin)' },
-    { name: 'Admin - Biaya', description: 'Lihat bukti biaya dan batalkan biaya yang tidak sah (hanya admin)' },
-    { name: 'Admin - Rekap Uang Jalan', description: 'Rekap selisih uang jalan per DO dan penandaan sudah disetor/dibayar (hanya admin)' },
-    { name: 'Admin - Konfigurasi', description: 'Checklist P2H, kategori biaya, dan pengaturan aplikasi per perusahaan (hanya admin); setiap perubahan menaikkan config_version' },
-    { name: 'Admin - Master Data', description: 'Tipe unit, unit, customer, lokasi (hanya admin)' },
-    { name: 'Admin - Driver', description: 'Kelola akun driver (hanya admin): buat, ubah, nonaktifkan, reset password, buka kunci' },
+    { name: 'Pengguna', description: 'Akun driver, akun admin, role, dan hak akses CRUD per modul' },
+    { name: 'Master Data', description: 'Tipe unit, unit, customer, lokasi, dan penugasan unit harian' },
+    { name: 'Konfigurasi', description: 'Checklist P2H, kategori biaya, dan pengaturan aplikasi per perusahaan; setiap perubahan menaikkan config_version' },
     { name: 'Internal', description: 'Antar-layanan (saas-worker), di root /internal (bukan /api/v1): migrasi, seed, verifikasi database client. Header X-Internal-Key.' },
   ],
   paths,

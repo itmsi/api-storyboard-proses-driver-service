@@ -63,7 +63,7 @@ module.exports = {
   // ===================== Biaya =====================
   '/expenses': {
     get: {
-      tags: ['Admin - Biaya'],
+      tags: ['Perjalanan'],
       summary: 'Daftar biaya perjalanan (admin)',
       description: 'Biaya semua DO, lengkap dengan bukti foto dan hasil pemeriksaan struk (`receipt.checks`). Biaya yang dibatalkan tetap tampil dengan `voided` terisi.',
       security: secured,
@@ -88,7 +88,7 @@ module.exports = {
   },
   '/expenses/{id}': {
     get: {
-      tags: ['Admin - Biaya'],
+      tags: ['Perjalanan'],
       summary: 'Detail biaya (admin)',
       security: secured,
       parameters: idPath,
@@ -97,7 +97,7 @@ module.exports = {
   },
   '/expenses/{id}/void': {
     post: {
-      tags: ['Admin - Biaya'],
+      tags: ['Perjalanan'],
       summary: 'Batalkan biaya (admin)',
       description: [
         'Untuk biaya yang tidak sah atau salah catat. Biaya tidak dihapus (jejak tetap ada), tetapi tidak dihitung lagi: total biaya DO dihitung ulang, '
@@ -121,7 +121,7 @@ module.exports = {
   // ===================== Rekap uang jalan =====================
   '/settlements': {
     get: {
-      tags: ['Admin - Rekap Uang Jalan'],
+      tags: ['Perjalanan'],
       summary: 'Daftar rekap uang jalan',
       description: 'Satu baris per DO selesai: selisih uang jalan dan total biaya. `meta.summary` berisi total sisa disetor, total kurang bayar, dan jumlah yang belum diselesaikan '
         + 'untuk **semua** hasil filter (bukan hanya halaman ini).',
@@ -144,7 +144,7 @@ module.exports = {
   },
   '/settlements/{id}': {
     get: {
-      tags: ['Admin - Rekap Uang Jalan'],
+      tags: ['Perjalanan'],
       summary: 'Detail rekap uang jalan',
       description: '`id` = id delivery order (satu DO punya paling banyak satu rekap, dibuat saat driver menyelesaikan DO).',
       security: secured,
@@ -154,7 +154,7 @@ module.exports = {
   },
   '/settlements/{id}/settle': {
     post: {
-      tags: ['Admin - Rekap Uang Jalan'],
+      tags: ['Perjalanan'],
       summary: 'Tandai sudah disetor / dibayar',
       description: [
         '`id` = id delivery order. Menandai bahwa sisa uang jalan sudah disetor ke perusahaan (`refund_to_company`) atau kekurangannya sudah dibayar ke driver (`payable_to_driver`).',

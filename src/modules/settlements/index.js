@@ -1,5 +1,6 @@
 const express = require('express')
 const { adminGuard } = require('../../middlewares/admin-guard')
+const { permit } = require('../../middlewares/permit')
 const { validate } = require('../../middlewares/validate')
 const { asyncHandler } = require('../../utils/response')
 const schema = require('./validation')
@@ -9,6 +10,7 @@ const router = express.Router()
 
 // Di-mount di /settlements (khusus admin). id di path = id delivery order.
 router.use(adminGuard)
+router.use(permit('settlements'))
 
 router.post('/get', validate({ body: schema.list }), asyncHandler(controller.list))
 router.get('/:id', validate({ params: schema.idParams }), asyncHandler(controller.get))

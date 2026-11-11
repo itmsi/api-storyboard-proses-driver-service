@@ -9,8 +9,9 @@ exports.seed = async (knex) => {
 
   const hash = await bcrypt.hash(DEV_PASSWORD, 10)
   // Id dibuat database (gen_random_uuid), seed dicari lewat username supaya aman dijalankan ulang
+  const administrator = await knex('roles').where({ is_system: true, is_delete: false }).first('id')
   await knex('users').insert({
-    username: 'admin', phone: null, email: 'admin@contoh.co.id', password_hash: hash, role: 'admin', name: 'Admin OGO',
+    username: 'admin', phone: null, email: 'admin@contoh.co.id', password_hash: hash, role: 'admin', role_id: administrator.id, name: 'Admin OGO',
   }).onConflict().ignore()
   const adminId = (await knex('users').where({ username: 'admin' }).first('id')).id
 
