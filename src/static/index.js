@@ -10,12 +10,24 @@
 const pkg = require('../../package.json')
 const components = require('./components')
 
-const paths = {
-  ...require('./paths/app-auth'),
-  ...require('./paths/media-p2h'),
-  ...require('./paths/delivery-orders'),
-  ...require('./paths/internal'),
-}
+// Beberapa path dipakai driver dan admin (mis. /delivery-orders). Digabung per metode HTTP supaya tiap file cukup
+// mendeskripsikan operasinya sendiri.
+const mergePaths = (...groups) => groups.reduce((all, group) => Object.entries(group).reduce(
+  (merged, [path, operations]) => ({ ...merged, [path]: { ...(merged[path] || {}), ...operations } }),
+  all
+), {})
+
+const paths = mergePaths(
+  require('./paths/app-auth'),
+  require('./paths/media-p2h'),
+  require('./paths/delivery-orders'),
+  require('./paths/orders'),
+  require('./paths/operations'),
+  require('./paths/config'),
+  require('./paths/accounts'),
+  require('./paths/master-data'),
+  require('./paths/internal')
+)
 
 const description = 'API backend aplikasi OGO Driver (Android): P2H unit, delivery order, foto muat/bongkar, odometer, biaya perjalanan, serah terima, dan sync offline.'
 
@@ -39,6 +51,15 @@ const index = {
     { name: 'Delivery Order', description: 'DO ditugaskan, berjalan, riwayat, terima DO' },
     { name: 'Perjalanan', description: 'Muat, odometer, biaya, serah terima, ringkasan, selesai' },
     { name: 'Sync', description: 'Antrean offline' },
+    { name: 'Admin - Pengguna', description: 'Kelola akun admin perusahaan (hanya admin)' },
+    { name: 'Admin - Delivery Order', description: 'Buat, ubah, dan batalkan DO oleh admin (daftar dan detail memakai endpoint DO yang sama, isinya mengikuti peran)' },
+    { name: 'Admin - Penugasan Unit', description: 'Penugasan unit harian per driver (hanya admin)' },
+    { name: 'Admin - P2H', description: 'Minta P2H ulang (hanya admin)' },
+    { name: 'Admin - Biaya', description: 'Lihat bukti biaya dan batalkan biaya yang tidak sah (hanya admin)' },
+    { name: 'Admin - Rekap Uang Jalan', description: 'Rekap selisih uang jalan per DO dan penandaan sudah disetor/dibayar (hanya admin)' },
+    { name: 'Admin - Konfigurasi', description: 'Checklist P2H, kategori biaya, dan pengaturan aplikasi per perusahaan (hanya admin); setiap perubahan menaikkan config_version' },
+    { name: 'Admin - Master Data', description: 'Tipe unit, unit, customer, lokasi (hanya admin)' },
+    { name: 'Admin - Driver', description: 'Kelola akun driver (hanya admin): buat, ubah, nonaktifkan, reset password, buka kunci' },
     { name: 'Internal', description: 'Antar-layanan (project manage company): migrasi database client. Header X-Internal-Key.' },
   ],
   paths,

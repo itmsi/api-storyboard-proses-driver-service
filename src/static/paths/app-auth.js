@@ -48,13 +48,20 @@ module.exports = {
   '/auth/login': {
     post: {
       tags: ['Auth'],
-      summary: 'Login driver',
-      description: 'Login dengan **client code** + ID driver atau No. HP + kata sandi. Client code memilih database perusahaan; '
+      summary: 'Login (driver dan admin)',
+      description: 'Satu endpoint untuk dua peran; peran dibaca dari akunnya. **Driver** (aplikasi HP): client code + ID driver atau No. HP + kata sandi + `device`. '
+        + '**Admin** (web): client code + username atau email + kata sandi, tanpa `device`. Client code memilih database perusahaan; '
         + 'semua request berikutnya otomatis memakai database yang sama (client code tersimpan di token). '
         + 'Dibatasi rate limit; setelah beberapa kali gagal akun dikunci sementara (`details.remaining_attempts` menunjukkan sisa percobaan).',
-      requestBody: jsonBody(ref('LoginRequest'), '02-auth/POST.login.request.json'),
+      requestBody: jsonBody(ref('LoginRequest'), {
+        Driver: '02-auth/POST.login.request.json',
+        Admin: '02-auth/POST.login.request.admin.json',
+      }),
       responses: {
-        200: jsonResponse('Login berhasil', envelope(ref('LoginResponse')), '02-auth/POST.login.response.json'),
+        200: jsonResponse('Login berhasil', envelope(ref('LoginResponse')), {
+          Driver: '02-auth/POST.login.response.json',
+          Admin: '02-auth/POST.login.response.admin.json',
+        }),
         401: jsonResponse('Kredensial / client code salah', ref('Error'), {
           INVALID_CREDENTIALS: '02-auth/POST.login.error.json',
           INVALID_CLIENT_CODE: '02-auth/POST.login.error.client-code.json',
@@ -84,7 +91,7 @@ module.exports = {
     post: {
       tags: ['Auth'],
       summary: 'Logout',
-      description: 'Mencabut refresh token perangkat ini dan menghapus FCM token-nya.',
+      description: 'Driver: mencabut refresh token perangkat ini dan menghapus FCM token-nya (`pending_sync_warning` jika masih ada data offline yang belum terkirim). Admin: mencabut sesi ini.',
       security: secured,
       responses: {
         200: jsonResponse('OK', envelope(ref('LogoutResponse')), '02-auth/POST.logout.response.json'),
@@ -97,22 +104,38 @@ module.exports = {
   '/me': {
     get: {
       tags: ['Akun'],
-      summary: 'Profil driver',
+      summary: 'Profil akun yang login',
+      description: 'Bentuk response mengikuti peran: driver mendapat `Me` (unit hari ini, aplikasi, sinkronisasi), admin mendapat `AdminProfile`.',
       security: secured,
       responses: {
-        200: jsonResponse('OK', envelope(ref('Me')), '02-auth/GET.me.response.json'),
+        200: jsonResponse('OK', envelope({ oneOf: [ref('Me'), ref('AdminProfile')] }), '02-auth/GET.me.response.json'),
         ...authErrors,
       },
     },
   },
   '/me/settings': {
-    patch: {
+    put: {
       tags: ['Akun'],
       summary: 'Ubah pengaturan (bahasa)',
       security: secured,
-      requestBody: jsonBody(ref('SettingsRequest'), '02-auth/PATCH.me.settings.request.json'),
+      requestBody: jsonBody(ref('SettingsRequest'), '02-auth/PUT.me.settings.request.json'),
       responses: {
-        200: jsonResponse('OK', envelope(ref('SettingsRequest')), '02-auth/PATCH.me.settings.response.json'),
+        200: jsonResponse('OK', envelope(ref('SettingsRequest')), '02-auth/PUT.me.settings.response.json'),
+        422: errorRef('ValidationError'),
+        ...authErrors,
+      },
+    },
+  },
+  '/me/password': {
+    post: {
+      tags: ['Akun'],
+      summary: 'Ganti password sendiri',
+      description: 'Untuk driver dan admin. Password baru minimal 8 karakter dan mengandung huruf dan angka. '
+        + 'Sesi di perangkat lain dicabut; sesi yang sedang dipakai tetap berjalan.',
+      security: secured,
+      requestBody: jsonBody(ref('ChangePasswordRequest')),
+      responses: {
+        200: jsonResponse('OK', envelope({ type: 'object', properties: { changed: { type: 'boolean', example: true } } })),
         422: errorRef('ValidationError'),
         ...authErrors,
       },

@@ -36,7 +36,8 @@ const insert = async (trx, row) => {
 const refreshDoTotal = (trx, doId, userId) => trx('delivery_orders')
   .where({ id: doId })
   .update({
-    expense_total: trx('expenses').where({ delivery_order_id: doId }).whereNull('voided_at').sum('amount'),
+    // coalesce: tanpa biaya yang tersisa (semua dibatalkan) SUM bernilai NULL, padahal kolomnya wajib terisi
+    expense_total: trx.raw('coalesce((select sum(amount) from expenses where delivery_order_id = ? and voided_at is null), 0)', [doId]),
     updated_by: userId,
   })
 

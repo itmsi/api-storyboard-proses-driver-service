@@ -75,7 +75,7 @@ const routes = [
     fromResult(await summaryService.complete(db, auth, p.id, body))
   ), () => 'Selesaikan DO'),
   {
-    method: 'PATCH',
+    method: 'PUT',
     pattern: /^\/me\/settings$/,
     params: [],
     bodySchema: meSchema.settings,

@@ -1,3 +1,4 @@
+const { wibDate } = require('../../utils/date')
 const repo = require('./repository')
 
 // Default aturan aplikasi (sesuai kontrak). Bisa ditimpa per client lewat tabel app_settings (key = nama field).
@@ -53,4 +54,22 @@ const resolveSettings = async (db) => {
   }
 }
 
-module.exports = { DEFAULT_CONFIG, resolveSettings }
+/**
+ * Naikkan config_version (format "YYYY-MM-DD.n", n naik tiap perubahan pada hari yang sama).
+ * Dipanggil di transaksi yang sama dengan setiap perubahan konfigurasi, supaya aplikasi driver yang membandingkan
+ * versi di bootstrap tahu harus mengambil ulang GET /config.
+ */
+const bumpConfigVersion = async (trx, adminId) => {
+  const current = await repo.findSetting(trx, 'config_version')
+  const today = wibDate()
+  let counter = 1
+  if (current && typeof current.value === 'string') {
+    const [day, n] = current.value.split('.')
+    if (day === today && Number(n) > 0) counter = Number(n) + 1
+  }
+  const version = `${today}.${counter}`
+  await repo.upsertSetting(trx, 'config_version', version, adminId)
+  return version
+}
+
+module.exports = { DEFAULT_CONFIG, resolveSettings, bumpConfigVersion }

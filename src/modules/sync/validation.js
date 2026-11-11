@@ -4,7 +4,7 @@ const MAX_ITEMS = 100
 
 const item = Joi.object({
   client_ref: Joi.string().guid({ version: 'uuidv4' }).required(),
-  method: Joi.string().uppercase().valid('POST', 'PATCH').required(),
+  method: Joi.string().uppercase().valid('POST', 'PUT').required(),
   path: Joi.string().trim().max(300).required(),
   body: Joi.object().unknown(true).required(),
   client_created_at: Joi.date().iso().required(),

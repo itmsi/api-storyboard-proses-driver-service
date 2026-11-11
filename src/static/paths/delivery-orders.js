@@ -10,19 +10,57 @@ module.exports = {
   '/delivery-orders': {
     get: {
       tags: ['Delivery Order'],
-      summary: 'Daftar DO milik driver',
-      description: 'Dipakai layar "DO ditugaskan" dengan `status=assigned`. Tanpa `status`: semua DO yang belum selesai. Hanya DO milik driver yang login.',
+      summary: 'Daftar DO (isi mengikuti peran)',
+      description: [
+        '**Driver:** DO miliknya, dipakai layar "DO ditugaskan" dengan `status=assigned`. Tanpa `status`: semua DO yang belum selesai. `meta = { count }`.',
+        '**Admin:** semua DO perusahaan, dengan pagination (`page`, `limit`, `sort`), `search` (nomor DO, barang, driver, plat, customer), dan filter `status`, `driver_id`, `unit_id`, `customer_id`, `from`/`to` (tanggal jadwal muat, WIB). `meta` = pagination standar.',
+      ].join('\n'),
       security: secured,
-      parameters: [{
-        name: 'status',
-        in: 'query',
-        required: false,
-        schema: { type: 'string', enum: ['assigned', 'accepted', 'loading', 'in_transit', 'handover'], example: 'assigned' },
-      }],
+      parameters: [
+        {
+          name: 'status',
+          in: 'query',
+          required: false,
+          description: 'Driver: assigned, accepted, loading, in_transit, handover. Admin: semua status termasuk completed dan cancelled.',
+          schema: { type: 'string', enum: ['assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled'], example: 'assigned' },
+        },
+        {
+          name: 'page', in: 'query', description: 'Hanya admin', schema: { type: 'integer', minimum: 1, default: 1 }
+        },
+        {
+          name: 'limit',
+          in: 'query',
+          description: 'Hanya admin',
+          schema: {
+            type: 'integer', minimum: 1, maximum: 100, default: 20
+          },
+        },
+        {
+          name: 'search', in: 'query', description: 'Hanya admin', schema: { type: 'string', maxLength: 100 }
+        },
+        {
+          name: 'sort', in: 'query', description: 'Hanya admin: no, planned_load_at, assigned_at, status, created_at; awalan `-` = menurun (default `-created_at`)', schema: { type: 'string', example: '-created_at' }
+        },
+        {
+          name: 'driver_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }
+        },
+        {
+          name: 'unit_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }
+        },
+        {
+          name: 'customer_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }
+        },
+        {
+          name: 'from', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'date', example: '2026-11-01' }
+        },
+        {
+          name: 'to', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'date', example: '2026-11-30' }
+        },
+      ],
       responses: {
         200: jsonResponse(
           'OK',
-          envelope(arr(ref('DeliveryOrder')), { type: 'object', properties: { count: { type: 'integer', example: 1 } } }),
+          envelope({ oneOf: [arr(ref('DeliveryOrder')), arr(ref('AdminDeliveryOrder'))] }, { oneOf: [{ type: 'object', properties: { count: { type: 'integer', example: 1 } } }, ref('PageMeta')] }),
           '05-delivery-orders/GET.delivery-orders.assigned.response.json'
         ),
         ...authErrors,
@@ -85,11 +123,12 @@ module.exports = {
   '/delivery-orders/{id}': {
     get: {
       tags: ['Delivery Order'],
-      summary: 'Detail DO',
+      summary: 'Detail DO (isi mengikuti peran)',
+      description: 'Driver: DO miliknya (DO driver lain = 404). Admin: detail lengkap beserta linimasa langkah, muat, odometer, biaya, serah terima, rekap keuangan, dan foto.',
       security: secured,
       parameters: doId,
       responses: {
-        200: jsonResponse('OK', envelope(ref('DeliveryOrder')), '05-delivery-orders/GET.delivery-orders.id.response.json'),
+        200: jsonResponse('OK', envelope({ oneOf: [ref('DeliveryOrder'), ref('AdminDeliveryOrderDetail')] }), '05-delivery-orders/GET.delivery-orders.id.response.json'),
         404: errorRef('NotFound'),
         ...authErrors,
       },
@@ -285,7 +324,7 @@ module.exports = {
             '- Item gagal dicatat di server dan dihitung di `pending_sync` (bootstrap, layar Berjalan, `GET /me`, peringatan saat logout) '
             + 'sampai berhasil dikirim ulang dengan `client_ref` yang sama.',
             '- Endpoint yang boleh dikirim: `POST /units/{unitId}/p2h`, `POST /delivery-orders/{id}/accept|loading|odometer|expenses|handover|complete`, '
-            + '`PATCH /me/settings`. Upload foto (`POST /media`, multipart) harus dilakukan langsung dan berhasil dulu, lalu id fotonya dipakai di item.',
+            + '`PUT /me/settings`. Upload foto (`POST /media`, multipart) harus dilakukan langsung dan berhasil dulu, lalu id fotonya dipakai di item.',
             '- Maksimal 100 item per request, `client_ref` tidak boleh ganda dalam satu request.',
           ].join('\n')}`,
       security: secured,

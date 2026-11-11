@@ -1,19 +1,12 @@
 const { AppError } = require('../../utils/errors')
 const { toWib } = require('../../utils/date')
+const { settle } = require('../../utils/settlement')
 const expenses = require('../expenses/service')
 const doService = require('../delivery-orders/service')
 const doRepo = require('../delivery-orders/repository')
 const repo = require('./repository')
 
 const MINUTE_MS = 60 * 1000
-
-/** Selisih uang jalan dan biaya: positif = sisa disetor ke perusahaan, negatif = kurang bayar ke driver. */
-const settle = (allowance, total) => {
-  const diff = allowance - total
-  if (diff > 0) return { type: 'refund_to_company', amount: diff, label: 'Sisa disetor' }
-  if (diff < 0) return { type: 'payable_to_driver', amount: -diff, label: 'Kurang bayar ke driver' }
-  return { type: 'balanced', amount: 0, label: 'Pas, tidak ada selisih' }
-}
 
 const reading = (row) => (row ? { km: row.effective_km, source: row.effective_source } : null)
 

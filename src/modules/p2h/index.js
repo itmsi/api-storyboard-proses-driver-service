@@ -1,5 +1,6 @@
 const express = require('express')
 const { authenticate, authorize } = require('../../middlewares/auth')
+const { adminGuard } = require('../../middlewares/admin-guard')
 const { validate } = require('../../middlewares/validate')
 const { asyncHandler } = require('../../utils/response')
 const schema = require('./validation')
@@ -22,6 +23,14 @@ router.post(
   guard,
   validate({ params: schema.unitParams, body: schema.submit }),
   asyncHandler(controller.submit)
+)
+
+// POST /api/v1/units/:unitId/p2h/recheck  (khusus admin: minta P2H ulang)
+router.post(
+  '/units/:unitId/p2h/recheck',
+  adminGuard,
+  validate({ params: schema.unitParams, body: schema.recheck }),
+  asyncHandler(controller.recheck)
 )
 
 module.exports = router

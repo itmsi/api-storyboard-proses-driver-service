@@ -26,8 +26,15 @@ const submit = Joi.object({
       .messages({ 'any.required': 'Keterangan wajib diisi jika item tidak sesuai.' }),
   }))
     .required(),
-  body_photo_ids: Joi.object(Object.fromEntries(SIDES.map((side) => [side, Joi.string().guid().required()]))).required(),
+  // Sisi mana yang wajib mengikuti pengaturan perusahaan (photo_rules.p2h_body.required_sides), diperiksa di service
+  body_photo_ids: Joi.object(Object.fromEntries(SIDES.map((side) => [side, Joi.string().guid()]))).min(1).required(),
   admin_confirmed_by_driver: Joi.boolean(),
 })
 
-module.exports = { unitParams, submit }
+// Permintaan P2H ulang oleh admin
+const recheck = Joi.object({
+  note: Joi.string().trim().min(3).max(300)
+    .required(),
+})
+
+module.exports = { unitParams, submit, recheck }

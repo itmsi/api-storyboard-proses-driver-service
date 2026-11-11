@@ -99,7 +99,72 @@ const clearFcmToken = (db, userId, deviceUuid) => db('devices')
   .where({ id: deviceUuid, user_id: userId })
   .update({ fcm_token: null, updated_by: userId })
 
+/**
+ * Cari akun untuk login dari satu kolom input. Peran (driver/admin) dibaca dari akunnya, bukan dari endpoint:
+ *   No. HP (+62…) -> users.phone | berisi "@" -> users.email | selain itu -> users.username
+ * Untuk driver ikut membawa profil kerjanya (drivers); akun yang peran/profilnya tidak lengkap tidak ditemukan.
+ */
+const findAccountForLogin = (db, { phone, identifier }) => db('users')
+  .leftJoin('drivers', (j) => j.on('drivers.user_id', 'users.id').andOn('drivers.is_delete', db.raw('false')))
+  .where({ 'users.is_delete': false })
+  .whereIn('users.role', ['driver', 'admin'])
+  .where((q) => q.whereNot('users.role', 'driver').orWhereNotNull('drivers.id'))
+  .modify((q) => {
+    if (phone) q.where('users.phone', phone)
+    else if (identifier.includes('@')) q.whereRaw('lower(users.email) = lower(?)', [identifier])
+    else q.whereRaw('lower(users.username) = lower(?)', [identifier])
+  })
+  .select(
+    'users.id',
+    'users.role',
+    'users.username',
+    'users.email',
+    'users.phone',
+    'users.name',
+    'users.password_hash',
+    'users.status as user_status',
+    'users.failed_login_count',
+    'users.locked_until',
+    'drivers.id as driver_id',
+    'drivers.code as driver_code',
+    'drivers.status as driver_status'
+  )
+  .first()
+
+/** Akun untuk refresh token (peran apa pun): masih ada dan, untuk driver, profil kerjanya masih ada. */
+const findAccountById = (db, userId) => db('users')
+  .leftJoin('drivers', (j) => j.on('drivers.user_id', 'users.id').andOn('drivers.is_delete', db.raw('false')))
+  .where({ 'users.id': userId, 'users.is_delete': false })
+  .whereIn('users.role', ['driver', 'admin'])
+  .where((q) => q.whereNot('users.role', 'driver').orWhereNotNull('drivers.id'))
+  .select(
+    'users.id',
+    'users.role',
+    'users.name',
+    'users.status as user_status',
+    'drivers.id as driver_id',
+    'drivers.status as driver_status'
+  )
+  .first()
+
+const updatePassword = (db, id, passwordHash, actorId) => db('users')
+  .where({ id })
+  .update({
+    password_hash: passwordHash, failed_login_count: 0, locked_until: null, updated_by: actorId,
+  })
+
+/** Cabut refresh token akun ini; `exceptFamily` = rantai sesi yang sedang dipakai (tidak ikut dicabut). */
+const revokeTokens = (db, userId, exceptFamily = null) => db('refresh_tokens')
+  .where({ user_id: userId })
+  .whereNull('revoked_at')
+  .modify((q) => { if (exceptFamily) q.whereNot({ family_id: exceptFamily }) })
+  .update({ revoked_at: db.fn.now() })
+
 module.exports = {
+  findAccountForLogin,
+  findAccountById,
+  updatePassword,
+  revokeTokens,
   findDriverUser,
   findDriverUserById,
   incrementFailedLogin,

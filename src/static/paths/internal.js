@@ -1,5 +1,5 @@
 const {
-  ref, envelope, jsonResponse, errorRef,
+  ref, envelope, jsonResponse, jsonBody, errorRef,
 } = require('../helpers')
 
 const internalKey = [{ internalKey: [] }]
@@ -37,6 +37,30 @@ module.exports = {
         ...internalErrors,
         409: jsonResponse('Migrasi sedang berjalan', ref('Error'), '14-internal/POST.migrate.error.in-progress.json'),
         500: jsonResponse('Migrasi gagal', ref('Error')),
+        503: jsonResponse('Database client tidak dapat dihubungi', ref('Error')),
+      },
+    },
+  },
+  '/internal/tenants/{clientCode}/bootstrap-admin': {
+    post: {
+      tags: ['Internal'],
+      summary: 'Buat admin pertama perusahaan',
+      description: [
+        'Dipanggil project **manage company** setelah migrasi database client, supaya perusahaan punya admin untuk login ke API admin.',
+        '',
+        '- Belum ada admin: dibuat (201, `created: true`).',
+        '- Admin dengan username yang sama sudah ada: tidak ada yang diubah (200, `created: false`), jadi aman dipanggil ulang.',
+        '- Sudah ada admin lain: 409. Admin berikutnya dibuat oleh admin itu lewat `POST /admin/users`.',
+        '- Client yang belum aktif boleh.',
+      ].join('\n'),
+      security: internalKey,
+      parameters: [clientCode],
+      requestBody: jsonBody(ref('BootstrapAdminRequest')),
+      responses: {
+        200: jsonResponse('Admin sudah ada (tidak diubah)', envelope(ref('BootstrapAdminResponse'))),
+        201: jsonResponse('Admin pertama dibuat', envelope(ref('BootstrapAdminResponse'))),
+        ...internalErrors,
+        409: jsonResponse('Sudah ada admin lain', ref('Error')),
         503: jsonResponse('Database client tidak dapat dihubungi', ref('Error')),
       },
     },

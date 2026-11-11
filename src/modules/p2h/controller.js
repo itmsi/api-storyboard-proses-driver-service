@@ -10,4 +10,8 @@ const submit = async (req, res) => {
   return ok(res, service.summarize(inspection), { status: created ? 201 : 200 })
 }
 
-module.exports = { getTemplate, getToday, submit }
+const recheck = async (req, res) => ok(res, await service.recheck(req.db, req.admin, req.valid.params.unitId, req.body))
+
+module.exports = {
+  getTemplate, getToday, submit, recheck,
+}

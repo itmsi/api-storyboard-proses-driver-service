@@ -279,6 +279,7 @@ const requireOwned = async (db, auth, id) => {
 
 /** Langkah perjalanan hanya valid pada status tertentu. DO selesai/terkunci = DO_LOCKED. */
 const assertStatus = (row, allowed) => {
+  if (row.status === 'cancelled') throw new AppError('DO_CANCELLED') // dibatalkan admin: driver berhenti mengerjakannya
   if (row.status === 'completed' || row.locked_at) throw new AppError('DO_LOCKED')
   if (!allowed.includes(row.status)) throw new AppError('INVALID_STATE', { details: { status: row.status, expected: allowed } })
 }

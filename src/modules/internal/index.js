@@ -15,4 +15,11 @@ router.post('/tenants/:clientCode/migrate', validate({ params: schema.clientPara
 // GET /api/v1/internal/tenants/:clientCode/migration-status
 router.get('/tenants/:clientCode/migration-status', validate({ params: schema.clientParams }), asyncHandler(controller.migrationStatus))
 
+// POST /api/v1/internal/tenants/:clientCode/bootstrap-admin  (admin pertama perusahaan)
+router.post(
+  '/tenants/:clientCode/bootstrap-admin',
+  validate({ params: schema.clientParams, body: schema.bootstrapAdmin }),
+  asyncHandler(controller.createFirstAdmin)
+)
+
 module.exports = router

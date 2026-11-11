@@ -10,7 +10,7 @@ exports.seed = async (knex) => {
   const hash = await bcrypt.hash(DEV_PASSWORD, 10)
   // Id dibuat database (gen_random_uuid), seed dicari lewat username supaya aman dijalankan ulang
   await knex('users').insert({
-    username: 'admin', phone: null, password_hash: hash, role: 'admin', name: 'Admin OGO',
+    username: 'admin', phone: null, email: 'admin@contoh.co.id', password_hash: hash, role: 'admin', name: 'Admin OGO',
   }).onConflict().ignore()
   const adminId = (await knex('users').where({ username: 'admin' }).first('id')).id
 
@@ -35,7 +35,7 @@ exports.seed = async (knex) => {
   // Unit B 9123 KZ + penugasan hari ini untuk Andi
   await knex('unit_types').insert({
     code: 'CDD_BAK', name: 'CDD Bak', max_load_kg: 2500, created_by: adminId,
-  }).onConflict('code').ignore()
+  }).onConflict(knex.raw('(code) WHERE is_delete = false')).ignore()
   const unitType = await knex('unit_types').where({ code: 'CDD_BAK' }).first()
   await knex('units').insert({
     plate: 'B 9123 KZ', unit_type_id: unitType.id, brand: 'Mitsubishi', year: 2022, created_by: adminId,
@@ -49,7 +49,7 @@ exports.seed = async (knex) => {
   // Customer + lokasi + DO-0144 (Cakung -> PT Contoh Jaya, Karawang) sesuai fixture
   await knex('customers').insert({
     code: 'CUST-001', name: 'PT Contoh Jaya', phone: '021-5550100', created_by: adminId,
-  }).onConflict('code').ignore()
+  }).onConflict(knex.raw('(code) WHERE is_delete = false')).ignore()
   const customer = await knex('customers').where({ code: 'CUST-001' }).first()
   const sites = [
     {

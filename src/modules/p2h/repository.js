@@ -72,7 +72,20 @@ const insertInspection = async (trx, row, items, photos) => {
   return inspection
 }
 
+/** Tandai P2H aktif sebagai digantikan karena admin meminta ulang; driver lalu membuat P2H baru. */
+const markRecheck = (db, inspectionId, adminId, note) => db('p2h_inspections')
+  .where({ id: inspectionId })
+  .whereNull('superseded_at')
+  .update({
+    superseded_at: db.fn.now(),
+    recheck_requested_by: adminId,
+    recheck_requested_at: db.fn.now(),
+    recheck_note: note,
+    updated_by: adminId,
+  })
+
 module.exports = {
+  markRecheck,
   findUnit,
   hasAssignment,
   getCheckItems,

@@ -5,4 +5,6 @@ const getMe = async (req, res) => ok(res, await service.getMe(req.db, req.auth))
 
 const updateSettings = async (req, res) => ok(res, await service.updateSettings(req.db, req.auth, req.body))
 
-module.exports = { getMe, updateSettings }
+const changePassword = async (req, res) => ok(res, await service.changePassword(req.db, req.auth, req.body))
+
+module.exports = { getMe, updateSettings, changePassword }

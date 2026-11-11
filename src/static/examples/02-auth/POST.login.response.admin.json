@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "data": {
+    "access_token": "<jwt>",
+    "refresh_token": "<refresh>",
+    "expires_in": 86400,
+    "admin": {
+      "id": "4f1a8c52-9d3e-4b7a-8e61-2c5d7f90a1b3",
+      "username": "budi.admin",
+      "name": "Budi Admin",
+      "email": "budi@contoh.co.id"
+    }
+  }
+}

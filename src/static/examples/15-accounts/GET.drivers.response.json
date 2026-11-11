@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "952975ba-bcf9-4a57-ac3b-be20940d8b25",
+      "code": "DRV-0021",
+      "name": "Andi",
+      "phone": "+6281234567890",
+      "status": "active",
+      "license": {
+        "no": "1234-5678",
+        "type": "B2 Umum",
+        "expires_on": "2028-05-01"
+      },
+      "unit_today": {
+        "id": "fc06e493-e9c6-429b-9529-bc07084818ee",
+        "plate": "B 9123 KZ"
+      },
+      "last_login_at": "2026-11-05T07:00:00+07:00",
+      "locked": false,
+      "locked_until": null,
+      "created_at": "2026-10-01T09:00:00+07:00",
+      "created_by": {
+        "id": "e49366b5-7565-4723-8763-3c32177a4038",
+        "name": "Admin Perusahaan"
+      },
+      "updated_at": "2026-11-05T07:00:00+07:00",
+      "updated_by": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "total_pages": 1
+  }
+}

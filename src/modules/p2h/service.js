@@ -198,6 +198,42 @@ const summarize = (inspection) => ({
   valid_until: toWib(inspection.valid_until),
 })
 
+/**
+ * Admin meminta P2H ulang untuk sebuah unit (mis. setelah perbaikan). P2H aktif hari ini ditandai digantikan:
+ * di aplikasi driver status unit kembali "belum" (dengan recheck_requested) dan DO yang belum diterima
+ * tidak bisa diterima sampai driver membuat P2H baru. Hanya P2H hari ini yang bisa diminta ulang.
+ */
+const recheck = async (db, admin, unitId, { note }) => {
+  const unit = await repo.findUnit(db, unitId)
+  if (!unit) throw new AppError('NOT_FOUND', { details: { unit_id: unitId } })
+
+  const today = wibDate()
+  const current = await repo.findCurrent(db, unitId, today)
+  if (!current) {
+    throw new AppError('INVALID_STATE', {
+      message: `Unit ${unit.plate} belum punya P2H aktif hari ini, atau P2H ulang sudah diminta dan menunggu driver.`,
+      details: { unit_id: unitId, date: today },
+    })
+  }
+
+  const changed = await repo.markRecheck(db, current.id, admin.id, note)
+  if (!changed) throw new AppError('INVALID_STATE', { message: 'P2H baru saja diganti, muat ulang lalu coba lagi.', details: { unit_id: unitId } })
+
+  return {
+    unit: unitRef(unit),
+    date: today,
+    status: 'belum',
+    recheck_requested: true,
+    note,
+    previous: {
+      id: current.id,
+      status: current.status,
+      checked_by: current.checked_by_name,
+      checked_at: toWib(current.checked_at),
+    },
+  }
+}
+
 module.exports = {
-  getTemplate, getToday, getStatus, submit, summarize,
+  getTemplate, getToday, getStatus, submit, summarize, recheck,
 }
