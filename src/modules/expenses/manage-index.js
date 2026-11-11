@@ -10,7 +10,7 @@ const router = express.Router()
 // Di-mount di /expenses (khusus admin). Pencatatan biaya oleh driver ada di index.js (/delivery-orders/:id/expenses).
 router.use(adminGuard)
 
-router.get('/', validate({ query: schema.list }), asyncHandler(controller.list))
+router.post('/get', validate({ body: schema.list }), asyncHandler(controller.list))
 router.get('/:id', validate({ params: schema.idParams }), asyncHandler(controller.get))
 router.post('/:id/void', validate({ params: schema.idParams, body: schema.voidExpense }), asyncHandler(controller.voidExpense))
 

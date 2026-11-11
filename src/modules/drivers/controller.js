@@ -2,7 +2,7 @@ const service = require('./service')
 const { ok } = require('../../utils/response')
 
 const list = async (req, res) => {
-  const { data, meta } = await service.list(req.db, req.valid.query)
+  const { data, meta } = await service.list(req.db, req.body)
   return ok(res, data, { meta })
 }
 

@@ -7,10 +7,10 @@ const isAdmin = (req) => req.auth.role === 'admin'
 // GET / dan GET /:id dipakai driver dan admin: isinya mengikuti peran
 const list = async (req, res) => {
   if (isAdmin(req)) {
-    const { data, meta } = await manage.list(req.db, req.valid.query)
+    const { data, meta } = await manage.list(req.db, req.body)
     return ok(res, data, { meta })
   }
-  const { data, meta } = await service.listAssigned(req.db, req.auth, req.valid.query.status)
+  const { data, meta } = await service.listAssigned(req.db, req.auth, req.body.status)
   return ok(res, data, { meta })
 }
 
@@ -25,7 +25,7 @@ const active = async (req, res) => {
 }
 
 const history = async (req, res) => {
-  const { data, meta } = await service.history(req.db, req.auth, req.valid.query)
+  const { data, meta } = await service.history(req.db, req.auth, req.body)
   return ok(res, data, { meta })
 }
 

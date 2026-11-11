@@ -14,11 +14,11 @@ const router = express.Router()
 const driverOnly = [authenticate, authorize('driver')]
 const anyRole = [authenticate, authorize('driver', 'admin'), activeAdminOnly]
 
-// GET /api/v1/delivery-orders
-//   driver: DO miliknya (?status=assigned)   |   admin: semua DO, dengan pagination dan filter
-router.get('/', anyRole, byRole({
-  driver: [validate({ query: schema.listQuery })],
-  admin: [validate({ query: manageSchema.list })],
+// POST /api/v1/delivery-orders/get  (filter di body)
+//   driver: DO miliknya ({ status: 'assigned' })   |   admin: semua DO, dengan pagination dan filter
+router.post('/get', anyRole, byRole({
+  driver: [validate({ body: schema.listQuery })],
+  admin: [validate({ body: manageSchema.list })],
 }), asyncHandler(controller.list))
 
 // POST /api/v1/delivery-orders  (admin membuat dan menugaskan DO)
@@ -26,7 +26,7 @@ router.post('/', adminGuard, validate({ body: manageSchema.create }), asyncHandl
 
 // Path tetap harus didaftarkan SEBELUM '/:id'
 router.get('/active', driverOnly, asyncHandler(controller.active))
-router.get('/history', driverOnly, validate({ query: schema.historyQuery }), asyncHandler(controller.history))
+router.post('/history', driverOnly, validate({ body: schema.historyQuery }), asyncHandler(controller.history))
 
 // GET /api/v1/delivery-orders/:id   (driver: DO miliknya; admin: detail lengkap beserta linimasa)
 router.get('/:id', anyRole, validate({ params: schema.idParams }), asyncHandler(controller.getById))

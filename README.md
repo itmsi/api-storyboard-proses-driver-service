@@ -58,9 +58,10 @@ Satu API melayani banyak perusahaan; tiap perusahaan punya database sendiri. Kre
   atau beberapa tenant lewat `TENANTS_JSON`. Adapter project manage company menyusul di `src/database/tenant/registry.js`.
 - Migrasi per tenant: `npm run migrate:tenant -- --client=OGO` atau `-- --all`; rollback `npm run migrate:tenant:rollback -- --client=OGO`;
   seed dev `npm run seed:tenant -- --client=OGO` (driver DRV-0021 / password `Passw0rd!`, jangan di production).
-- Endpoint internal untuk project manage company (header `X-Internal-Key` = `INTERNAL_API_KEY`; kosong = nonaktif):
-  `POST /api/v1/internal/tenants/{clientCode}/migrate` (idempoten, sinkron, boleh untuk client yang belum aktif) dan
-  `GET /api/v1/internal/tenants/{clientCode}/migration-status`. Dokumentasi di Swagger, tag **Internal**.
+- Integrasi saas-api (`TENANT_REGISTRY=remote`): kredensial database client diminta ke saas-api dan didekripsi dengan `TENANT_DB_ENC_KEY`.
+  Endpoint untuk saas-worker ada di root `/internal` (header `X-Internal-Key` = `INTERNAL_PROVISIONING_KEY`; kosong = nonaktif):
+  `POST /internal/tenants/{client_id}/migrate`, `.../seed`, `GET .../verify`, `POST .../system-user/reset`, `GET /internal/migrations/status`.
+  Seeder membuat akun sistem `msi.support` (password dari saas-api); orang MSI memakainya untuk membuat admin pertama lewat `POST /users`. Swagger tag **Internal**.
 - Test: `npm test` (tanpa DB). Test end-to-end DB: `RUN_DB_TESTS=1 npm test`. Test **menghapus isi database** (rollback semua migrasi), jadi selalu diarahkan ke database terpisah `ogo_driver_test` (ubah lewat `TEST_DB_NAME`, nama wajib berakhiran `_test`), apa pun isi `DB_NAME` di `.env`. Database dev (`DB_NAME`) tidak tersentuh.
 
 ## Menjalankan tanpa Docker
@@ -191,14 +192,21 @@ Usulan skema lengkap ada di `src/database/schema.draft.sql`. Setelah disepakati,
 
 ## Status
 
+**Standar daftar (filter lewat POST body):** daftar dengan filter memakai `POST /<modul>/get` dengan body JSON, mengikuti api-hrm, bukan query string. Contoh: `POST /drivers/get` dengan body `{ "page": 1, "limit": 20, "search": "budi", "sort": "-code" }`. Body boleh kosong (`{}`). Berlaku untuk drivers, users, unit-types, units, customers, locations, p2h-items, expense-categories, expenses, settlements, unit-assignments, dan delivery-orders (riwayat driver: `POST /delivery-orders/history`). Detail by id (`GET /<modul>/{id}`) dan endpoint tanpa parameter (`/me`, `/config`, `/app/bootstrap`, `/delivery-orders/active`) tetap GET.
+
 | Bagian | Status |
 |---|---|
 | Kerangka server, config, error handling, auth JWT, validasi, upload, storage | Siap |
 | Swagger seluruh kontrak OGO Driver (28 endpoint) | Siap |
 | `GET /config/public` | Berjalan |
-| Fase 1: `POST /auth/login` (client code), `/auth/refresh`, `/auth/logout`, `GET /me`, `PATCH /me/settings`, `POST /devices/push-token`, `GET /config` | Siap (menunggu uji dengan DB) |
+| Fase 1: `POST /auth/login` (client code), `/auth/refresh`, `/auth/logout`, `GET /me`, `PUT /me/settings`, `POST /devices/push-token`, `GET /config` | Siap (menunggu uji dengan DB) |
 | Fase 2: `POST /media` (foto + thumbnail), `GET /p2h/template`, `GET /units/{unitId}/p2h/today`, `POST /units/{unitId}/p2h` | Siap (teruji dengan DB) |
-| Fase 3: `GET /app/bootstrap`, `GET /delivery-orders` (+ `/active`, `/history`, `/{id}`), `POST /delivery-orders/{id}/accept` | Siap (teruji dengan DB) |
+| Fase 3: `GET /app/bootstrap`, `POST /delivery-orders/get` (+ `GET /active`, `POST /history`, `GET /{id}`), `POST /delivery-orders/{id}/accept` | Siap (teruji dengan DB) |
 | Fase 4: `POST /delivery-orders/{id}/loading`, `/odometer`, `GET|POST /delivery-orders/{id}/expenses` | Siap (teruji dengan DB). OCR dilakukan di aplikasi HP; server menyimpan hasil `ocr`, koreksi, dan nilai efektif |
 | Fase 5: `POST /delivery-orders/{id}/handover`, `GET /delivery-orders/{id}/summary`, `POST /delivery-orders/{id}/complete` | Siap (teruji dengan DB) |
 | Fase 6: `POST /sync/batch` (+ `pending_sync` di bootstrap, layar Berjalan, `GET /me`, logout) | Siap (teruji dengan DB) |
+| **Akun & admin (A1)**: login satu pintu untuk driver dan admin (`POST /auth/login`, peran dari akun; admin boleh username atau email), `GET /me` (sesuai peran), `POST /me/password`, kelola driver `/drivers` (buat, ubah, nonaktifkan, reset password, buka kunci, hapus), kelola pengguna admin `/users` | Siap (teruji dengan DB). Rencana lengkap: `docs/PLAN-ADMIN.md` |
+| **API admin A5** (konfigurasi): `/p2h-items` (checklist P2H), `/expense-categories` (kategori biaya), `GET|PUT /settings` (modul, aturan foto, jam berlaku P2H, alasan koreksi, bahasa); tiap perubahan menaikkan `config_version` | Siap (teruji dengan DB) |
+| **API admin A4** (operasional): `POST /units/{unitId}/p2h/recheck` (minta P2H ulang), `/expenses` (daftar, detail, `POST /expenses/{id}/void` batalkan biaya), `/settlements` (rekap uang jalan, `POST /settlements/{doId}/settle` tandai disetor/dibayar) | Siap (teruji dengan DB) |
+| **API admin A3** (DO): `POST /delivery-orders` (buat dan tugaskan), `POST /delivery-orders/get` dan `GET /delivery-orders/{id}` (isi mengikuti peran: driver miliknya, admin semua dengan filter dan detail lengkap + linimasa), `PUT /delivery-orders/{id}` (hanya saat belum diterima), `POST /delivery-orders/{id}/cancel`, penugasan unit harian `/unit-assignments` | Siap (teruji dengan DB) |
+| **API admin A2** (master data): CRUD `/unit-types`, `/units`, `/customers`, `/locations` (khusus admin) (pagination, cari, filter, soft delete, hapus dijaga DO/penugasan yang masih berjalan) | Siap (teruji dengan DB) |
