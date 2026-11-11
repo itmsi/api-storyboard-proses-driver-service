@@ -160,7 +160,14 @@ const revokeTokens = (db, userId, exceptFamily = null) => db('refresh_tokens')
   .modify((q) => { if (exceptFamily) q.whereNot({ family_id: exceptFamily }) })
   .update({ revoked_at: db.fn.now() })
 
+/** Role hak akses sebuah akun admin (null jika belum punya). */
+const findAdminRole = (db, userId) => db('users')
+  .join('roles', 'roles.id', 'users.role_id')
+  .where({ 'users.id': userId, 'roles.is_delete': false })
+  .first('roles.id', 'roles.name', 'roles.is_system', 'roles.permissions')
+
 module.exports = {
+  findAdminRole,
   findAccountForLogin,
   findAccountById,
   updatePassword,

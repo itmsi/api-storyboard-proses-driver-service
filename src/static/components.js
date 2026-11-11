@@ -202,7 +202,12 @@ const schemas = {
         obj({ driver: ref('DriverRef') }),
         obj({
           admin: obj({
-            id: str('4f1a8c52-9d3e-4b7a-8e61-2c5d7f90a1b3'), username: str('budi.admin'), name: str('Budi Admin'), email: str('budi@contoh.co.id'),
+            id: str('4f1a8c52-9d3e-4b7a-8e61-2c5d7f90a1b3'),
+            username: str('budi.admin'),
+            name: str('Budi Admin'),
+            email: str('budi@contoh.co.id'),
+            role: nullable(obj({ id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90'), name: str('Staf Operasional'), is_system: bool(false) })),
+            permissions: obj({}, [], { description: 'Hak akses dari role: { <modul>: [read, create, update, delete] }', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { units: ['read', 'update'] } }),
           }),
         }),
       ],

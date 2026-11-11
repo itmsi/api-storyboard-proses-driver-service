@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const permissions = require('../../utils/permissions')
 const tenant = require('../../database/tenant')
 const { AppError } = require('../../utils/errors')
 const { normalizePhone } = require('../../utils/phone')
@@ -14,6 +15,12 @@ const repo = require('./repository')
 const isActive = (row) => row.user_status === 'active' && (row.role !== 'driver' || row.driver_status === 'active')
 
 // Isi access token. device_id = baris devices (uuid) milik perangkat yang login (hanya driver)
+/** Hak akses sebuah role: Administrator (is_system) = semua, tanpa role = tidak ada. */
+const grantsOf = (role) => {
+  if (!role) return {}
+  return role.is_system ? permissions.all() : role.permissions
+}
+
 const claimsOf = (user, deviceUuid = null) => (user.role === 'driver'
   ? { role: 'driver', driver_id: user.driver_id, device_id: deviceUuid }
   : { role: 'admin' })
@@ -54,10 +61,17 @@ const login = async ({
       },
     }
   }
+  // Hak akses dari role (untuk FE menyembunyikan menu); server tetap memeriksa di setiap request
+  const role = await repo.findAdminRole(db, user.id)
   return {
     ...issued,
     admin: {
-      id: user.id, username: user.username, name: user.name, email: user.email,
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      role: role ? { id: role.id, name: role.name, is_system: role.is_system } : null,
+      permissions: grantsOf(role),
     },
   }
 }
