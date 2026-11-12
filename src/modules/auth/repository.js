@@ -2,7 +2,7 @@
 
 const findDriverUser = (db, { username, phone }) => db('users')
   .join('drivers', 'drivers.user_id', 'users.id')
-  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'users.role': 'driver' })
+  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'users.user_type': 'driver' })
   .modify((q) => {
     if (phone) q.where('users.phone', phone)
     else q.whereRaw('lower(users.username) = lower(?)', [username])
@@ -107,8 +107,8 @@ const clearFcmToken = (db, userId, deviceUuid) => db('devices')
 const findAccountForLogin = (db, { phone, identifier }) => db('users')
   .leftJoin('drivers', (j) => j.on('drivers.user_id', 'users.id').andOn('drivers.is_delete', db.raw('false')))
   .where({ 'users.is_delete': false })
-  .whereIn('users.role', ['driver', 'admin'])
-  .where((q) => q.whereNot('users.role', 'driver').orWhereNotNull('drivers.id'))
+  .whereIn('users.user_type', ['driver', 'admin'])
+  .where((q) => q.whereNot('users.user_type', 'driver').orWhereNotNull('drivers.id'))
   .modify((q) => {
     if (phone) q.where('users.phone', phone)
     else if (identifier.includes('@')) q.whereRaw('lower(users.email) = lower(?)', [identifier])
@@ -116,7 +116,7 @@ const findAccountForLogin = (db, { phone, identifier }) => db('users')
   })
   .select(
     'users.id',
-    'users.role',
+    'users.user_type',
     'users.username',
     'users.email',
     'users.phone',
@@ -135,11 +135,11 @@ const findAccountForLogin = (db, { phone, identifier }) => db('users')
 const findAccountById = (db, userId) => db('users')
   .leftJoin('drivers', (j) => j.on('drivers.user_id', 'users.id').andOn('drivers.is_delete', db.raw('false')))
   .where({ 'users.id': userId, 'users.is_delete': false })
-  .whereIn('users.role', ['driver', 'admin'])
-  .where((q) => q.whereNot('users.role', 'driver').orWhereNotNull('drivers.id'))
+  .whereIn('users.user_type', ['driver', 'admin'])
+  .where((q) => q.whereNot('users.user_type', 'driver').orWhereNotNull('drivers.id'))
   .select(
     'users.id',
-    'users.role',
+    'users.user_type',
     'users.name',
     'users.status as user_status',
     'drivers.id as driver_id',

@@ -11,7 +11,7 @@ exports.seed = async (knex) => {
   // Id dibuat database (gen_random_uuid), seed dicari lewat username supaya aman dijalankan ulang
   const administrator = await knex('roles').where({ is_system: true, is_delete: false }).first('id')
   await knex('users').insert({
-    username: 'admin', phone: null, email: 'admin@contoh.co.id', password_hash: hash, role: 'admin', role_id: administrator.id, name: 'Admin OGO',
+    username: 'admin', phone: null, email: 'admin@contoh.co.id', password_hash: hash, user_type: 'admin', role_id: administrator.id, name: 'Admin OGO',
   }).onConflict().ignore()
   const adminId = (await knex('users').where({ username: 'admin' }).first('id')).id
 
@@ -19,7 +19,7 @@ exports.seed = async (knex) => {
     username: 'DRV-0021',
     phone: '+6281234567890',
     password_hash: hash,
-    role: 'driver',
+    user_type: 'driver',
     name: 'Andi',
     created_by: adminId,
   }).onConflict().ignore()

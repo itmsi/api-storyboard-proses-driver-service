@@ -8,11 +8,11 @@ const tokens = require('./tokens')
 const repo = require('./repository')
 
 /**
- * Satu alur auth untuk dua peran, dibedakan oleh kolom users.role:
+ * Satu alur auth untuk dua jenis akun, dibedakan oleh kolom users.user_type:
  *   driver -> aplikasi HP: wajib `device`, token membawa driver_id dan device_id, response berisi `driver`
  *   admin  -> web admin:   tanpa device, response berisi `admin`
  */
-const isActive = (row) => row.user_status === 'active' && (row.role !== 'driver' || row.driver_status === 'active')
+const isActive = (row) => row.user_status === 'active' && (row.user_type !== 'driver' || row.driver_status === 'active')
 
 // Isi access token. device_id = baris devices (uuid) milik perangkat yang login (hanya driver)
 /** Hak akses sebuah role: Administrator (is_system) = semua, tanpa role = tidak ada. */
@@ -21,7 +21,7 @@ const grantsOf = (role) => {
   return role.is_system ? permissions.all() : role.permissions
 }
 
-const claimsOf = (user, deviceUuid = null) => (user.role === 'driver'
+const claimsOf = (user, deviceUuid = null) => (user.user_type === 'driver'
   ? { role: 'driver', driver_id: user.driver_id, device_id: deviceUuid }
   : { role: 'admin' })
 
@@ -38,12 +38,12 @@ const login = async ({
   if (!isActive(user)) throw new AppError('FORBIDDEN') // password benar, tapi akun dinonaktifkan
 
   // Driver login dari HP, jadi perangkatnya wajib dikenali (untuk token push, sync, dan pencabutan sesi per perangkat)
-  if (user.role === 'driver' && !device) {
+  if (user.user_type === 'driver' && !device) {
     throw new AppError('VALIDATION_ERROR', { details: [{ field: 'device', message: 'Data perangkat wajib diisi untuk login driver.' }] })
   }
 
   await repo.markLoginSuccess(db, user.id)
-  const deviceRow = user.role === 'driver' ? await repo.upsertDevice(db, user.id, device) : null
+  const deviceRow = user.user_type === 'driver' ? await repo.upsertDevice(db, user.id, device) : null
   const issued = await tokens.issueTokens(db, {
     clientCode,
     userId: user.id,
@@ -53,7 +53,7 @@ const login = async ({
     remember,
   })
 
-  if (user.role === 'driver') {
+  if (user.user_type === 'driver') {
     return {
       ...issued,
       driver: {

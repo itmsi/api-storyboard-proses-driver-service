@@ -6,7 +6,7 @@ const base = (db, today) => db('users')
   .join('drivers', 'drivers.user_id', 'users.id')
   .leftJoin('driver_unit_assignments as dua', (j) => j.on('dua.driver_id', 'drivers.id').andOn('dua.work_date', db.raw('?', [today])))
   .leftJoin('units as unit_today', 'unit_today.id', 'dua.unit_id')
-  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'users.role': 'driver' })
+  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'users.user_type': 'driver' })
 
 const select = (db, query) => query.select(
   'drivers.id as id',

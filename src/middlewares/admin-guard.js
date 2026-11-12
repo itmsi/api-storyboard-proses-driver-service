@@ -12,7 +12,7 @@ const ensureActiveAdmin = async (req, res, next) => {
     const row = await req.db('users')
       .leftJoin('roles', (j) => j.on('roles.id', 'users.role_id').andOn('roles.is_delete', req.db.raw('false')))
       .where({
-        'users.id': req.auth.sub, 'users.role': 'admin', 'users.is_delete': false, 'users.status': 'active',
+        'users.id': req.auth.sub, 'users.user_type': 'admin', 'users.is_delete': false, 'users.status': 'active',
       })
       .first(
         'users.id',

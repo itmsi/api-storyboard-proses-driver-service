@@ -33,7 +33,7 @@ const getAdminProfile = async (db, auth) => {
   const row = await withAuditNames(
     db('users')
       .leftJoin('roles', 'roles.id', 'users.role_id')
-      .where({ 'users.id': auth.sub, 'users.role': 'admin', 'users.is_delete': false })
+      .where({ 'users.id': auth.sub, 'users.user_type': 'admin', 'users.is_delete': false })
       .select(
         'roles.name as role_name',
         'roles.is_system as role_is_system',

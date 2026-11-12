@@ -85,7 +85,7 @@ const create = async (db, admin, body) => {
       username: code,
       phone,
       password_hash: passwordHash,
-      role: 'driver',
+      user_type: 'driver',
       name: body.name,
       status: 'active',
       created_by: admin.id,

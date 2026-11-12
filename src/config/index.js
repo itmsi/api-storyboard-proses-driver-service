@@ -101,7 +101,7 @@ const config = {
   },
 
   upload: {
-    maxFileSize: num('UPLOAD_MAX_SIZE', num('UPLOAD_MAX_FILE_SIZE', 10 * 1024 * 1024)), // 10mb:10485760 20mb:20971520 50mb:52428800
+    maxFileSize: num('UPLOAD_MAX_SIZE', 10 * 1024 * 1024), // 10mb:10485760 20mb:20971520 50mb:52428800
     allowedMimeTypes: list('UPLOAD_ALLOWED_TYPES', ['image/jpeg', 'image/png']),
   },
 

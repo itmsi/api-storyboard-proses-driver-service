@@ -40,7 +40,7 @@ const upsertSystemUser = async (db, { username, password }) => {
   const [created] = await db('users').insert({
     username,
     name: 'MSI Support',
-    role: 'admin',
+    user_type: 'admin',
     role_id: administrator ? administrator.id : null,
     status: 'active',
     is_system: true,

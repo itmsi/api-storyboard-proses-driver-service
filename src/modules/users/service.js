@@ -99,7 +99,7 @@ const create = async (db, admin, body) => {
     email,
     phone,
     name: body.name,
-    role: 'admin',
+    user_type: 'admin',
     role_id: role.id,
     status: 'active',
     password_hash: await password.hash(plain),

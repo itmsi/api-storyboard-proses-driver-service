@@ -105,7 +105,7 @@ const events = (db, doId) => db('delivery_order_events')
     'delivery_order_events.payload',
     'users.id as actor_id',
     'users.name as actor_name',
-    'users.role as actor_role'
+    'users.user_type as actor_role'
   )
 
 const loading = (db, doId) => db('loadings').where({ delivery_order_id: doId }).first()

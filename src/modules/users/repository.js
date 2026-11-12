@@ -4,7 +4,7 @@ const { searchColumns } = require('../../utils/pagination')
 // Akun sistem MSI (is_system) sengaja tidak termasuk: tidak tampil, tidak bisa diubah/dihapus, dan tidak dihitung sebagai admin perusahaan
 const base = (db) => db('users')
   .leftJoin('roles', 'roles.id', 'users.role_id')
-  .where({ 'users.role': 'admin', 'users.is_delete': false, 'users.is_system': false })
+  .where({ 'users.user_type': 'admin', 'users.is_delete': false, 'users.is_system': false })
 
 const SELECT = [
   'users.id',
