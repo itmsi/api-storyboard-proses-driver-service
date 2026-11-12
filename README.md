@@ -119,7 +119,7 @@ Lihat `.env.example` untuk daftar lengkap. Yang penting:
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Koneksi PostgreSQL |
 | `JWT_SECRET` | **Wajib** di production (server menolak start tanpa ini) |
 | `SWAGGER_ENABLED` | Default aktif di development, mati di production |
-| `STORAGE_DRIVER` | `local` (folder `storage/`) atau `s3` (MinIO/S3) |
+| `STORAGE_DRIVER` | `nextcloud` (bawaan, WebDAV) atau `s3` (MinIO/S3) |
 | `MOBILE_MIN_APP_VERSION`, `MAINTENANCE_MODE`, `SUPPORT_PHONE` | Isi `GET /config/public` |
 
 ## Format response
@@ -191,6 +191,14 @@ npm run seed
 Usulan skema lengkap ada di `src/database/schema.draft.sql`. Setelah disepakati, pecah menjadi file migrasi knex.
 
 ## Status
+
+**Migrasi:** selama tahap pengembangan tidak ada migrasi "perubahan": mengubah skema berarti mengedit migrasi pembuat tabelnya (satu file per kelompok tabel di `src/database/migrations`), lalu membuat ulang database (drop, buat baru, `npm run migrate`). Begitu ada database production, migrasi yang sudah jalan dibekukan dan perubahan dibuat sebagai migrasi baru.
+
+**Alur pemakaian** (perusahaan baru, role, data kerja, hari kerja driver, setelah DO selesai): lihat `docs/ALUR-PEMAKAIAN.md`.
+
+**Penyimpanan media:** `STORAGE_DRIVER=nextcloud` (bawaan; tidak ada lagi penyimpanan lokal) atau `s3` (MinIO). Dengan `nextcloud`, foto dan thumbnail diunggah lewat WebDAV ke `NEXTCLOUD_UPLOAD_DIR/media/<CLIENT>/<tahun>/<bulan>/<tanggal>/` (folder dibuat otomatis) dan disajikan API di `/storage/...`, jadi kredensial Nextcloud hanya ada di server dan aplikasi tetap memakai URL API. Isi `NEXTCLOUD_URL`, `NEXTCLOUD_USERNAME`, `NEXTCLOUD_PASSWORD` di `.env` (jangan di-commit).
+
+**Role dan hak akses admin:** setiap akun (admin dan driver) punya satu role (`/roles`), dan role berisi hak per modul (katalog: `GET /roles/catalog`). Role punya jenis akun (`user_type` admin atau driver): role admin berisi hak `read`/`create`/`update`/`delete` per modul pengelolaan, role driver berisi modul `driver_*` untuk aplikasi HP. Jenis akun dibaca dari role (tidak ada lagi kolom jenis akun di `users`); rencana dan catatan refactor di `docs/PLAN-ROLE-TERPADU.md`. Setiap endpoint admin memeriksa hak itu dan membalas 403 dengan `details.required = modul:aksi` jika tidak punya. Role bawaan **Administrator** memegang semua hak dan tidak bisa diubah atau dihapus; akun admin yang sudah ada dan akun sistem `msi.support` otomatis Administrator. Admin hanya bisa memberi hak yang dimilikinya sendiri dan tidak bisa mengelola akun dengan hak di atasnya. Hak berlaku seketika saat role diubah, tanpa login ulang. `GET /me` mengembalikan `role` dan `permissions` untuk FE.
 
 **Standar daftar (filter lewat POST body):** daftar dengan filter memakai `POST /<modul>/get` dengan body JSON, mengikuti api-hrm, bukan query string. Contoh: `POST /drivers/get` dengan body `{ "page": 1, "limit": 20, "search": "budi", "sort": "-code" }`. Body boleh kosong (`{}`). Berlaku untuk drivers, users, unit-types, units, customers, locations, p2h-items, expense-categories, expenses, settlements, unit-assignments, dan delivery-orders (riwayat driver: `POST /delivery-orders/history`). Detail by id (`GET /<modul>/{id}`) dan endpoint tanpa parameter (`/me`, `/config`, `/app/bootstrap`, `/delivery-orders/active`) tetap GET.
 
