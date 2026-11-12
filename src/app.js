@@ -5,6 +5,7 @@ const compression = require('compression')
 const morgan = require('morgan')
 const config = require('./config')
 const routes = require('./routes')
+const { storageProxy } = require('./middlewares/storage-proxy')
 const { notFoundHandler, errorHandler } = require('./middlewares/error-handler')
 
 const app = express()
@@ -24,9 +25,8 @@ app.use(morgan(config.app.isProduction ? 'combined' : 'dev', {
   skip: (req) => req.path === '/health',
 }))
 
-if (config.storage.driver === 'local') {
-  app.use('/storage', express.static(config.storage.localDir, { maxAge: '7d', index: false }))
-}
+// /storage: media disajikan dari Nextcloud (kredensial hanya di server)
+app.use('/storage', storageProxy)
 
 app.use(routes)
 

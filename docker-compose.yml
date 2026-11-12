@@ -11,8 +11,6 @@ services:
       - "127.0.0.1:9060:9060" # hanya dari host (nginx / cloudflare tunnel). Ganti ke "9060:9060" agar terbuka ke jaringan.
     extra_hosts:
       - "host.docker.internal:host-gateway" # agar DB_HOST=host.docker.internal menjangkau Postgres di host (Linux)
-    volumes:
-      - ./storage:/app/storage # foto jika STORAGE_DRIVER=local
     restart: unless-stopped
     networks:
       - infra_net

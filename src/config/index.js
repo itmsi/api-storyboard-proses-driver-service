@@ -101,14 +101,23 @@ const config = {
   },
 
   upload: {
-    maxFileSize: num('UPLOAD_MAX_FILE_SIZE', 10 * 1024 * 1024),
+    maxFileSize: num('UPLOAD_MAX_SIZE', num('UPLOAD_MAX_FILE_SIZE', 10 * 1024 * 1024)), // 10mb:10485760 20mb:20971520 50mb:52428800
     allowedMimeTypes: list('UPLOAD_ALLOWED_TYPES', ['image/jpeg', 'image/png']),
   },
 
   storage: {
-    driver: str('STORAGE_DRIVER', 'local'), // local | s3
-    localDir: path.resolve(str('STORAGE_LOCAL_DIR', 'storage')),
+    driver: str('STORAGE_DRIVER', 'nextcloud'), // nextcloud | s3
     publicBaseUrl: str('STORAGE_PUBLIC_BASE_URL', ''),
+    nextcloud: {
+      url: str('NEXTCLOUD_URL').replace(/\/+$/, ''),
+      username: str('NEXTCLOUD_USERNAME'),
+      password: str('NEXTCLOUD_PASSWORD'),
+      // Endpoint OCS share link (belum dipakai: media disajikan API di /storage, bukan lewat link share)
+      shareApiPath: `/${str('NEXTCLOUD_SHARE_API_PATH', '/ocs/v1.php/apps/files_sharing/api/v1/shares').replace(/^\/+|\/+$/g, '')}`,
+      webdavPath: `/${str('NEXTCLOUD_WEBDAV_PATH', '/remote.php/webdav').replace(/^\/+|\/+$/g, '')}`,
+      uploadDir: `/${str('NEXTCLOUD_UPLOAD_DIR', '/OGO-Driver').replace(/^\/+|\/+$/g, '')}`,
+      timeoutMs: num('NEXTCLOUD_TIMEOUT_MS', 30000),
+    },
     s3: {
       endPoint: str('S3_ENDPOINT', 'localhost'),
       port: num('S3_PORT', 9000),

@@ -63,7 +63,35 @@ const addAssignmentPost = (all) => {
   return all
 }
 
-const paths = addAssignmentPost(convertListEndpoints(mergePaths(
+/**
+ * Urutan endpoint di Swagger: kelompokkan per resource (urutan kemunculan pertama), lalu di dalamnya
+ * daftar (/x/get), buat (/x), detail (/x/{id}), tindakan lain (/x/{id}/...). Tanpa ini, endpoint daftar hasil konversi POST
+ * jatuh di akhir dokumen dan terlihat "loncat".
+ */
+const pathRank = (path) => {
+  const rest = path.split('/').filter(Boolean).slice(1)
+  if (rest.length === 0) return 1
+  if (['get', 'history', 'catalog'].includes(rest[0])) return 0
+  if (rest.length === 1 && rest[0].startsWith('{')) return 2
+  return 3
+}
+
+const orderPaths = (all) => {
+  const groupOrder = []
+  Object.keys(all).forEach((p) => {
+    const group = p.split('/').filter(Boolean)[0]
+    if (!groupOrder.includes(group)) groupOrder.push(group)
+  })
+  const keys = Object.keys(all).map((p, index) => ({ p, index }))
+  keys.sort((a, b) => {
+    const ga = groupOrder.indexOf(a.p.split('/').filter(Boolean)[0])
+    const gb = groupOrder.indexOf(b.p.split('/').filter(Boolean)[0])
+    return (ga - gb) || (pathRank(a.p) - pathRank(b.p)) || (a.index - b.index)
+  })
+  return Object.fromEntries(keys.map(({ p }) => [p, all[p]]))
+}
+
+const paths = orderPaths(addAssignmentPost(convertListEndpoints(mergePaths(
   require('./paths/app-auth'),
   require('./paths/media-p2h'),
   require('./paths/delivery-orders'),
@@ -75,7 +103,7 @@ const paths = addAssignmentPost(convertListEndpoints(mergePaths(
   require('./paths/admin-crud'),
   require('./paths/roles'),
   require('./paths/internal')
-)))
+))))
 
 const description = [
   'API backend aplikasi OGO Driver (Android): P2H unit, delivery order, foto muat/bongkar, odometer, biaya perjalanan, serah terima, dan sync offline.',
