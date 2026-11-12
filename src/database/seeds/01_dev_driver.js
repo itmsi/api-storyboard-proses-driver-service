@@ -35,9 +35,8 @@ exports.seed = async (knex) => {
   }).onConflict('code').ignore()
 
   // Unit B 9123 KZ + penugasan hari ini untuk Andi
-  await knex('unit_types').insert({
-    code: 'CDD_BAK', name: 'CDD Bak', max_load_kg: 2500, created_by: adminId,
-  }).onConflict(knex.raw('(code) WHERE is_delete = false')).ignore()
+  // Tipe unit bawaan sudah dibuat migrasi; data dev memberi CDD Bak kapasitas 2500 kg (fixture)
+  await knex('unit_types').where({ code: 'CDD_BAK', is_delete: false }).update({ max_load_kg: 2500 })
   const unitType = await knex('unit_types').where({ code: 'CDD_BAK' }).first()
   await knex('units').insert({
     plate: 'B 9123 KZ', unit_type_id: unitType.id, brand: 'Mitsubishi', year: 2022, created_by: adminId,

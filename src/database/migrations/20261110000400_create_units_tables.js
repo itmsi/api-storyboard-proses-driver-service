@@ -13,6 +13,17 @@ exports.up = async (knex) => {
   await knex.raw('CREATE UNIQUE INDEX unit_types_code_uq ON unit_types (code) WHERE is_delete = false')
   await addUpdatedAtTrigger(knex, 'unit_types')
 
+  // Data acuan awal: tipe unit umum. Hanya titik awal: admin boleh mengubah, menambah, atau menghapusnya (kapasitas diisi sendiri).
+  await knex('unit_types').insert([
+    { code: 'CDD_BAK', name: 'CDD Bak' },
+    { code: 'CDD_BOX', name: 'CDD Box' },
+    { code: 'FUSO_BAK', name: 'Fuso Bak' },
+    { code: 'FUSO_BOX', name: 'Fuso Box' },
+    { code: 'TRONTON', name: 'Tronton' },
+    { code: 'WINGBOX', name: 'Wingbox' },
+    { code: 'TRAILER', name: 'Trailer' },
+  ])
+
   await knex.schema.createTable('units', (t) => {
     t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'))
     t.text('plate').notNullable() // B 9123 KZ
