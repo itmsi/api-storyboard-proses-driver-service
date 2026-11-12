@@ -11,6 +11,7 @@ const select = (db, query) => query.select(
   'roles.description',
   'roles.permissions',
   'roles.is_system',
+  'roles.user_type',
   'roles.is_active',
   db('users').where({ 'users.is_delete': false, 'users.is_system': false }).where('users.role_id', db.ref('roles.id')).count('*')
     .as('user_count'),
@@ -20,10 +21,13 @@ const select = (db, query) => query.select(
   'roles.updated_by'
 )
 
-const list = async (db, { search, isActive, paging }) => {
+const list = async (db, {
+  search, isActive, userType, paging,
+}) => {
   const filtered = () => {
     const q = searchColumns(base(db), search, ['roles.name', 'roles.code'])
     if (isActive !== undefined) q.where('roles.is_active', isActive)
+    if (userType) q.where('roles.user_type', userType)
     return q
   }
   const [{ count }] = await filtered().count('roles.id as count')
@@ -60,7 +64,7 @@ const countUsers = async (db, id) => {
   return Number(count)
 }
 
-const findAdministrator = (db) => db('roles').where({ is_system: true, is_delete: false }).first('id', 'name')
+const findAdministrator = (db) => db('roles').where({ is_system: true, user_type: 'admin', is_delete: false }).first('id', 'name')
 
 module.exports = {
   list, findById, findByCodeOrName, insert, update, softDelete, countUsers, findAdministrator,

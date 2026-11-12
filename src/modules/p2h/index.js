@@ -1,7 +1,7 @@
 const express = require('express')
 const { authenticate, authorize } = require('../../middlewares/auth')
 const { adminGuard } = require('../../middlewares/admin-guard')
-const { can } = require('../../middlewares/permit')
+const { can, driverCan } = require('../../middlewares/permit')
 const { validate } = require('../../middlewares/validate')
 const { asyncHandler } = require('../../utils/response')
 const schema = require('./validation')
@@ -13,15 +13,16 @@ const router = express.Router()
 const guard = [authenticate, authorize('driver')]
 
 // GET /api/v1/p2h/template
-router.get('/p2h/template', guard, asyncHandler(controller.getTemplate))
+router.get('/p2h/template', guard, driverCan('driver_p2h', 'read'), asyncHandler(controller.getTemplate))
 
 // GET /api/v1/units/:unitId/p2h/today
-router.get('/units/:unitId/p2h/today', guard, validate({ params: schema.unitParams }), asyncHandler(controller.getToday))
+router.get('/units/:unitId/p2h/today', guard, driverCan('driver_p2h', 'read'), validate({ params: schema.unitParams }), asyncHandler(controller.getToday))
 
 // POST /api/v1/units/:unitId/p2h
 router.post(
   '/units/:unitId/p2h',
   guard,
+  driverCan('driver_p2h', 'create'),
   validate({ params: schema.unitParams, body: schema.submit }),
   asyncHandler(controller.submit)
 )

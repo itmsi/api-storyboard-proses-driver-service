@@ -1,7 +1,7 @@
 const express = require('express')
 const { authenticate, authorize } = require('../../middlewares/auth')
 const { adminGuard, activeAdminOnly } = require('../../middlewares/admin-guard')
-const { can, adminCan } = require('../../middlewares/permit')
+const { can, adminCan, driverCan } = require('../../middlewares/permit')
 const { imageUpload } = require('../../middlewares/upload')
 const { validate } = require('../../middlewares/validate')
 const { asyncHandler } = require('../../utils/response')
@@ -16,6 +16,7 @@ router.post(
   '/',
   authenticate,
   authorize('driver'),
+  driverCan('driver_media', 'create'),
   imageUpload.single('file'),
   validate({ body: schema.upload }),
   asyncHandler(controller.upload)
@@ -25,7 +26,7 @@ router.post(
 router.post('/get', adminGuard, can('media', 'read'), validate({ body: schema.list }), asyncHandler(controller.list))
 
 // GET /api/v1/media/:id  (admin: semua; driver: foto miliknya)
-router.get('/:id', authenticate, authorize('driver', 'admin'), activeAdminOnly, adminCan('media', 'read'), validate({ params: schema.idParams }), asyncHandler(controller.get))
+router.get('/:id', authenticate, authorize('driver', 'admin'), activeAdminOnly, adminCan('media', 'read'), driverCan('driver_media', 'read'), validate({ params: schema.idParams }), asyncHandler(controller.get))
 
 // DELETE /api/v1/media/:id  (admin, hapus lunak; ditolak jika masih dipakai)
 router.delete('/:id', adminGuard, can('media', 'delete'), validate({ params: schema.idParams }), asyncHandler(controller.remove))

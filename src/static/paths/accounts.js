@@ -27,6 +27,9 @@ const listParams = (sortValues, searchHint) => [
     schema: { type: 'string', example: sortValues[0] },
   },
   { name: 'status', in: 'query', schema: { type: 'string', enum: ['active', 'suspended'] } },
+  {
+    name: 'role_id', in: 'query', description: 'Filter berdasarkan role', schema: { type: 'string', format: 'uuid' }
+  },
 ]
 
 const adminErrors = {

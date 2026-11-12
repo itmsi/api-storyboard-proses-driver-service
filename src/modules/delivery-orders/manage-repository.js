@@ -92,6 +92,7 @@ const insert = async (trx, row) => {
 
 const events = (db, doId) => db('delivery_order_events')
   .leftJoin('users', 'users.id', 'delivery_order_events.actor_id')
+  .leftJoin('roles', 'roles.id', 'users.role_id')
   .where({ 'delivery_order_events.delivery_order_id': doId })
   .orderBy('delivery_order_events.id')
   .select(
@@ -105,7 +106,7 @@ const events = (db, doId) => db('delivery_order_events')
     'delivery_order_events.payload',
     'users.id as actor_id',
     'users.name as actor_name',
-    'users.user_type as actor_role'
+    'roles.user_type as actor_role'
   )
 
 const loading = (db, doId) => db('loadings').where({ delivery_order_id: doId }).first()

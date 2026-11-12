@@ -3,6 +3,7 @@ const { withAuditNames } = require('../../utils/audit')
 const getProfile = (db, userId, deviceUuid) => withAuditNames(
   db('users')
     .join('drivers', 'drivers.user_id', 'users.id')
+    .leftJoin('roles', 'roles.id', 'users.role_id')
     .leftJoin('devices', (j) => j.on('devices.id', '=', db.raw('?', [deviceUuid])))
     .where({ 'users.id': userId, 'users.is_delete': false, 'drivers.is_delete': false })
     .select(
@@ -11,6 +12,10 @@ const getProfile = (db, userId, deviceUuid) => withAuditNames(
       'users.name',
       'users.phone',
       'users.language',
+      'users.role_id',
+      'roles.name as role_name',
+      'roles.is_system as role_is_system',
+      'roles.permissions as role_permissions',
       'devices.app_version',
       'devices.last_synced_at',
       'drivers.created_at',

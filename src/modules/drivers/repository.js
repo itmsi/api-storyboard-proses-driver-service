@@ -4,9 +4,10 @@ const { searchColumns } = require('../../utils/pagination')
 // Satu driver = baris users (login) + baris drivers (profil kerja). id yang dipakai di API = drivers.id.
 const base = (db, today) => db('users')
   .join('drivers', 'drivers.user_id', 'users.id')
+  .leftJoin('roles', 'roles.id', 'users.role_id')
   .leftJoin('driver_unit_assignments as dua', (j) => j.on('dua.driver_id', 'drivers.id').andOn('dua.work_date', db.raw('?', [today])))
   .leftJoin('units as unit_today', 'unit_today.id', 'dua.unit_id')
-  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'users.user_type': 'driver' })
+  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'roles.user_type': 'driver' })
 
 const select = (db, query) => query.select(
   'drivers.id as id',
@@ -15,6 +16,8 @@ const select = (db, query) => query.select(
   'users.name',
   'users.phone',
   'users.status as user_status',
+  'users.role_id',
+  'roles.name as role_name',
   db.raw('drivers.license_expires_on::text as license_expires_on'),
   'drivers.license_no',
   'drivers.license_type',
@@ -30,12 +33,13 @@ const select = (db, query) => query.select(
 )
 
 const list = async (db, {
-  today, search, status, paging,
+  today, search, status, roleId, paging,
 }) => {
   const filtered = () => {
     const q = base(db, today)
     searchColumns(q, search, ['users.name', 'drivers.code', 'users.phone'])
     if (status) q.where('users.status', status)
+    if (roleId) q.where('users.role_id', roleId)
     return q
   }
   const [{ count }] = await filtered().count('drivers.id as count')
@@ -48,6 +52,14 @@ const list = async (db, {
 }
 
 const findById = (db, today, id) => withAuditNames(select(db, base(db, today)).where('drivers.id', id), 'drivers').first()
+
+/** Role driver (jenis akun driver) yang ada; tanpa id = role bawaan Driver. */
+const findDriverRole = (db, roleId) => {
+  const q = db('roles').where({ user_type: 'driver', is_delete: false })
+  if (roleId) q.where({ id: roleId })
+  else q.where({ is_system: true })
+  return q.first('id', 'name', 'is_active')
+}
 
 const findActiveDo = (db, driverId) => db('delivery_orders')
   .where({ driver_id: driverId })
@@ -81,5 +93,14 @@ const softDelete = async (trx, row, actorId) => {
 }
 
 module.exports = {
-  list, findById, findActiveDo, codeUsed, nextSequence, insertDriver, updateUser, updateDriver, softDelete,
+  findDriverRole,
+  list,
+  findById,
+  findActiveDo,
+  codeUsed,
+  nextSequence,
+  insertDriver,
+  updateUser,
+  updateDriver,
+  softDelete,
 }

@@ -8,18 +8,20 @@ const tokens = require('./tokens')
 const repo = require('./repository')
 
 /**
- * Satu alur auth untuk dua jenis akun, dibedakan oleh kolom users.user_type:
+ * Satu alur auth untuk dua jenis akun, dibedakan oleh jenis role akunnya (roles.user_type):
  *   driver -> aplikasi HP: wajib `device`, token membawa driver_id dan device_id, response berisi `driver`
  *   admin  -> web admin:   tanpa device, response berisi `admin`
  */
 const isActive = (row) => row.user_status === 'active' && (row.user_type !== 'driver' || row.driver_status === 'active')
 
 // Isi access token. device_id = baris devices (uuid) milik perangkat yang login (hanya driver)
-/** Hak akses sebuah role: Administrator (is_system) = semua, tanpa role = tidak ada. */
+/** Hak akses sebuah role: Administrator (role bawaan admin) = semua hak admin; role lain memakai hak tersimpan; tanpa role = tidak ada. */
 const grantsOf = (role) => {
   if (!role) return {}
-  return role.is_system ? permissions.all() : role.permissions
+  return role.is_system && role.user_type === 'admin' ? permissions.all() : role.permissions
 }
+
+const roleView = (role) => (role ? { id: role.id, name: role.name, is_system: role.is_system } : null)
 
 const claimsOf = (user, deviceUuid = null) => (user.user_type === 'driver'
   ? { role: 'driver', driver_id: user.driver_id, device_id: deviceUuid }
@@ -53,16 +55,21 @@ const login = async ({
     remember,
   })
 
+  // Hak akses dari role (untuk FE menyembunyikan menu); server tetap memeriksa di setiap request
+  const role = await repo.findAccountRole(db, user.id)
   if (user.user_type === 'driver') {
     return {
       ...issued,
       driver: {
-        id: user.driver_id, code: user.driver_code, name: user.name, phone: user.phone,
+        id: user.driver_id,
+        code: user.driver_code,
+        name: user.name,
+        phone: user.phone,
+        role: roleView(role),
+        permissions: grantsOf(role),
       },
     }
   }
-  // Hak akses dari role (untuk FE menyembunyikan menu); server tetap memeriksa di setiap request
-  const role = await repo.findAdminRole(db, user.id)
   return {
     ...issued,
     admin: {
@@ -70,7 +77,7 @@ const login = async ({
       username: user.username,
       name: user.name,
       email: user.email,
-      role: role ? { id: role.id, name: role.name, is_system: role.is_system } : null,
+      role: roleView(role),
       permissions: grantsOf(role),
     },
   }

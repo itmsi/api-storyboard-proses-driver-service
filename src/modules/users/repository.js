@@ -4,7 +4,7 @@ const { searchColumns } = require('../../utils/pagination')
 // Akun sistem MSI (is_system) sengaja tidak termasuk: tidak tampil, tidak bisa diubah/dihapus, dan tidak dihitung sebagai admin perusahaan
 const base = (db) => db('users')
   .leftJoin('roles', 'roles.id', 'users.role_id')
-  .where({ 'users.user_type': 'admin', 'users.is_delete': false, 'users.is_system': false })
+  .where({ 'roles.user_type': 'admin', 'users.is_delete': false, 'users.is_system': false })
 
 const SELECT = [
   'users.id',
@@ -59,11 +59,11 @@ const countOtherActiveAdministrators = async (db, exceptId) => {
   return Number(count)
 }
 
-const ROLE_COLUMNS = ['id', 'name', 'is_system', 'is_active', 'permissions']
+const ROLE_COLUMNS = ['id', 'name', 'is_system', 'is_active', 'permissions', 'user_type']
 
 const findRole = (db, roleId) => db('roles').where({ id: roleId, is_delete: false }).first(ROLE_COLUMNS)
 
-const findAdministratorRole = (db) => db('roles').where({ is_system: true, is_delete: false }).first(ROLE_COLUMNS)
+const findAdministratorRole = (db) => db('roles').where({ is_system: true, user_type: 'admin', is_delete: false }).first(ROLE_COLUMNS)
 
 const insert = async (db, row) => {
   const [created] = await db('users').insert(row).returning('id')

@@ -70,6 +70,7 @@ const assertManageable = async (db, admin, target) => {
 const resolveRole = async (db, admin, roleId) => {
   const role = roleId ? await repo.findRole(db, roleId) : await repo.findAdministratorRole(db)
   if (!role) throw accounts.fail('role_id', 'Role tidak ditemukan.')
+  if (role.user_type !== 'admin') throw accounts.fail('role_id', 'Role ini untuk akun driver, bukan akun admin.')
   if (!role.is_active) throw accounts.fail('role_id', 'Role sedang nonaktif.')
   if (!permissions.isSubset(admin.permissions, grantsOf(role))) throw beyondOwn('Anda tidak boleh memberi hak yang tidak Anda miliki.', role.id)
   return role
@@ -99,7 +100,6 @@ const create = async (db, admin, body) => {
     email,
     phone,
     name: body.name,
-    user_type: 'admin',
     role_id: role.id,
     status: 'active',
     password_hash: await password.hash(plain),

@@ -5,6 +5,7 @@ const { AppError } = require('../../utils/errors')
 const knexfile = require('../knexfile')
 const tenant = require('./index')
 const { upsertSystemUser } = require('./system-user')
+const { ensureDefaultRoles } = require('./default-roles')
 
 /**
  * Operasi yang dipanggil saas-worker saat membuat client baru (dan saat rollout migrasi):
@@ -92,28 +93,32 @@ const migrate = async (clientId) => {
 
 /**
  * Seeder idempoten. Data acuan (checklist P2H, kategori biaya) sudah dibuat oleh migrasi, jadi seeder hanya
- * menyiapkan akun sistem MSI bila diminta.
+ * menyiapkan role bawaan (Administrator dan Driver dengan default permission) dan, bila diminta, akun sistem MSI.
  */
 const seed = async (clientId, { includeSystemUser }) => {
   const found = await requireTenant(clientId)
   const started = Date.now()
   const seeded = []
 
-  if (includeSystemUser) {
-    if (!found.systemUser) {
-      throw new AppError('VALIDATION_ERROR', { details: [{ field: 'include_system_user', message: 'System user belum dikonfigurasi untuk client ini di saas-api.' }] })
-    }
-    try {
-      await withDb(found.owner, 'api-ogo-seed', async (db) => {
+  if (includeSystemUser && !found.systemUser) {
+    throw new AppError('VALIDATION_ERROR', { details: [{ field: 'include_system_user', message: 'System user belum dikonfigurasi untuk client ini di saas-api.' }] })
+  }
+
+  try {
+    await withDb(found.owner, 'api-ogo-seed', async (db) => {
+      // Role bawaan (Administrator, Driver dengan default permission) selalu disiapkan, lalu akun sistem bila diminta
+      await ensureDefaultRoles(db)
+      seeded.push('default_roles')
+      if (includeSystemUser) {
         const { action } = await upsertSystemUser(db, found.systemUser)
         seeded.push(`system_user:${action}`)
-      })
-    } catch (err) {
-      if (err.code === '42P01') { // tabel belum ada
-        throw new AppError('INVALID_STATE', { message: 'Database belum dimigrasi. Jalankan migrasi dulu.', details: { reason: 'belum_dimigrasi' } })
       }
-      throw err
+    })
+  } catch (err) {
+    if (err.code === '42P01') { // tabel belum ada
+      throw new AppError('INVALID_STATE', { message: 'Database belum dimigrasi. Jalankan migrasi dulu.', details: { reason: 'belum_dimigrasi' } })
     }
+    throw err
   }
   return { seeded, duration_ms: Date.now() - started }
 }

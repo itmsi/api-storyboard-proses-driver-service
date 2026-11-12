@@ -2,7 +2,8 @@
 
 const findDriverUser = (db, { username, phone }) => db('users')
   .join('drivers', 'drivers.user_id', 'users.id')
-  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'users.user_type': 'driver' })
+  .join('roles', 'roles.id', 'users.role_id')
+  .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'roles.user_type': 'driver' })
   .modify((q) => {
     if (phone) q.where('users.phone', phone)
     else q.whereRaw('lower(users.username) = lower(?)', [username])
@@ -100,15 +101,16 @@ const clearFcmToken = (db, userId, deviceUuid) => db('devices')
   .update({ fcm_token: null, updated_by: userId })
 
 /**
- * Cari akun untuk login dari satu kolom input. Peran (driver/admin) dibaca dari akunnya, bukan dari endpoint:
+ * Cari akun untuk login dari satu kolom input. Jenis akun (driver/admin) dibaca dari role akunnya (roles.user_type), bukan dari endpoint:
  *   No. HP (+62…) -> users.phone | berisi "@" -> users.email | selain itu -> users.username
  * Untuk driver ikut membawa profil kerjanya (drivers); akun yang peran/profilnya tidak lengkap tidak ditemukan.
  */
 const findAccountForLogin = (db, { phone, identifier }) => db('users')
+  .join('roles', 'roles.id', 'users.role_id')
   .leftJoin('drivers', (j) => j.on('drivers.user_id', 'users.id').andOn('drivers.is_delete', db.raw('false')))
   .where({ 'users.is_delete': false })
-  .whereIn('users.user_type', ['driver', 'admin'])
-  .where((q) => q.whereNot('users.user_type', 'driver').orWhereNotNull('drivers.id'))
+  .whereIn('roles.user_type', ['driver', 'admin'])
+  .where((q) => q.whereNot('roles.user_type', 'driver').orWhereNotNull('drivers.id'))
   .modify((q) => {
     if (phone) q.where('users.phone', phone)
     else if (identifier.includes('@')) q.whereRaw('lower(users.email) = lower(?)', [identifier])
@@ -116,7 +118,7 @@ const findAccountForLogin = (db, { phone, identifier }) => db('users')
   })
   .select(
     'users.id',
-    'users.user_type',
+    'roles.user_type as user_type',
     'users.username',
     'users.email',
     'users.phone',
@@ -133,13 +135,14 @@ const findAccountForLogin = (db, { phone, identifier }) => db('users')
 
 /** Akun untuk refresh token (peran apa pun): masih ada dan, untuk driver, profil kerjanya masih ada. */
 const findAccountById = (db, userId) => db('users')
+  .join('roles', 'roles.id', 'users.role_id')
   .leftJoin('drivers', (j) => j.on('drivers.user_id', 'users.id').andOn('drivers.is_delete', db.raw('false')))
   .where({ 'users.id': userId, 'users.is_delete': false })
-  .whereIn('users.user_type', ['driver', 'admin'])
-  .where((q) => q.whereNot('users.user_type', 'driver').orWhereNotNull('drivers.id'))
+  .whereIn('roles.user_type', ['driver', 'admin'])
+  .where((q) => q.whereNot('roles.user_type', 'driver').orWhereNotNull('drivers.id'))
   .select(
     'users.id',
-    'users.user_type',
+    'roles.user_type as user_type',
     'users.name',
     'users.status as user_status',
     'drivers.id as driver_id',
@@ -160,14 +163,14 @@ const revokeTokens = (db, userId, exceptFamily = null) => db('refresh_tokens')
   .modify((q) => { if (exceptFamily) q.whereNot({ family_id: exceptFamily }) })
   .update({ revoked_at: db.fn.now() })
 
-/** Role hak akses sebuah akun admin (null jika belum punya). */
-const findAdminRole = (db, userId) => db('users')
+/** Role hak akses sebuah akun (admin maupun driver); null jika belum punya. */
+const findAccountRole = (db, userId) => db('users')
   .join('roles', 'roles.id', 'users.role_id')
   .where({ 'users.id': userId, 'roles.is_delete': false })
-  .first('roles.id', 'roles.name', 'roles.is_system', 'roles.permissions')
+  .first('roles.id', 'roles.name', 'roles.is_system', 'roles.user_type', 'roles.permissions')
 
 module.exports = {
-  findAdminRole,
+  findAccountRole,
   findAccountForLogin,
   findAccountById,
   updatePassword,

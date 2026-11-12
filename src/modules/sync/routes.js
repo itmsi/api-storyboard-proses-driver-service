@@ -89,6 +89,21 @@ const routes = [
   },
 ]
 
+/**
+ * Hak driver yang dibutuhkan tiap jenis item (modul:aksi), sama dengan hak endpoint aslinya. Sync batch hanya jalan bila
+ * driver punya hak sync (driver_sync:create) DAN hak untuk tiap item; item tanpa hak gagal sendiri (403), item lain tetap diproses.
+ */
+const REQUIRED = {
+  p2h: ['driver_p2h', 'create'],
+  accept: ['driver_delivery_orders', 'update'],
+  complete: ['driver_delivery_orders', 'update'],
+  loading: ['driver_trip', 'create'],
+  odometer: ['driver_trip', 'create'],
+  handover: ['driver_trip', 'create'],
+  expense: ['driver_expenses', 'create'],
+  settings: ['driver_profile', 'update'],
+}
+
 /** Normalisasi path dari HP ("/api/v1/..." dan query string diabaikan), cari rute yang cocok. */
 const match = (method, rawPath) => {
   const path = String(rawPath).split('?')[0].replace(/^\/api\/v1(?=\/)/, '').replace(/\/+$/, '')
@@ -101,4 +116,4 @@ const match = (method, rawPath) => {
   return null
 }
 
-module.exports = { match }
+module.exports = { match, REQUIRED }

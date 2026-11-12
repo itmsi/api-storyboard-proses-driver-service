@@ -8,6 +8,7 @@ const idParams = Joi.object({
 
 const list = listQuery.keys({
   status: Joi.string().valid('active', 'suspended'),
+  role_id: Joi.string().guid(),
 })
 
 const license = {
@@ -24,6 +25,8 @@ const create = Joi.object({
   // Kosong = kode otomatis DRV-0001, DRV-0002, ...
   code: Joi.string().trim().uppercase().pattern(/^[A-Z0-9-]{3,20}$/)
     .messages({ 'string.pattern.base': 'Kode hanya boleh huruf, angka, dan "-" (3-20 karakter).' }),
+  // Role driver (hak di aplikasi HP, lihat /roles dengan user_type driver). Kosong = role bawaan Driver.
+  role_id: Joi.string().guid(),
   // Kosong = dibuatkan password sementara (dikembalikan sekali di response)
   password: passwordRule,
   ...license,
@@ -33,6 +36,7 @@ const update = Joi.object({
   name: Joi.string().trim().min(2).max(120),
   phone: Joi.string().trim().max(30).allow(null, ''),
   status: Joi.string().valid('active', 'suspended'),
+  role_id: Joi.string().guid(),
   ...license,
 }).min(1)
 

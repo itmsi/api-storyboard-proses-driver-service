@@ -1,6 +1,6 @@
 const Joi = require('joi')
 const { listQuery } = require('../../utils/pagination')
-const { ACTIONS, RESOURCES } = require('../../utils/permissions')
+const { ACTIONS, USER_TYPES, RESOURCES } = require('../../utils/permissions')
 
 const idParams = Joi.object({
   id: Joi.string().guid().required(),
@@ -8,6 +8,7 @@ const idParams = Joi.object({
 
 const list = listQuery.keys({
   is_active: Joi.boolean(),
+  user_type: Joi.string().valid(...USER_TYPES),
 })
 
 // { "drivers": ["read", "create"], ... }; modul dan aksi asing ditolak di service (pesan per field)
@@ -25,6 +26,8 @@ const create = Joi.object({
   ...fields,
   code: Joi.string().trim().lowercase().pattern(/^[a-z0-9_-]{2,40}$/)
     .messages({ 'string.pattern.base': 'Kode hanya boleh huruf kecil, angka, "_" dan "-" (2-40 karakter).' }),
+  // Jenis akun pemakai role: admin (modul pengelolaan) atau driver (modul aplikasi HP). Tidak bisa diubah sesudah dibuat.
+  user_type: Joi.string().valid(...USER_TYPES).default('admin'),
   name: fields.name.required(),
   permissions: permissions.required(),
 })

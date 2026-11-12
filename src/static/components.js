@@ -199,7 +199,14 @@ const schemas = {
     description: 'Pasangan token + data akun. Driver mendapat `driver`, admin mendapat `admin`.',
     allOf: [ref('TokenPair'), {
       oneOf: [
-        obj({ driver: ref('DriverRef') }),
+        obj({
+          driver: {
+            allOf: [ref('DriverRef'), obj({
+              role: nullable(obj({ id: str('4c7e9b21-8d35-4a60-b1f2-6e0a3d5c8f17'), name: str('Driver'), is_system: bool(true) })),
+              permissions: obj({}, [], { description: 'Hak akses dari role driver: { <modul driver_*>: [aksi] }', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { driver_profile: ['read', 'update'], driver_p2h: ['read', 'create'] } }),
+            })],
+          },
+        }),
         obj({
           admin: obj({
             id: str('4f1a8c52-9d3e-4b7a-8e61-2c5d7f90a1b3'),
@@ -224,6 +231,8 @@ const schemas = {
     name: str('Andi'),
     phone: str('[NO_HP]'),
     unit_today: nullable(ref('UnitRef')),
+    role: nullable(obj({ id: str('4c7e9b21-8d35-4a60-b1f2-6e0a3d5c8f17'), name: str('Driver'), is_system: bool(true) })),
+    permissions: obj({}, [], { description: 'Hak akses dari role driver: { <modul driver_*>: [aksi] }. Aplikasi boleh menyembunyikan fitur yang tidak diizinkan; server tetap memeriksa di setiap request.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { driver_profile: ['read', 'update'] } }),
     settings: obj({ language: enumOf(['id', 'en', 'zh']) }),
     app: obj({ version: str('1.0.0') }),
     sync: obj({ pending: int(0), last_synced_at: nullable(dt('2026-11-05T07:29:00+07:00')) }),
@@ -620,6 +629,7 @@ const schemas = {
     name: str('Andi'),
     phone: nullable(str('+6281234567890')),
     status: enumOf(['active', 'suspended']),
+    role: nullable(obj({ id: str('4c7e9b21-8d35-4a60-b1f2-6e0a3d5c8f17'), name: str('Driver') })),
     license: obj({
       no: nullable(str('1234-5678')), type: nullable(str('B2 Umum')), expires_on: nullable(date('2028-05-01')),
     }),
@@ -640,6 +650,7 @@ const schemas = {
     name: str('Budi Santoso'),
     phone: nullable(str('0812-3456-7890', { description: 'Diubah ke format +62…; unik antar akun' })),
     code: str('DRV-0100', { description: 'Kosong = otomatis (DRV-0001, DRV-0002, …). Kode yang pernah dipakai tidak bisa dipakai ulang' }),
+    role_id: str('4c7e9b21-8d35-4a60-b1f2-6e0a3d5c8f17', { format: 'uuid', description: 'Role driver (hak di aplikasi HP, lihat /roles dengan user_type driver). Kosong = role bawaan Driver. Role admin ditolak.' }),
     password: str('<password>', { format: 'password', description: 'Kosong = dibuatkan password sementara' }),
     license_no: nullable(str('1234-5678')),
     license_type: nullable(str('B2 Umum')),
@@ -649,6 +660,7 @@ const schemas = {
     name: str('Budi Santoso'),
     phone: nullable(str('0812-3456-7890')),
     status: { ...enumOf(['active', 'suspended']), description: 'suspended = tidak bisa login dan sesinya dicabut' },
+    role_id: str('4c7e9b21-8d35-4a60-b1f2-6e0a3d5c8f17', { format: 'uuid', description: 'Pindah ke role driver lain. Role admin ditolak.' }),
     license_no: nullable(str('1234-5678')),
     license_type: nullable(str('B2 Umum')),
     license_expires_on: nullable(date('2028-05-01')),
@@ -688,12 +700,14 @@ const schemas = {
     name: str('Staf Operasional'),
     description: nullable(str('Mengelola unit dan customer')),
     permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
-    is_system: bool(false, { description: 'true = role bawaan Administrator: semua hak, tidak bisa diubah atau dihapus' }),
+    user_type: enumOf(['admin', 'driver'], 'admin', { description: 'Jenis akun pemakai role: admin (modul pengelolaan) atau driver (modul aplikasi HP, awalan driver_)' }),
+    is_system: bool(false, { description: 'true = role bawaan: Administrator (semua hak admin, terkunci penuh) atau Driver (hak default driver; hanya hak dan deskripsi yang boleh disesuaikan, tidak bisa dihapus)' }),
     is_active: bool(true, { description: 'Role nonaktif: akun yang memakainya ditolak (403 role_nonaktif)' }),
     user_count: int(2, { description: 'Jumlah akun admin yang memakai role ini' }),
     ...auditProps,
   }),
   AdminRoleCreate: obj({
+    user_type: enumOf(['admin', 'driver'], 'admin', { description: 'Jenis akun pemakai role. Bawaan admin. Tidak bisa diubah sesudah dibuat. Role driver wajib memuat driver_profile:read.' }),
     name: str('Staf Operasional'),
     code: str('operasional', { description: 'Huruf kecil, angka, "_", "-" (2-40). Kosong = dibuat dari nama.' }),
     description: nullable(str('Mengelola unit dan customer')),
@@ -708,7 +722,13 @@ const schemas = {
   }),
   PermissionCatalog: obj({
     actions: arr(str('read'), { example: ['read', 'create', 'update', 'delete'] }),
-    resources: arr(obj({ key: str('delivery_orders'), label: str('Delivery order'), actions: arr(str('read')) })),
+    user_types: arr(str('admin'), { example: ['admin', 'driver'] }),
+    resources: arr(obj({
+      key: str('delivery_orders'),
+      label: str('Delivery order'),
+      user_type: enumOf(['admin', 'driver'], 'admin', { description: 'Jenis akun pemilik modul: modul admin hanya untuk role admin, modul driver_* hanya untuk role driver' }),
+      actions: arr(str('read'), { description: 'Aksi yang tersedia pada modul ini (modul driver bisa lebih sedikit dari empat aksi)' }),
+    })),
   }),
 
   // ---------- Admin - P2H & Media ----------

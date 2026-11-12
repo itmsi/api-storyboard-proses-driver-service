@@ -1,6 +1,7 @@
 const express = require('express')
 const { authenticate, authorize } = require('../../middlewares/auth')
 const { validate } = require('../../middlewares/validate')
+const { driverCan } = require('../../middlewares/permit')
 const { asyncHandler } = require('../../utils/response')
 const schema = require('./validation')
 const controller = require('./controller')
@@ -10,6 +11,6 @@ const router = express.Router()
 router.use(authenticate, authorize('driver'))
 
 // POST /api/v1/sync/batch
-router.post('/batch', validate({ body: schema.batch }), asyncHandler(controller.batch))
+router.post('/batch', driverCan('driver_sync', 'create'), validate({ body: schema.batch }), asyncHandler(controller.batch))
 
 module.exports = router

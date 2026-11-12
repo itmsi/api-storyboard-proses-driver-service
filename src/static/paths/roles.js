@@ -31,7 +31,7 @@ module.exports = {
     post: {
       tags: [TAG],
       summary: 'Daftar role',
-      description: 'Urut: `name` (default), `code`, `created_at`. Filter: `is_active`, `search` (nama atau kode).',
+      description: 'Urut: `name` (default), `code`, `created_at`. Filter: `is_active`, `user_type` (`admin` atau `driver`), `search` (nama atau kode).',
       security: secured,
       requestBody: jsonBody({
         type: 'object',
@@ -43,6 +43,7 @@ module.exports = {
           search: { type: 'string' },
           sort: { type: 'string', example: 'name' },
           is_active: { type: 'boolean' },
+          user_type: { type: 'string', enum: ['admin', 'driver'] },
         },
       }, undefined, false),
       responses: { 200: jsonResponse('OK', paged('AdminRole')), ...withValidation },

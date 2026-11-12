@@ -2,7 +2,9 @@ const { AppError } = require('../../utils/errors')
 const { validateValue } = require('../../middlewares/validate')
 const { describeError } = require('../../middlewares/error-handler')
 const { toWib } = require('../../utils/date')
-const { match } = require('./routes')
+const { match, REQUIRED } = require('./routes')
+const permissions = require('../../utils/permissions')
+const { fetchDriverPermissions } = require('../../middlewares/permit')
 const repo = require('./repository')
 
 const failure = (status, error) => ({ status, error })
@@ -11,7 +13,7 @@ const failure = (status, error) => ({ status, error })
  * Proses satu item seperti request biasa ke `path`: validasi yang sama, service yang sama.
  * Tidak pernah melempar; hasilnya selalu salah satu dari created | duplicate_ignored | failed.
  */
-const processItem = async (db, auth, item, locale) => {
+const processItem = async (db, auth, item, locale, granted) => {
   const context = `sync ${item.method} ${item.path}`
   const fail = (err) => ({
     outcome: failure('failed', describeError(err, locale, context)),
@@ -24,6 +26,15 @@ const processItem = async (db, auth, item, locale) => {
   }
   const { route, params } = matched
   const meta = { type: route.type }
+
+  // Hak driver untuk jenis item ini (sama dengan hak endpoint aslinya)
+  const [resource, action] = REQUIRED[route.type]
+  if (!permissions.can(granted, resource, action)) {
+    return {
+      ...fail(new AppError('FORBIDDEN', { message: 'Akun Anda tidak punya hak untuk tindakan ini.', details: { required: `${resource}:${action}` } })),
+      meta,
+    }
+  }
 
   if (route.paramSchema) {
     const checked = validateValue(route.paramSchema, params)
@@ -58,10 +69,13 @@ const processBatch = async (db, auth, { device_id: deviceId, items }, locale) =>
   const order = items.map((item, index) => ({ item, index }))
     .sort((a, b) => new Date(a.item.client_created_at) - new Date(b.item.client_created_at) || a.index - b.index)
 
+  // Hak dibaca sekali per batch (perubahan role berlaku di batch berikutnya)
+  const granted = await fetchDriverPermissions(db, auth.sub)
+
   const results = new Array(items.length)
   for (const { item, index } of order) { // eslint-disable-line no-restricted-syntax
     // eslint-disable-next-line no-await-in-loop
-    const { outcome, meta } = await processItem(db, auth, item, locale)
+    const { outcome, meta } = await processItem(db, auth, item, locale, granted)
     results[index] = { client_ref: item.client_ref, ...outcome }
 
     // eslint-disable-next-line no-await-in-loop

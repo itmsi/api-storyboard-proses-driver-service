@@ -1,6 +1,7 @@
 const express = require('express')
 const { authenticate, authorize } = require('../../middlewares/auth')
 const { validate } = require('../../middlewares/validate')
+const { driverCan } = require('../../middlewares/permit')
 const { asyncHandler } = require('../../utils/response')
 const schema = require('./validation')
 const controller = require('./controller')
@@ -11,9 +12,9 @@ const router = express.Router()
 const guard = [authenticate, authorize('driver')]
 
 // GET /api/v1/delivery-orders/:id/expenses
-router.get('/:id/expenses', guard, validate({ params: schema.idParams }), asyncHandler(controller.list))
+router.get('/:id/expenses', guard, driverCan('driver_expenses', 'read'), validate({ params: schema.idParams }), asyncHandler(controller.list))
 
 // POST /api/v1/delivery-orders/:id/expenses
-router.post('/:id/expenses', guard, validate({ params: schema.idParams, body: schema.create }), asyncHandler(controller.create))
+router.post('/:id/expenses', guard, driverCan('driver_expenses', 'create'), validate({ params: schema.idParams, body: schema.create }), asyncHandler(controller.create))
 
 module.exports = router

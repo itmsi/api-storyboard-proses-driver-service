@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt')
 const { wibDate } = require('../../utils/date')
+const { ensureDefaultRoles } = require('../tenant/default-roles')
 
 // Data dev: admin + driver Andi (DRV-0021) sesuai fixture. Password dev = "Passw0rd!" (JANGAN dipakai di production).
 const DEV_PASSWORD = 'Passw0rd!'
@@ -9,9 +10,9 @@ exports.seed = async (knex) => {
 
   const hash = await bcrypt.hash(DEV_PASSWORD, 10)
   // Id dibuat database (gen_random_uuid), seed dicari lewat username supaya aman dijalankan ulang
-  const administrator = await knex('roles').where({ is_system: true, is_delete: false }).first('id')
+  const { administratorId, driverId } = await ensureDefaultRoles(knex)
   await knex('users').insert({
-    username: 'admin', phone: null, email: 'admin@contoh.co.id', password_hash: hash, user_type: 'admin', role_id: administrator.id, name: 'Admin OGO',
+    username: 'admin', phone: null, email: 'admin@contoh.co.id', password_hash: hash, role_id: administratorId, name: 'Admin OGO',
   }).onConflict().ignore()
   const adminId = (await knex('users').where({ username: 'admin' }).first('id')).id
 
@@ -19,7 +20,7 @@ exports.seed = async (knex) => {
     username: 'DRV-0021',
     phone: '+6281234567890',
     password_hash: hash,
-    user_type: 'driver',
+    role_id: driverId,
     name: 'Andi',
     created_by: adminId,
   }).onConflict().ignore()

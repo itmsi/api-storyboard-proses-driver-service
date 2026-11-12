@@ -17,6 +17,7 @@ const serialize = (row, extra = {}) => ({
   name: row.name,
   phone: row.phone,
   status: row.user_status,
+  role: row.role_id ? { id: row.role_id, name: row.role_name } : null,
   license: {
     no: row.license_no,
     type: row.license_type,
@@ -39,7 +40,7 @@ const load = async (db, id) => {
 const list = async (db, query) => {
   const paging = pagination.parse(query, SORTABLE, 'name')
   const { rows, total } = await repo.list(db, {
-    today: wibDate(), search: query.search, status: query.status, paging,
+    today: wibDate(), search: query.search, status: query.status, roleId: query.role_id, paging,
   })
   return { data: rows.map((r) => serialize(r)), meta: pagination.meta(paging, total) }
 }
@@ -64,7 +65,16 @@ const nextCode = async (db) => {
   throw new AppError('INTERNAL_ERROR', { details: { reason: 'tidak menemukan kode driver yang kosong' } })
 }
 
+/** Role harus ada, aktif, dan untuk akun driver (bukan role admin). Tanpa id = role bawaan Driver. */
+const resolveRole = async (db, roleId) => {
+  const role = await repo.findDriverRole(db, roleId)
+  if (!role) throw accounts.fail('role_id', roleId ? 'Role driver tidak ditemukan (role admin tidak bisa dipakai untuk akun driver).' : 'Role bawaan Driver tidak ditemukan.')
+  if (!role.is_active) throw accounts.fail('role_id', 'Role sedang nonaktif.')
+  return role
+}
+
 const create = async (db, admin, body) => {
+  const role = await resolveRole(db, body.role_id)
   const phone = await accounts.ensurePhone(db, body.phone)
 
   let { code } = body
@@ -85,7 +95,7 @@ const create = async (db, admin, body) => {
       username: code,
       phone,
       password_hash: passwordHash,
-      user_type: 'driver',
+      role_id: role.id,
       name: body.name,
       status: 'active',
       created_by: admin.id,
@@ -112,6 +122,7 @@ const update = async (db, admin, id, body) => {
   const driver = { updated_by: admin.id }
 
   if (body.name !== undefined) user.name = body.name
+  if (body.role_id !== undefined) user.role_id = (await resolveRole(db, body.role_id)).id
   if (body.phone !== undefined) user.phone = await accounts.ensurePhone(db, body.phone, row.user_id)
   if (body.status !== undefined) {
     user.status = body.status

@@ -21,6 +21,9 @@ const getDriverProfile = async (db, auth) => {
     name: row.name,
     phone: row.phone,
     unit_today: unit || null,
+    role: row.role_id ? { id: row.role_id, name: row.role_name, is_system: Boolean(row.role_is_system) } : null,
+    // Hak akses dari role (untuk FE menyembunyikan fitur); server tetap memeriksa di setiap request
+    permissions: row.role_permissions || {},
     settings: { language: row.language },
     app: { version: row.app_version },
     sync: { pending: pending.length, last_synced_at: toWib(row.last_synced_at) },
@@ -33,7 +36,7 @@ const getAdminProfile = async (db, auth) => {
   const row = await withAuditNames(
     db('users')
       .leftJoin('roles', 'roles.id', 'users.role_id')
-      .where({ 'users.id': auth.sub, 'users.user_type': 'admin', 'users.is_delete': false })
+      .where({ 'users.id': auth.sub, 'roles.user_type': 'admin', 'users.is_delete': false })
       .select(
         'roles.name as role_name',
         'roles.is_system as role_is_system',
