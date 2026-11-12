@@ -39,6 +39,18 @@ const findActive = (db, driverId) => db('delivery_orders')
   .whereIn('status', ACTIVE_STATUSES)
   .first('id', 'no')
 
+/** DO lain yang sedang berjalan dengan unit ini (driver mana pun): satu unit tidak bisa dipakai dua DO bersamaan. */
+const findUnitInUse = (db, unitId, exceptDoId) => db('delivery_orders')
+  .join('drivers', 'drivers.id', 'delivery_orders.driver_id')
+  .join('users', 'users.id', 'drivers.user_id')
+  .where('delivery_orders.unit_id', unitId)
+  .whereNot('delivery_orders.id', exceptDoId)
+  .whereIn('delivery_orders.status', ACTIVE_STATUSES)
+  .first('delivery_orders.id', 'delivery_orders.no', 'delivery_orders.status', 'drivers.code as driver_code', 'users.name as driver_name')
+
+/** Kunci per unit sampai transaksi selesai, agar dua driver tidak menerima DO dengan unit yang sama pada saat bersamaan. */
+const lockUnit = (trx, unitId) => trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`unit:${unitId}`])
+
 /** Riwayat: DO selesai dalam rentang waktu, terbaru dulu; cursor = (completed_at, id) terakhir halaman sebelumnya. */
 const history = (db, driverId, {
   from, to, limit, cursor,
@@ -89,6 +101,8 @@ module.exports = {
   findOwnedForUpdate,
   countAssigned,
   findActive,
+  findUnitInUse,
+  lockUnit,
   history,
   historySummary,
   findEventByClientRef,

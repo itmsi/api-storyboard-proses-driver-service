@@ -347,7 +347,12 @@ const schemas = {
       checked_at: dt(),
       recheck_requested: bool(true, { description: 'Hanya ada jika status belum dan admin meminta P2H ulang' }),
     }, ['status'], { description: 'Hanya untuk DO berstatus assigned' }),
-    can_accept: bool(true, { description: 'false jika P2H belum ada / unit tidak layak / masih ada DO berjalan. Hanya untuk DO assigned' }),
+    can_accept: bool(true, { description: 'false jika P2H belum ada / unit tidak layak / masih ada DO berjalan / unit sedang dipakai DO lain (lihat unit_in_use_by). Hanya untuk DO assigned' }),
+    unit_in_use_by: {
+      type: 'object',
+      description: 'Hanya ada jika unit DO ini sedang dipakai DO lain yang berjalan',
+      properties: { delivery_order_no: { type: 'string', example: 'DO-0143' }, driver_name: { type: 'string', example: 'Budi Santoso' } },
+    },
     ...auditProps,
   }),
   AcceptRequest: obj({

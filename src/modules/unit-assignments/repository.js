@@ -45,6 +45,14 @@ const findById = (db, id) => withAuditNames(select(db, base(db)).where('dua.id',
 
 const findByDriverDate = (db, driverId, date) => db('driver_unit_assignments').where({ driver_id: driverId, work_date: date }).first()
 
+/** Penugasan unit pada tanggal tsb milik driver lain (satu unit hanya untuk satu driver per tanggal). */
+const findUnitTaken = (db, unitId, date, exceptDriverId) => db('driver_unit_assignments as dua')
+  .join('drivers', 'drivers.id', 'dua.driver_id')
+  .join('users', 'users.id', 'drivers.user_id')
+  .where({ 'dua.unit_id': unitId, 'dua.work_date': date })
+  .whereNot('dua.driver_id', exceptDriverId)
+  .first('dua.id', 'dua.driver_id', 'drivers.code as driver_code', 'users.name as driver_name')
+
 /**
  * Driver sudah mulai bekerja dengan unit itu pada tanggal tsb: sudah membuat P2H di unit itu,
  * atau punya DO yang sedang berjalan dengan unit itu. Penugasan tidak boleh dicabut/dipindah lagi.
@@ -71,5 +79,5 @@ const upsert = async (db, row) => {
 const remove = (db, id) => db('driver_unit_assignments').where({ id }).delete()
 
 module.exports = {
-  list, findById, findByDriverDate, hasStartedWork, upsert, remove,
+  list, findById, findByDriverDate, findUnitTaken, hasStartedWork, upsert, remove,
 }

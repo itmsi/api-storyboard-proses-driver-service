@@ -59,22 +59,27 @@ const serialize = (row, extra = {}) => ({
 
 /**
  * Untuk DO yang belum diterima: sertakan status P2H unit hari ini dan apakah DO boleh diterima sekarang.
- * can_accept = status assigned + unit sudah P2H & boleh beroperasi + tidak ada DO lain yang sedang berjalan.
+ * can_accept = status assigned + unit sudah P2H & boleh beroperasi + tidak ada DO lain yang sedang berjalan
+ * (milik driver ini, atau DO driver lain yang memakai unit yang sama).
  */
 const withAcceptInfo = async (db, rows) => {
   const today = wibDate()
   const hasActive = Boolean(rows.length && await repo.findActive(db, rows[0].driver_id))
   const p2hByUnit = new Map()
+  const busyByUnit = new Map()
 
   return Promise.all(rows.map(async (row) => {
     if (row.status !== 'assigned') return serialize(row)
     if (!p2hByUnit.has(row.unit_id)) p2hByUnit.set(row.unit_id, await p2h.getStatus(db, row.unit_id, today))
     const status = p2hByUnit.get(row.unit_id)
+    if (!busyByUnit.has(row.unit_id)) busyByUnit.set(row.unit_id, await repo.findUnitInUse(db, row.unit_id, row.id))
+    const busy = busyByUnit.get(row.unit_id)
     return serialize(row, {
       p2h_today: status.status === 'belum'
         ? { status: 'belum', ...(status.recheck_requested ? { recheck_requested: true } : {}) }
         : { status: status.status, checked_by: status.checked_by, checked_at: status.checked_at },
-      can_accept: status.can_operate && !hasActive,
+      can_accept: status.can_operate && !hasActive && !busy,
+      ...(busy ? { unit_in_use_by: { delivery_order_no: busy.no, driver_name: busy.driver_name } } : {}),
     })
   }))
 }
@@ -237,6 +242,15 @@ const accept = async (db, auth, id, body) => {
   const active = await repo.findActive(db, auth.driver_id)
   if (active) throw new AppError('INVALID_STATE', { details: { reason: 'masih ada DO berjalan', active_do_id: active.id, active_do_no: active.no } })
 
+  const unitBusy = (other) => new AppError('CONFLICT', {
+    message: `Unit ${row.unit_plate} sedang dipakai ${other.no} (${other.driver_name}). DO ini baru bisa diterima setelah DO itu selesai atau dibatalkan.`,
+    details: {
+      reason: 'unit_sedang_dipakai', unit_id: row.unit_id, delivery_order_id: other.id, delivery_order_no: other.no, driver_code: other.driver_code,
+    },
+  })
+  const busy = await repo.findUnitInUse(db, row.unit_id, id)
+  if (busy) throw unitBusy(busy)
+
   if (Number(row.travel_allowance_amount) > 0 && !body.travel_allowance_received) {
     throw new AppError('VALIDATION_ERROR', {
       details: [{ field: 'travel_allowance_received', message: 'Konfirmasi uang jalan sudah diterima wajib untuk DO ini.' }],
@@ -245,6 +259,10 @@ const accept = async (db, auth, id, body) => {
 
   const updated = await db.transaction(async (trx) => {
     await repo.findOwnedForUpdate(trx, auth.driver_id, id)
+    // Cek ulang di dalam kunci unit: driver lain bisa saja menerima DO dengan unit yang sama barusan
+    await repo.lockUnit(trx, row.unit_id)
+    const taken = await repo.findUnitInUse(trx, row.unit_id, id)
+    if (taken) throw unitBusy(taken)
     const done = await repo.markAccepted(trx, id, {
       status: 'accepted',
       accepted_at: body.accepted_at,

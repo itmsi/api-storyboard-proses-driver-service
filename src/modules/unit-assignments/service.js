@@ -7,8 +7,21 @@ const master = require('../../utils/master')
 const doRepo = require('../delivery-orders/manage-repository')
 const repo = require('./repository')
 
-// Penugasan unit harian: satu driver satu unit per hari (satu unit boleh dipakai beberapa driver di hari yang sama).
+// Penugasan unit harian: satu driver satu unit per hari, dan satu unit hanya untuk satu driver per hari
+// (dijaga juga oleh indeks unik driver_unit_assignments_unit_date_uq).
 // Penugasan hari ini menjadi syarat driver membuat P2H di unit itu.
+
+const UNIT_DATE_CONSTRAINT = 'driver_unit_assignments_unit_date_uq'
+
+const unitTaken = (unit, workDate, other) => new AppError('CONFLICT', {
+  message: other
+    ? `Unit ${unit.plate} sudah ditugaskan ke ${other.driver_name} (${other.driver_code}) pada ${workDate}.`
+    : `Unit ${unit.plate} sudah ditugaskan ke driver lain pada ${workDate}.`,
+  details: {
+    reason: 'unit_sudah_ditugaskan',
+    ...(other ? { assignment_id: other.id, driver: { id: other.driver_id, code: other.driver_code, name: other.driver_name } } : {}),
+  },
+})
 
 const SORTABLE = {
   driver: 'driver_user.name', plate: 'units.plate', created_at: 'dua.created_at',
@@ -69,13 +82,23 @@ const assign = async (db, admin, body) => {
   if (existing && existing.unit_id === body.unit_id) return { result: await get(db, existing.id), created: false }
   if (existing) await assertNotStarted(db, existing, 'diganti')
 
-  const saved = await repo.upsert(db, {
-    driver_id: body.driver_id,
-    unit_id: body.unit_id,
-    work_date: body.work_date,
-    created_by: admin.id,
-    updated_by: admin.id,
-  })
+  const other = await repo.findUnitTaken(db, body.unit_id, body.work_date, body.driver_id)
+  if (other) throw unitTaken(unit, body.work_date, other)
+
+  let saved
+  try {
+    saved = await repo.upsert(db, {
+      driver_id: body.driver_id,
+      unit_id: body.unit_id,
+      work_date: body.work_date,
+      created_by: admin.id,
+      updated_by: admin.id,
+    })
+  } catch (err) {
+    // Admin lain baru saja menugaskan unit ini di tanggal yang sama
+    if (err.code === '23505' && err.constraint === UNIT_DATE_CONSTRAINT) throw unitTaken(unit, body.work_date)
+    throw err
+  }
   return { result: await get(db, saved.id), created: Boolean(saved.inserted) }
 }
 

@@ -80,7 +80,7 @@ module.exports = {
     get: {
       tags: ['Master Data'],
       summary: 'Daftar penugasan unit pada satu tanggal',
-      description: 'Tanpa `date`: hari ini. Satu driver satu unit per hari; satu unit boleh dipakai beberapa driver di hari yang sama.',
+      description: 'Tanpa `date`: hari ini. Satu driver satu unit per hari, dan satu unit hanya untuk satu driver per hari.',
       security: secured,
       parameters: [
         { name: 'date', in: 'query', schema: { type: 'string', format: 'date', example: '2026-11-05' } },
@@ -109,14 +109,14 @@ module.exports = {
       description: [
         'Membuat penugasan (201), atau mengganti unit penugasan yang sudah ada untuk driver dan tanggal yang sama (200). Memanggil ulang dengan data yang sama aman (200).',
         'Penugasan hari ini diperlukan driver untuk membuat P2H di unit itu.',
-        'Ditolak 422: tanggal sebelum hari ini, driver/unit tidak ada atau tidak aktif. Ditolak 409 `CONFLICT` (`details.reason = sudah_bekerja`) jika penugasan lama yang akan diganti sudah dipakai: ada P2H di unit itu pada tanggal tsb, atau driver sedang mengerjakan DO dengan unit itu.',
+        'Ditolak 422: tanggal sebelum hari ini, driver/unit tidak ada atau tidak aktif. Ditolak 409 `CONFLICT`: `details.reason = unit_sudah_ditugaskan` jika unit sudah ditugaskan ke driver lain pada tanggal itu (`details.driver` = driver pemegangnya); `details.reason = sudah_bekerja` jika penugasan lama yang akan diganti sudah dipakai: ada P2H di unit itu pada tanggal tsb, atau driver sedang mengerjakan DO dengan unit itu.',
       ].join('\n'),
       security: secured,
       requestBody: jsonBody(ref('UnitAssignmentRequest')),
       responses: {
         200: jsonResponse('Sudah ada / diganti', envelope(ref('UnitAssignment'))),
         201: jsonResponse('Dibuat', envelope(ref('UnitAssignment'))),
-        409: jsonResponse('Driver sudah mulai bekerja dengan unit sebelumnya', ref('Error')),
+        409: jsonResponse('Unit sudah ditugaskan ke driver lain, atau driver sudah mulai bekerja dengan unit sebelumnya', ref('Error')),
         ...withValidation,
       },
     },

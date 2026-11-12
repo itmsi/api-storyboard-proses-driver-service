@@ -65,9 +65,10 @@ Rantai syarat yang paling sering membuat bingung:
 ```
 Assign unit (admin) ──> P2H unit (driver) ──> Terima DO (driver) ──> Muat ──> Odometer awal ──> Serah terima ──> Odometer akhir ──> Selesai
      │                       │                       │
-     │                       │                       └─ ditolak P2H_REQUIRED bila unit DO belum P2H layak hari ini
+     │                       │                       └─ ditolak P2H_REQUIRED bila unit DO belum P2H layak hari ini,
+     │                       │                          atau CONFLICT bila unit sedang dipakai DO lain yang berjalan
      │                       └─ ditolak FORBIDDEN bila driver tidak di-assign ke unit itu hari ini
-     └─ tanpa assignment, aplikasi HP tidak punya unit_today dan driver tidak bisa P2H
+     └─ satu unit hanya untuk satu driver per tanggal; tanpa assignment, aplikasi HP tidak punya unit_today dan driver tidak bisa P2H
 ```
 
 ---
@@ -511,7 +512,7 @@ Penugasan menentukan **unit mana yang dibawa seorang driver pada tanggal tertent
 | Aturan | Akibat bila dilanggar |
 |---|---|
 | Satu driver hanya punya **satu unit per tanggal**. Mengirim lagi untuk driver dan tanggal yang sama akan **mengganti unitnya**. | - (bukan error, data ditimpa) |
-| Satu unit **boleh** dipakai beberapa driver pada tanggal yang sama. | - |
+| Satu unit hanya untuk **satu driver per tanggal**. Unit yang sudah dipegang driver lain di tanggal itu tidak bisa di-assign lagi. | `409 CONFLICT`, `details.reason: unit_sudah_ditugaskan`, `details.driver` = driver pemegangnya |
 | `work_date` hari ini atau ke depan (WIB). | `422`, field `work_date` |
 | Driver ada dan berstatus aktif. | `422`, field `driver_id` |
 | Unit ada dan berstatus `active` (bukan `maintenance` / `inactive`). | `422`, field `unit_id` |
@@ -568,6 +569,26 @@ Contoh penolakan ganti unit:
   }
 }
 ```
+
+Contoh penolakan karena unit sudah dipegang driver lain:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "CONFLICT",
+    "message": "Unit B 9123 KZ sudah ditugaskan ke Budi Santoso (DRV-0007) pada 2026-11-12.",
+    "http_status": 409,
+    "details": {
+      "reason": "unit_sudah_ditugaskan",
+      "assignment_id": "c41e…",
+      "driver": { "id": "…", "code": "DRV-0007", "name": "Budi Santoso" }
+    }
+  }
+}
+```
+Untuk memindahkan unit dari Budi ke Andi: cabut dulu penugasan Budi (`DELETE /unit-assignments/{assignment_id}`) atau ganti unit Budi, lalu assign unit itu ke Andi.
+
+Tip web admin: saat memilih unit di form penugasan, panggil `POST /unit-assignments/get` dengan `{ "date": "<tanggal>" }` dan tandai unit yang sudah terpakai, supaya admin tidak memilih unit yang pasti ditolak.
 
 ### Lihat, detail, cabut
 
@@ -710,6 +731,9 @@ Daftar DO yang ditugaskan: `POST /delivery-orders/get` dengan `{ "status": "assi
 Ditolak bila:
 - `P2H_REQUIRED`: unit DO belum P2H hari ini, atau P2H-nya `tidak_layak`.
 - `INVALID_STATE`: DO bukan berstatus `assigned`, atau driver masih punya DO lain yang berjalan (**satu driver hanya boleh satu DO berjalan**).
+- `CONFLICT` (`details.reason: unit_sedang_dipakai`): unit DO ini sedang dipakai DO lain yang belum selesai, dari driver mana pun (**satu unit hanya boleh satu DO berjalan**). `details.delivery_order_no` menyebut DO yang memakainya.
+
+Di daftar dan detail DO, field `can_accept` sudah memperhitungkan semua syarat di atas. Bila unit sedang dipakai DO lain, ada juga `unit_in_use_by: { "delivery_order_no", "driver_name" }` untuk ditampilkan ke driver.
 - `VALIDATION_ERROR` di `travel_allowance_received`: DO punya uang jalan tetapi driver belum mengonfirmasi menerimanya.
 
 DO berjalan: `GET /delivery-orders/active`. Riwayat: `POST /delivery-orders/history` dengan `{ "from": "2026-11-01", "to": "2026-11-12", "limit": 20, "cursor": "..." }`.
@@ -922,7 +946,7 @@ Langkah di luar urutan ditolak `409 INVALID_STATE` dengan `details.status` (stat
 | `FORBIDDEN` | 403 | Tidak punya hak (`details.required`), akun nonaktif, role nonaktif, atau bukan unit milik driver | Sembunyikan fitur / tampilkan pesan |
 | `NOT_FOUND` | 404 | Data tidak ada (atau milik driver lain) | Muat ulang daftar |
 | `ROUTE_NOT_FOUND` | 404 | URL endpoint salah | Periksa path |
-| `CONFLICT` | 409 | Bentrok dengan data lain: masih dipakai, `sudah_bekerja`, admin terakhir, `client_ref` untuk DO lain | Tampilkan `message` |
+| `CONFLICT` | 409 | Bentrok dengan data lain: masih dipakai, `sudah_bekerja`, `unit_sudah_ditugaskan`, `unit_sedang_dipakai`, admin terakhir, `client_ref` untuk DO lain | Tampilkan `message` (lihat `details.reason`) |
 | `INVALID_STATE` | 409 | Langkah tidak sesuai status DO, atau masih ada DO berjalan | Muat ulang DO, arahkan ke langkah yang benar |
 | `P2H_REQUIRED` | 409 | Terima DO sebelum unit P2H layak | Arahkan ke layar P2H |
 | `DUPLICATE_RECEIPT` | 409 | Struk sudah pernah dipakai | Tampilkan pesan |

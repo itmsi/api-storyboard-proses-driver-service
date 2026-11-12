@@ -138,7 +138,8 @@ module.exports = {
     post: {
       tags: ['Delivery Order'],
       summary: 'Terima DO',
-      description: 'Syarat: unit sudah P2H hari ini dan boleh beroperasi. Konfirmasi uang jalan diterima dicatat di sini. '
+      description: 'Syarat: unit sudah P2H hari ini dan boleh beroperasi, driver tidak punya DO lain yang berjalan, dan unit tidak sedang dipakai DO lain yang berjalan '
+        + '(409 `CONFLICT`, `details.reason = unit_sedang_dipakai`). Konfirmasi uang jalan diterima dicatat di sini. '
         + 'Payload push DO baru: schema `PushDoAssigned`.',
       security: secured,
       parameters: doId,
@@ -147,7 +148,7 @@ module.exports = {
         200: jsonResponse('OK', envelope(ref('AcceptResponse')), '05-delivery-orders/POST.accept.response.json'),
         404: errorRef('NotFound'),
         409: {
-          description: 'P2H belum ada / status DO tidak sesuai',
+          description: 'P2H belum ada / status DO tidak sesuai / unit sedang dipakai DO lain',
           content: {
             'application/json': {
               schema: ref('Error'),
