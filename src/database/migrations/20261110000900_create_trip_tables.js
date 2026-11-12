@@ -11,7 +11,7 @@ exports.up = async (knex) => {
     t.boolean('proof_required').notNullable().defaultTo(false)
     t.integer('sort_order').notNullable().defaultTo(0)
     t.boolean('is_active').notNullable().defaultTo(true)
-    addAudit(knex, t)
+    addAudit(knex, t, { softDelete: true })
   })
   await knex.raw("ALTER TABLE expense_categories ADD CONSTRAINT expense_categories_input_chk CHECK (input IN ('receipt_ocr', 'manual'))")
   await addUpdatedAtTrigger(knex, 'expense_categories')
@@ -120,6 +120,7 @@ exports.up = async (knex) => {
     t.uuid('client_ref').notNullable()
     t.timestamp('voided_at', { useTz: true }) // dibatalkan admin, tidak dihapus
     t.uuid('voided_by')
+    t.text('void_reason') // alasan pembatalan oleh admin
     addAudit(knex, t)
     t.unique(['created_by', 'client_ref'])
   })

@@ -24,7 +24,7 @@ exports.up = async (knex) => {
     t.decimal('gps_accuracy_m', 7, 2)
     t.uuid('captured_by').notNullable().references('id').inTable('users')
     t.uuid('client_ref').notNullable() // idempotensi upload ulang
-    addAudit(knex, t)
+    addAudit(knex, t, { softDelete: true })
     t.unique(['captured_by', 'client_ref'])
   })
   await knex.raw(`ALTER TABLE media ADD CONSTRAINT media_kind_chk CHECK (kind IN (${KINDS.map((k) => `'${k}'`).join(', ')}))`)

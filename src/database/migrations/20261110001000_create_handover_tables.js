@@ -61,6 +61,7 @@ exports.up = async (knex) => {
     t.integer('duration_minutes')
     t.timestamp('settled_at', { useTz: true }) // diisi finance saat uang disetor / dibayar
     t.uuid('settled_by')
+    t.text('note') // catatan saat ditandai sudah disetor/dibayar
     addAudit(knex, t)
   })
   await knex.raw("ALTER TABLE settlements ADD CONSTRAINT settlements_type_chk CHECK (type IN ('refund_to_company', 'payable_to_driver', 'balanced'))")

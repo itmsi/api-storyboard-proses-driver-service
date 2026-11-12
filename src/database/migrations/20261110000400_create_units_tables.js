@@ -4,11 +4,13 @@ const { addAudit, addUpdatedAtTrigger } = require('../helpers/audit')
 exports.up = async (knex) => {
   await knex.schema.createTable('unit_types', (t) => {
     t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'))
-    t.text('code').notNullable().unique() // CDD_BAK, FUSO_BOX
+    t.text('code').notNullable() // CDD_BAK, FUSO_BOX
     t.text('name').notNullable() // CDD Bak
     t.integer('max_load_kg')
     addAudit(knex, t, { softDelete: true })
   })
+  // Kode unik hanya di antara data yang belum dihapus, supaya kode dari data yang sudah dihapus bisa dipakai lagi (sama seperti plat unit)
+  await knex.raw('CREATE UNIQUE INDEX unit_types_code_uq ON unit_types (code) WHERE is_delete = false')
   await addUpdatedAtTrigger(knex, 'unit_types')
 
   await knex.schema.createTable('units', (t) => {

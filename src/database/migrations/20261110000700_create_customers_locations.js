@@ -4,12 +4,13 @@ const { addAudit, addUpdatedAtTrigger } = require('../helpers/audit')
 exports.up = async (knex) => {
   await knex.schema.createTable('customers', (t) => {
     t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'))
-    t.text('code').notNullable().unique()
+    t.text('code').notNullable()
     t.text('name').notNullable() // PT Contoh Jaya
     t.text('phone')
     t.text('email')
     addAudit(knex, t, { softDelete: true })
   })
+  await knex.raw('CREATE UNIQUE INDEX customers_code_uq ON customers (code) WHERE is_delete = false') // kode data yang sudah dihapus bisa dipakai lagi
   await addUpdatedAtTrigger(knex, 'customers')
 
   await knex.schema.createTable('locations', (t) => {

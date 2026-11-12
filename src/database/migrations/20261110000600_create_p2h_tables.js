@@ -9,7 +9,7 @@ exports.up = async (knex) => {
     t.boolean('is_critical').notNullable().defaultTo(false) // tidak_sesuai pada item kritis -> tidak_layak
     t.integer('sort_order').notNullable().defaultTo(0)
     t.boolean('is_active').notNullable().defaultTo(true)
-    addAudit(knex, t)
+    addAudit(knex, t, { softDelete: true })
   })
   await addUpdatedAtTrigger(knex, 'p2h_check_items')
 
@@ -48,11 +48,11 @@ exports.up = async (knex) => {
     t.timestamp('recheck_requested_at', { useTz: true })
     t.text('recheck_note')
     t.uuid('client_ref').notNullable() // idempotensi kirim ulang dari HP
-    addAudit(knex, t)
+    addAudit(knex, t, { softDelete: true })
     t.unique(['checked_by', 'client_ref'])
   })
   await knex.raw("ALTER TABLE p2h_inspections ADD CONSTRAINT p2h_status_chk CHECK (status IN ('layak', 'catatan', 'tidak_layak'))")
-  await knex.raw('CREATE UNIQUE INDEX p2h_current_uq ON p2h_inspections (unit_id, inspection_date) WHERE superseded_at IS NULL')
+  await knex.raw('CREATE UNIQUE INDEX p2h_current_uq ON p2h_inspections (unit_id, inspection_date) WHERE superseded_at IS NULL AND is_delete = false')
   await addUpdatedAtTrigger(knex, 'p2h_inspections')
 
   await knex.schema.createTable('p2h_inspection_items', (t) => {
