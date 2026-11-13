@@ -134,7 +134,7 @@ CREATE TABLE driver_unit_assignments (
   created_at   timestamptz NOT NULL DEFAULT now(),
   UNIQUE (driver_id, work_date)
 );
-CREATE INDEX dua_unit_date_idx ON driver_unit_assignments (unit_id, work_date);
+CREATE UNIQUE INDEX driver_unit_assignments_unit_date_uq ON driver_unit_assignments (unit_id, work_date);  -- satu unit satu driver per tanggal
 
 CREATE TABLE customers (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
