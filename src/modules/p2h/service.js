@@ -35,11 +35,11 @@ const getStatus = async (db, unitId, date) => {
 
 const invalid = (field, message) => new AppError('VALIDATION_ERROR', { details: [{ field, message }] })
 
-/** Unit harus ada dan ditugaskan ke driver ini hari ini. */
+/** Unit harus ada. Driver hanya boleh unit yang ditugaskan kepadanya hari ini; admin boleh unit mana pun. */
 const loadUnit = async (db, auth, unitId, today) => {
   const unit = await repo.findUnit(db, unitId)
   if (!unit) throw new AppError('NOT_FOUND', { details: { unit_id: unitId } })
-  if (!(await repo.hasAssignment(db, auth.driver_id, unitId, today))) {
+  if (auth.role !== 'admin' && !(await repo.hasAssignment(db, auth.driver_id, unitId, today))) {
     throw new AppError('FORBIDDEN', { details: { unit_id: unitId } })
   }
   return unit

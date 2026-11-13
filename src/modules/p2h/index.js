@@ -1,7 +1,9 @@
 const express = require('express')
 const { authenticate, authorize } = require('../../middlewares/auth')
-const { adminGuard } = require('../../middlewares/admin-guard')
-const { can, driverCan } = require('../../middlewares/permit')
+const { adminGuard, activeAdminOnly } = require('../../middlewares/admin-guard')
+const {
+  can, adminCan, driverCan,
+} = require('../../middlewares/permit')
 const { validate } = require('../../middlewares/validate')
 const { asyncHandler } = require('../../utils/response')
 const schema = require('./validation')
@@ -11,12 +13,15 @@ const router = express.Router()
 
 // Dipasang per route (bukan router.use) karena router ini di-mount di root /api/v1
 const guard = [authenticate, authorize('driver')]
+// Endpoint baca yang juga boleh dipakai admin (hak p2h:read); driver tetap dicek hak driver_p2h:read
+const readGuard = [authenticate, authorize('driver', 'admin'), activeAdminOnly, adminCan('p2h', 'read'), driverCan('driver_p2h', 'read')]
 
 // GET /api/v1/p2h/template
-router.get('/p2h/template', guard, driverCan('driver_p2h', 'read'), asyncHandler(controller.getTemplate))
+router.get('/p2h/template', readGuard, asyncHandler(controller.getTemplate))
 
 // GET /api/v1/units/:unitId/p2h/today
-router.get('/units/:unitId/p2h/today', guard, driverCan('driver_p2h', 'read'), validate({ params: schema.unitParams }), asyncHandler(controller.getToday))
+//   driver: unit yang ditugaskan kepadanya hari ini | admin: unit mana pun (hak p2h:read)
+router.get('/units/:unitId/p2h/today', readGuard, validate({ params: schema.unitParams }), asyncHandler(controller.getToday))
 
 // POST /api/v1/units/:unitId/p2h
 router.post(

@@ -32,6 +32,7 @@ module.exports = {
     get: {
       tags: ['P2H'],
       summary: 'Template checklist P2H',
+      description: 'Driver (hak `driver_p2h:read`) dan admin (hak `p2h:read`).',
       security: secured,
       responses: {
         200: jsonResponse('OK', envelope(ref('P2HTemplate')), '04-p2h/GET.p2h.template.response.json'),
@@ -43,7 +44,8 @@ module.exports = {
     get: {
       tags: ['P2H'],
       summary: 'Status P2H unit hari ini',
-      description: 'P2H berlaku per unit per hari (sampai 23:59 waktu lokal). Driver lain yang memakai unit yang sama '
+      description: 'Driver (hak `driver_p2h:read`): hanya unit yang ditugaskan kepadanya hari ini. Admin (hak `p2h:read`): unit mana pun, tanpa penugasan. '
+        + 'P2H berlaku per unit per hari (sampai 23:59 waktu lokal). Driver lain yang memakai unit yang sama '
         + 'cukup melihat hasil P2H yang sudah ada. Jika admin meminta P2H ulang, status kembali `belum` dengan `recheck_requested: true`.',
       security: secured,
       parameters: [{ $ref: '#/components/parameters/UnitId' }],
