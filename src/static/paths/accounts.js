@@ -62,7 +62,10 @@ module.exports = {
         + 'Jika `password` kosong, dibuatkan password sementara dan **dikembalikan sekali** di `initial_password`. '
         + 'Driver langsung bisa login di aplikasi dengan kode atau No. HP.',
       security: secured,
-      requestBody: jsonBody(ref('AdminDriverCreate'), '15-accounts/POST.drivers.request.json'),
+      requestBody: jsonBody(ref('AdminDriverCreate'), {
+        'Lengkap: kode, role, dan password sendiri': '15-accounts/POST.drivers.request.custom.json',
+        'Minimal: kode dan password otomatis': '15-accounts/POST.drivers.request.json',
+      }),
       responses: {
         201: jsonResponse('Dibuat', envelope(ref('AdminDriverDetail')), '15-accounts/POST.drivers.response.json'),
         ...withValidation,

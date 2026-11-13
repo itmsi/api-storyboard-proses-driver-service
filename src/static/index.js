@@ -9,6 +9,7 @@
  */
 const pkg = require('../../package.json')
 const components = require('./components')
+const { addBodyExamples } = require('./auto-examples')
 
 // Beberapa path dipakai driver dan admin (mis. /delivery-orders). Digabung per metode HTTP supaya tiap file cukup
 // mendeskripsikan operasinya sendiri.
@@ -110,6 +111,9 @@ const description = [
   '',
   'Catatan hak akses: endpoint pengelolaan (admin) hanya bisa dipakai akun admin yang rolenya punya hak modul dan aksi terkait; jika tidak, 403 dengan details.required = modul:aksi. Lihat tag Pengguna (role dan permissions).',
 ].join('\n')
+
+// Contoh request otomatis untuk semua body JSON yang belum punya contoh
+addBodyExamples(paths, components.schemas)
 
 const index = {
   openapi: '3.0.3',
