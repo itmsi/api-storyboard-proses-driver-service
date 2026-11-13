@@ -41,6 +41,7 @@ router.use('/delivery-orders', require('../modules/loading'))
 router.use('/delivery-orders', require('../modules/odometer'))
 router.use('/delivery-orders', require('../modules/expenses'))
 router.use('/delivery-orders', require('../modules/handover'))
+router.use('/delivery-orders', require('../modules/progress'))
 router.use('/delivery-orders', require('../modules/summary'))
 router.use(require('../modules/p2h')) // /p2h/template, /units/:unitId/p2h...
 

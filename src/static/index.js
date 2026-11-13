@@ -101,6 +101,7 @@ const paths = orderPaths(addAssignmentPost(convertListEndpoints(mergePaths(
   require('./paths/config'),
   require('./paths/accounts'),
   require('./paths/master-data'),
+  require('./paths/progress'),
   require('./paths/admin-crud'),
   require('./paths/roles'),
   require('./paths/internal')
@@ -114,6 +115,27 @@ const description = [
 
 // Contoh request otomatis untuk semua body JSON yang belum punya contoh
 addBodyExamples(paths, components.schemas)
+
+// POST /delivery-orders/get dipakai driver dan admin dengan filter berbeda: beri contoh per peran
+const doList = paths['/delivery-orders/get'] && paths['/delivery-orders/get'].post
+if (doList) {
+  doList.requestBody.content['application/json'].examples = {
+    'Driver: DO yang ditugaskan': { summary: 'Aplikasi driver: hanya field status yang diterima, hasil otomatis hanya DO milik driver itu', value: { status: 'assigned' } },
+    'Driver: semua DO yang masih berjalan': { summary: 'Aplikasi driver: tanpa filter', value: {} },
+    'Admin: semua DO': { summary: 'Admin: tanpa filter', value: {} },
+    'Admin: dengan filter': {
+      summary: 'Admin: semua filter bersifat opsional, pilih yang perlu (id diambil dari /drivers/get, /units/get, /customers/get)',
+      value: {
+        status: 'assigned', page: 1, limit: 20, search: '0144', sort: '-created_at', from: '2026-11-01', to: '2026-11-30',
+      },
+    },
+  }
+  doList.description = [
+    doList.description,
+    '',
+    'Driver: filter selain `status` ditolak (422); hak `driver_delivery_orders:read`. Admin: hak `delivery_orders:read`; `driver_id`, `unit_id`, dan `customer_id` diambil dari `data[].id` di `POST /drivers/get`, `POST /units/get`, dan `POST /customers/get`.',
+  ].filter((x) => x !== undefined).join('\n')
+}
 
 const index = {
   openapi: '3.0.3',
