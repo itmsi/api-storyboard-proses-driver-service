@@ -20,6 +20,7 @@ exports.up = async (knex) => {
     t.text('name').notNullable() // Gudang Cakung
     t.text('address').notNullable()
     t.text('city')
+    t.text('maps_url') // tautan Google Maps (tempel dari tombol Bagikan)
     t.decimal('lat', 9, 6)
     t.decimal('lng', 9, 6)
     t.integer('geofence_radius_m').defaultTo(200) // validasi GPS saat muat / serah terima

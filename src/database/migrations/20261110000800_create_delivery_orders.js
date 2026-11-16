@@ -42,10 +42,13 @@ exports.up = async (knex) => {
     t.timestamp('locked_at', { useTz: true }) // setelah selesai: tidak bisa diubah dari aplikasi
     t.timestamp('cancelled_at', { useTz: true })
     t.text('cancel_reason')
+    // DO onhold (ditahan admin) tidak menahan hari kerja driver; bisa dilanjutkan (assigned) atau dibatalkan
+    t.timestamp('on_hold_at', { useTz: true })
+    t.text('on_hold_reason')
     addAudit(knex, t)
   })
   await knex.raw(`ALTER TABLE delivery_orders ADD CONSTRAINT do_status_chk CHECK (status IN (
-    'assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled'))`)
+    'assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled'))`)
   await knex.raw(`ALTER TABLE delivery_orders ADD CONSTRAINT do_delivery_status_chk CHECK (
     delivery_status IS NULL OR delivery_status IN ('terkirim_lengkap', 'terkirim_catatan', 'gagal_kirim'))`)
   await knex.raw('ALTER TABLE delivery_orders ADD CONSTRAINT do_allowance_chk CHECK (travel_allowance_amount >= 0)')
