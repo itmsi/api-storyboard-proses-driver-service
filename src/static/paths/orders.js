@@ -27,11 +27,17 @@ module.exports = {
       description: [
         'Nomor DO otomatis (`DO-0001`, …). Alamat asal dan tujuan **disalin** ke DO, jadi mengubah lokasi master tidak mengubah DO.',
         '`customer_id` boleh dikosongkan (diturunkan dari lokasi tujuan). Driver harus aktif dan unit harus berstatus `active`.',
-        'Status awal `assigned`; DO langsung muncul di aplikasi driver. Driver baru bisa menerimanya setelah unit hari itu di-P2H (butuh penugasan unit, lihat `/unit-assignments`).',
+        'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
+        '**Penugasan unit harian disiapkan sekalian** untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini), sehingga driver langsung bisa P2H di unit itu. Hasilnya ada di `unit_assignment` (`created` true = dibuat otomatis, false = sudah ada). Bila tanggal muat sudah lewat, penugasan tidak disiapkan (`unit_assignment: null`).',
+        'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `penugasan_beda_unit` (driver sudah punya unit lain pada tanggal itu; ubah lewat `PUT /unit-assignments` atau pakai unit yang sama) atau `unit_sudah_ditugaskan` (unit itu dipegang driver lain pada tanggal itu).',
       ].join('\n'),
       security: secured,
       requestBody: jsonBody(ref('AdminDeliveryOrderCreate')),
-      responses: { 201: jsonResponse('Dibuat', envelope(ref('AdminDeliveryOrderDetail'))), ...withValidation },
+      responses: {
+        201: jsonResponse('Dibuat', envelope(ref('AdminDeliveryOrderDetail'))),
+        409: jsonResponse('Penugasan unit harian bentrok (`penugasan_beda_unit` / `unit_sudah_ditugaskan`)', ref('Error')),
+        ...withValidation,
+      },
     },
   },
   '/delivery-orders/{id}': {
@@ -42,6 +48,7 @@ module.exports = {
         'Hanya saat DO masih `assigned` (belum diterima driver). Kirim hanya field yang ingin diubah; `cargo` juga boleh sebagian.',
         'Sesudah diterima, data DO adalah bukti kerja driver: koreksinya lewat pembatalan lalu pembuatan DO baru (409 `INVALID_STATE`).',
         'DO selesai: 409 `DO_LOCKED`. DO dibatalkan: 409 `DO_CANCELLED`.',
+        'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, penugasan unit harian untuk kombinasi barunya disiapkan (respons memuat `unit_assignment`); penugasan lama dibiarkan. Bentrok = 409 seperti pada pembuatan DO dan DO tidak berubah.',
       ].join('\n'),
       security: secured,
       parameters: idPath,

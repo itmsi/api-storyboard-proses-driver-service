@@ -102,6 +102,46 @@ const assign = async (db, admin, body) => {
   return { result: await get(db, saved.id), created: Boolean(saved.inserted) }
 }
 
+/**
+ * Dipanggil saat DO dibuat atau diubah: menyiapkan penugasan unit harian (driver, unit, tanggal) untuk tanggal rencana muat,
+ * supaya driver langsung bisa membuat P2H di unit itu tanpa admin menugaskan unit lagi secara terpisah.
+ * Dijalankan di transaksi yang sama dengan DO, jadi kalau bentrok DO tidak ikut dibuat.
+ *
+ *  - Sudah ada penugasan yang sama: tidak berubah (created: false).
+ *  - Belum ada: dibuat (created: true).
+ *  - Driver sudah punya unit lain pada tanggal itu, atau unit itu sudah dipegang driver lain: 409 (tidak menimpa diam-diam;
+ *    ubah lewat PUT /unit-assignments atau pakai unit yang sama).
+ *  - Tanggal sebelum hari ini: tidak disiapkan (null); penugasan hanya untuk hari ini dan seterusnya.
+ */
+const ensureForOrder = async (db, admin, {
+  driverId, unitId, unit, workDate
+}) => {
+  if (workDate < wibDate()) return null
+
+  const existing = await repo.findByDriverDate(db, driverId, workDate)
+  if (existing) {
+    if (existing.unit_id === unitId) return { id: existing.id, work_date: workDate, created: false }
+    throw new AppError('CONFLICT', {
+      message: `Driver sudah ditugaskan unit lain pada ${workDate}. Ubah penugasan unit harian lebih dulu (PUT /unit-assignments) atau pakai unit yang sama.`,
+      details: { reason: 'penugasan_beda_unit', assignment_id: existing.id, work_date: workDate },
+    })
+  }
+
+  const other = await repo.findUnitTaken(db, unitId, workDate, driverId)
+  if (other) throw unitTaken(unit, workDate, other)
+
+  let saved
+  try {
+    saved = await repo.upsert(db, {
+      driver_id: driverId, unit_id: unitId, work_date: workDate, created_by: admin.id, updated_by: admin.id,
+    })
+  } catch (err) {
+    if (err.code === '23505' && err.constraint === UNIT_DATE_CONSTRAINT) throw unitTaken(unit, workDate)
+    throw err
+  }
+  return { id: saved.id, work_date: workDate, created: true }
+}
+
 const remove = async (db, admin, id) => {
   const row = await load(db, id)
   await assertNotStarted(db, row, 'dicabut')
@@ -110,5 +150,9 @@ const remove = async (db, admin, id) => {
 }
 
 module.exports = {
-  list, get, assign, remove,
+  ensureForOrder,
+  list,
+  get,
+  assign,
+  remove,
 }

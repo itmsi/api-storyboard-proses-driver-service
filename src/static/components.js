@@ -160,6 +160,20 @@ const schemas = {
     })),
     correction_reason_required: bool(true),
     p2h: obj({ frequency: str('daily_per_unit'), valid_until_local: str('23:59') }),
+    branding: obj({
+      app_name: nullable(str('Logistik Maju', { description: 'Nama aplikasi di dalam layar. Kosong = pakai client_name.' })),
+      tagline: nullable(str('Antar Tepat Waktu')),
+      logo_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/logo.png', { format: 'uri', description: 'Logo (latar terang)' })),
+      logo_dark_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/logo-dark.png', { format: 'uri', description: 'Logo untuk tema gelap' })),
+      icon_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/icon.png', { format: 'uri', description: 'Ikon persegi' })),
+      colors: obj({
+        primary: str('#0B3C8C', { description: 'Format #RRGGBB, selalu huruf besar di respons' }),
+        secondary: str('#6BB33B'),
+        accent: str('#F5A623'),
+        on_primary: str('#FFFFFF', { description: 'Warna teks/ikon di atas warna primer' }),
+      }),
+      support: obj({ label: str('Hubungi admin'), phone: nullable(str('0812-3456-7890')) }),
+    }, undefined, { description: 'Tampilan merek perusahaan ini; aplikasi membacanya saat berjalan (warna dan logo), jadi tidak perlu rilis aplikasi baru.' }),
   }),
   Bootstrap: obj({
     server_time: dt(),
@@ -964,6 +978,11 @@ const schemas = {
   }),
   AdminDeliveryOrderDetail: {
     allOf: [ref('AdminDeliveryOrder'), obj({
+      unit_assignment: nullable(obj({
+        id: str('7130d0ce-c529-4121-96ec-f1314361e654'),
+        work_date: str('2026-11-19', { description: 'Tanggal penugasan unit harian = tanggal rencana muat (WIB), atau hari ini bila tanpa rencana muat' }),
+        created: bool(true, { description: 'true = dibuat otomatis oleh DO ini; false = penugasan yang sama sudah ada' }),
+      }, undefined, { description: 'Hanya ada di respons POST dan PUT DO. null = tanggal muat sudah lewat, penugasan tidak disiapkan.' })),
       origin: obj({
         location_id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a22'),
         name: str('Gudang Cakung'),
@@ -1238,6 +1257,20 @@ const schemas = {
     }),
     p2h: obj({ frequency: enumOf(['daily_per_unit']), valid_until_local: str('23:59', { description: 'Jam P2H berakhir setiap hari (WIB)' }) }),
     correction_reason_required: bool(true, { description: 'Koreksi hasil OCR wajib disertai alasan' }),
+    branding: obj({
+      app_name: nullable(str('Logistik Maju', { description: 'Nama aplikasi di dalam layar. Kosong = pakai client_name.' })),
+      tagline: nullable(str('Antar Tepat Waktu')),
+      logo_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/logo.png', { format: 'uri', description: 'Logo (latar terang)' })),
+      logo_dark_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/logo-dark.png', { format: 'uri', description: 'Logo untuk tema gelap' })),
+      icon_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/icon.png', { format: 'uri', description: 'Ikon persegi' })),
+      colors: obj({
+        primary: str('#0B3C8C', { description: 'Format #RRGGBB, selalu huruf besar di respons' }),
+        secondary: str('#6BB33B'),
+        accent: str('#F5A623'),
+        on_primary: str('#FFFFFF', { description: 'Warna teks/ikon di atas warna primer' }),
+      }),
+      support: obj({ label: str('Hubungi admin'), phone: nullable(str('0812-3456-7890')) }),
+    }, undefined, { description: 'Tampilan merek perusahaan ini; aplikasi membacanya saat berjalan (warna dan logo), jadi tidak perlu rilis aplikasi baru.' }),
   }),
   AdminSettingsUpdate: obj({
     languages: arr(enumOf(['id', 'en', 'zh'])),
@@ -1253,6 +1286,17 @@ const schemas = {
     }, undefined, { description: 'Boleh sebagian per kelompok' }),
     p2h: obj({ frequency: enumOf(['daily_per_unit']), valid_until_local: str('18:30') }),
     correction_reason_required: bool(false),
+    branding: obj({
+      app_name: nullable(str('Logistik Maju', { description: 'null = kosongkan' })),
+      tagline: nullable(str('Antar Tepat Waktu')),
+      logo_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/logo.png', { format: 'uri' })),
+      logo_dark_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/logo-dark.png', { format: 'uri' })),
+      icon_url: nullable(str('https://api.contoh.co.id/storage/branding/maju/icon.png', { format: 'uri' })),
+      colors: obj({
+        primary: str('#0B3C8C'), secondary: str('#6BB33B'), accent: str('#F5A623'), on_primary: str('#FFFFFF'),
+      }, undefined, { description: 'Boleh sebagian. Format #RRGGBB. Warna tidak bisa dikosongkan.' }),
+      support: obj({ label: str('Hubungi admin'), phone: nullable(str('0812-3456-7890')) }, undefined, { description: 'Boleh sebagian' }),
+    }, undefined, { description: 'Merek perusahaan. Boleh sebagian: hanya yang dikirim yang berubah (colors dan support digabung per field).' }),
   }),
 
   // ---------- Push notification (FCM data payload, bukan endpoint) ----------

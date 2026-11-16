@@ -6,7 +6,7 @@ const appRepo = require('../app/repository')
 // (jumlah foto, sisi foto P2H, jam berlaku P2H, alasan koreksi wajib).
 // Disimpan sebagai baris app_settings (satu kunci per kelompok); kunci yang belum pernah diubah memakai nilai bawaan.
 
-const EDITABLE = ['modules', 'photo_rules', 'p2h', 'correction_reason_required', 'languages', 'default_language']
+const EDITABLE = ['modules', 'photo_rules', 'p2h', 'correction_reason_required', 'languages', 'default_language', 'branding']
 
 const RANGES = ['loading', 'unloading', 'delivery_note_pages']
 
@@ -29,6 +29,16 @@ const merge = (current, body) => {
     RANGES.forEach((k) => { if (body.photo_rules[k]) rules[k] = { ...current.photo_rules[k], ...body.photo_rules[k] } })
     if (body.photo_rules.p2h_body) rules.p2h_body = { ...current.photo_rules.p2h_body, ...body.photo_rules.p2h_body }
     next.photo_rules = rules
+  }
+  if (body.branding) {
+    const { colors, support, ...plain } = body.branding
+    const upper = colors ? Object.fromEntries(Object.entries(colors).map(([k, v]) => [k, v.toUpperCase()])) : null
+    next.branding = {
+      ...current.branding,
+      ...plain,
+      colors: { ...current.branding.colors, ...(upper || {}) },
+      support: { ...current.branding.support, ...(support || {}) },
+    }
   }
   ['correction_reason_required', 'languages', 'default_language'].forEach((k) => {
     if (body[k] !== undefined) next[k] = body[k]

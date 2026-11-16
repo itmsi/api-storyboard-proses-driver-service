@@ -30,6 +30,18 @@ const DEFAULT_CONFIG = {
   ],
   correction_reason_required: true,
   p2h: { frequency: 'daily_per_unit', valid_until_local: '23:59' },
+  // Tampilan merek per klien. app_name kosong = aplikasi memakai client_name. Warna #RRGGBB; logo dan ikon berupa URL.
+  branding: {
+    app_name: null,
+    tagline: null,
+    logo_url: null,
+    logo_dark_url: null,
+    icon_url: null,
+    colors: {
+      primary: '#0B3C8C', secondary: '#6BB33B', accent: '#F5A623', on_primary: '#FFFFFF',
+    },
+    support: { label: 'Hubungi admin', phone: null },
+  },
 }
 
 /**

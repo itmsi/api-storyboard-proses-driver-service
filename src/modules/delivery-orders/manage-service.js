@@ -1,10 +1,11 @@
 const { AppError } = require('../../utils/errors')
 const { auditFields } = require('../../utils/audit')
-const { toWib } = require('../../utils/date')
+const { toWib, wibDate } = require('../../utils/date')
 const pagination = require('../../utils/pagination')
 const { fail } = require('../../utils/accounts')
 const master = require('../../utils/master')
 const { serializeMedia } = require('../media/serializer')
+const assignments = require('../unit-assignments/service')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
 
@@ -226,10 +227,18 @@ const list = async (db, query) => {
 
 const get = async (db, id) => serializeDetail(db, await load(db, id))
 
+/** Tanggal penugasan unit harian untuk sebuah DO: tanggal rencana muat (WIB); tanpa rencana muat = hari ini. */
+const assignmentDate = (plannedLoadAt) => wibDate(plannedLoadAt ? new Date(plannedLoadAt) : new Date())
+
 const create = async (db, admin, body) => {
   const refs = await resolveRefs(db, body)
   const no = await repo.nextNumber(db)
+  let unitAssignment = null
   const id = await db.transaction(async (trx) => {
+    // Penugasan unit harian disiapkan sekalian; bentrok = DO tidak dibuat
+    unitAssignment = await assignments.ensureForOrder(trx, admin, {
+      driverId: body.driver_id, unitId: body.unit_id, unit: refs.unit, workDate: assignmentDate(body.planned_load_at),
+    })
     const created = await repo.insert(trx, {
       no,
       customer_id: refs.customerId,
@@ -260,7 +269,7 @@ const create = async (db, admin, body) => {
     })
     return created
   })
-  return get(db, id)
+  return { ...(await get(db, id)), unit_assignment: unitAssignment }
 }
 
 /** Status yang tidak boleh diubah/dibatalkan lagi, dengan pesan yang tepat. */
@@ -307,7 +316,15 @@ const update = async (db, admin, id, body) => {
   if (cargo.quantity !== undefined) fields.cargo_quantity = cargo.quantity
   if (cargo.unit !== undefined) fields.cargo_unit = cargo.unit
 
+  let unitAssignment = null
   await db.transaction(async (trx) => {
+    // Driver, unit, atau tanggal muat berubah: siapkan penugasan harian untuk kombinasi barunya
+    if (['driver_id', 'unit_id', 'planned_load_at'].some((k) => body[k] !== undefined)) {
+      const planned = body.planned_load_at !== undefined ? body.planned_load_at : row.planned_load_at
+      unitAssignment = await assignments.ensureForOrder(trx, admin, {
+        driverId: merged.driver_id, unitId: merged.unit_id, unit: refs.unit, workDate: assignmentDate(planned),
+      })
+    }
     const done = await doRepo.updateIfStatus(trx, id, ['assigned'], fields)
     if (!done) throw new AppError('INVALID_STATE', { message: 'DO baru saja diterima driver dan tidak bisa diubah lagi.', details: { expected: ['assigned'] } })
     await doRepo.insertEvent(trx, {
@@ -320,7 +337,7 @@ const update = async (db, admin, id, body) => {
       payload: { changed: Object.keys(body) },
     })
   })
-  return get(db, id)
+  return { ...(await get(db, id)), ...(unitAssignment ? { unit_assignment: unitAssignment } : {}) }
 }
 
 /** Batalkan DO yang belum selesai. Foto, biaya, dan jejak yang sudah ada tidak dihapus. */
