@@ -18,6 +18,10 @@ const fields = {
   name: Joi.string().trim().min(2).max(120),
   address: Joi.string().trim().min(3).max(300),
   city: Joi.string().trim().max(80).allow(null, ''),
+  // Tautan Google Maps (maps.app.goo.gl, google.com/maps, dst.): cukup tempel dari tombol Bagikan
+  maps_url: Joi.string().trim().max(500).uri({ scheme: ['http', 'https'] })
+    .allow(null, '')
+    .messages({ 'string.uri': 'Tautan peta harus berupa URL http/https (contoh: https://maps.app.goo.gl/xxxx).' }),
   lat: Joi.number().min(-90).max(90).allow(null),
   lng: Joi.number().min(-180).max(180).allow(null),
   geofence_radius_m: Joi.number().integer().min(10).max(5000)

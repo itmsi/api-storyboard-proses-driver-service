@@ -24,8 +24,8 @@ const mergePaths = (...groups) => groups.reduce((all, group) => Object.entries(g
  * POST <path>/get dengan body JSON berisi parameter itu. Detail by id tetap GET.
  */
 const LIST_PATHS = [
-  '/drivers', '/users', '/unit-types', '/units', '/customers', '/locations', '/p2h-items', '/expense-categories',
-  '/expenses', '/settlements', '/unit-assignments', '/delivery-orders',
+  '/drivers', '/users', '/units', '/customers', '/locations', '/p2h-items', '/expense-categories',
+  '/expenses', '/settlements', '/delivery-orders',
 ]
 const HISTORY_PATH = '/delivery-orders/history' // riwayat driver: POST /delivery-orders/history
 
@@ -57,13 +57,6 @@ const convertListEndpoints = (all) => {
   return result
 }
 
-// POST /unit-assignments sama dengan PUT (upsert)
-const addAssignmentPost = (all) => {
-  const item = all['/unit-assignments']
-  if (item && item.put && !item.post) item.post = { ...item.put, summary: `${item.put.summary} (POST sama dengan PUT)` }
-  return all
-}
-
 /**
  * Urutan endpoint di Swagger: kelompokkan per resource (urutan kemunculan pertama), lalu di dalamnya
  * daftar (/x/get), buat (/x), detail (/x/{id}), tindakan lain (/x/{id}/...). Tanpa ini, endpoint daftar hasil konversi POST
@@ -92,7 +85,7 @@ const orderPaths = (all) => {
   return Object.fromEntries(keys.map(({ p }) => [p, all[p]]))
 }
 
-const paths = orderPaths(addAssignmentPost(convertListEndpoints(mergePaths(
+const paths = orderPaths(convertListEndpoints(mergePaths(
   require('./paths/app-auth'),
   require('./paths/media-p2h'),
   require('./paths/delivery-orders'),
@@ -105,7 +98,7 @@ const paths = orderPaths(addAssignmentPost(convertListEndpoints(mergePaths(
   require('./paths/admin-crud'),
   require('./paths/roles'),
   require('./paths/internal')
-))))
+)))
 
 const description = [
   'API backend aplikasi OGO Driver (Android): P2H unit, delivery order, foto muat/bongkar, odometer, biaya perjalanan, serah terima, dan sync offline.',

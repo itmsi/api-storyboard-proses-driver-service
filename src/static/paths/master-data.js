@@ -93,25 +93,19 @@ const crud = ({
 module.exports = {
   ...crud({
     tag: 'Master Data',
-    label: 'tipe unit',
-    base: '/unit-types',
-    schemaName: 'AdminUnitType',
-    sortValues: ['name', 'code', 'max_load_kg', 'created_at'],
-    searchHint: 'Cari kode atau nama',
-    createDesc: '`code` huruf besar/angka/`_`/`-`, unik di antara data aktif, dan **tidak bisa diubah** setelah dibuat.',
-    deleteDesc: 'Ditolak jika masih dipakai unit aktif. Kode dari data yang sudah dihapus boleh dipakai lagi.',
-    deleteGuard: 'Tipe unit masih dipakai unit',
-  }),
-  ...crud({
-    tag: 'Master Data',
     label: 'unit',
     base: '/units',
     schemaName: 'AdminUnit',
     sortValues: ['plate', 'status', 'type', 'year', 'created_at'],
-    searchHint: 'Cari plat atau merek',
+    searchHint: 'Cari plat, merek, tipe, atau nomor rangka (VIN)',
     listExtra: [
       { name: 'status', in: 'query', schema: { type: 'string', enum: ['active', 'maintenance', 'inactive'] } },
-      { name: 'unit_type_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+      {
+        name: 'unit_type', in: 'query', description: 'Tipe unit persis (huruf besar/kecil diabaikan)', schema: { type: 'string', maxLength: 40 }
+      },
+      {
+        name: 'driver_id', in: 'query', description: 'Unit yang driver bawaannya driver ini', schema: { type: 'string', format: 'uuid' }
+      },
     ],
     createDesc: 'Plat dinormalisasi ke bentuk baku (`b-9123-kz` menjadi `B 9123 KZ`) dan unik di antara unit aktif walau spasi/huruf besar-kecil berbeda. '
       + '`stnk_expired` / `kir_expired` pada response menandai dokumen kedaluwarsa (hanya penanda, tidak memblokir).',

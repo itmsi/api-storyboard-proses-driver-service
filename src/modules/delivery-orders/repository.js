@@ -6,14 +6,13 @@ const ACTIVE_STATUSES = ['accepted', 'loading', 'in_transit', 'handover']
 const base = (db, driverId) => withAuditNames(
   db('delivery_orders')
     .join('units', 'units.id', 'delivery_orders.unit_id')
-    .join('unit_types', 'unit_types.id', 'units.unit_type_id')
     .join('drivers', 'drivers.id', 'delivery_orders.driver_id')
     .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
     .where('delivery_orders.driver_id', driverId)
     .select(
       'delivery_orders.*',
       'units.plate as unit_plate',
-      'unit_types.name as unit_type',
+      'units.unit_type as unit_type',
       'drivers.code as driver_code',
       'driver_user.name as driver_name',
       'driver_user.phone as driver_phone'

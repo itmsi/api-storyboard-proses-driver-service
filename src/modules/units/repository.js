@@ -3,7 +3,8 @@ const { searchColumns } = require('../../utils/pagination')
 const { OPEN_DO_STATUSES } = require('../../utils/master')
 
 const base = (db) => db('units')
-  .join('unit_types', 'unit_types.id', 'units.unit_type_id')
+  .leftJoin('drivers as default_driver', 'default_driver.id', 'units.driver_id')
+  .leftJoin('users as default_driver_user', 'default_driver_user.id', 'default_driver.user_id')
   .where({ 'units.is_delete': false })
 
 const select = (db, query) => query.select(
@@ -11,13 +12,16 @@ const select = (db, query) => query.select(
   'units.plate',
   'units.brand',
   'units.year',
+  'units.vin_number',
   'units.status',
   'units.last_odometer_km',
   db.raw('units.stnk_expires_on::text as stnk_expires_on'),
   db.raw('units.kir_expires_on::text as kir_expires_on'),
-  'unit_types.id as type_id',
-  'unit_types.code as type_code',
-  'unit_types.name as type_name',
+  'units.unit_type',
+  'units.max_load_kg',
+  'units.driver_id',
+  'default_driver.code as default_driver_code',
+  'default_driver_user.name as default_driver_name',
   'units.created_at',
   'units.created_by',
   'units.updated_at',
@@ -25,12 +29,13 @@ const select = (db, query) => query.select(
 )
 
 const list = async (db, {
-  search, status, unitTypeId, paging,
+  search, status, unitType, defaultDriverId, paging,
 }) => {
   const filtered = () => {
-    const q = searchColumns(base(db), search, ['units.plate', 'units.brand'])
+    const q = searchColumns(base(db), search, ['units.plate', 'units.brand', 'units.vin_number', 'units.unit_type'])
     if (status) q.where('units.status', status)
-    if (unitTypeId) q.where('units.unit_type_id', unitTypeId)
+    if (unitType) q.whereRaw('lower(units.unit_type) = ?', [unitType.toLowerCase()])
+    if (defaultDriverId) q.where('units.driver_id', defaultDriverId)
     return q
   }
   const [{ count }] = await filtered().count('units.id as count')
@@ -44,7 +49,25 @@ const list = async (db, {
 
 const findById = (db, id) => withAuditNames(select(db, base(db)).where('units.id', id), 'units').first()
 
-const findType = (db, id) => db('unit_types').where({ id, is_delete: false }).first('id')
+/** Driver yang boleh jadi driver bawaan: ada dan aktif (akun dan profil kerja). */
+const findDriver = (db, id) => db('drivers')
+  .join('users', 'users.id', 'drivers.user_id')
+  .where({ 'drivers.id': id, 'drivers.is_delete': false, 'users.is_delete': false })
+  .first('drivers.id', 'drivers.code', 'users.name', 'users.status as user_status', 'drivers.status as driver_status')
+
+/** Unit lain (belum dihapus) yang sudah memakai driver ini sebagai driver bawaan. */
+const findUnitOfDefaultDriver = (db, driverId, exceptUnitId) => {
+  const q = db('units').where({ driver_id: driverId, is_delete: false })
+  if (exceptUnitId) q.whereNot({ id: exceptUnitId })
+  return q.first('id', 'plate')
+}
+
+/** VIN sama pada unit lain yang belum dihapus. */
+const vinTaken = async (db, vin, exceptId) => {
+  const q = db('units').where({ vin_number: vin, is_delete: false })
+  if (exceptId) q.whereNot({ id: exceptId })
+  return q.first('id', 'plate')
+}
 
 /** Plat sama (spasi dan huruf besar/kecil diabaikan) pada unit lain yang belum dihapus. */
 const plateTaken = async (db, plate, exceptId) => {
@@ -76,5 +99,5 @@ const insert = async (db, row) => {
 const update = (db, id, fields) => db('units').where({ id }).update(fields)
 
 module.exports = {
-  list, findById, findType, plateTaken, findUsage, insert, update,
+  list, findById, findDriver, findUnitOfDefaultDriver, plateTaken, vinTaken, findUsage, insert, update,
 }

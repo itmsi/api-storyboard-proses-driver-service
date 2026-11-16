@@ -16,8 +16,6 @@ const errors = {
 }
 const withValidation = { ...errors, 422: errorRef('ValidationError') }
 const notFound = { 404: errorRef('NotFound') }
-const arr = (items) => ({ type: 'array', items })
-const paged = (item) => envelope(arr(ref(item)), ref('PageMeta'))
 
 module.exports = {
   '/delivery-orders': {
@@ -29,7 +27,7 @@ module.exports = {
         '`customer_id` boleh dikosongkan (diturunkan dari lokasi tujuan). Driver harus aktif dan unit harus berstatus `active`.',
         'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
         '**Penugasan unit harian disiapkan sekalian** untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini), sehingga driver langsung bisa P2H di unit itu. Hasilnya ada di `unit_assignment` (`created` true = dibuat otomatis, false = sudah ada). Bila tanggal muat sudah lewat, penugasan tidak disiapkan (`unit_assignment: null`).',
-        'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `penugasan_beda_unit` (driver sudah punya unit lain pada tanggal itu; ubah lewat `PUT /unit-assignments` atau pakai unit yang sama) atau `unit_sudah_ditugaskan` (unit itu dipegang driver lain pada tanggal itu).',
+        'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `penugasan_beda_unit` (driver sudah punya unit lain pada tanggal itu; gunakan unit yang sama atau ganti driver/unit DO) atau `unit_sudah_ditugaskan` (unit itu dipegang driver lain pada tanggal itu).',
       ].join('\n'),
       security: secured,
       requestBody: jsonBody(ref('AdminDeliveryOrderCreate')),
@@ -82,72 +80,4 @@ module.exports = {
     },
   },
 
-  // ===================== Penugasan unit harian =====================
-  '/unit-assignments': {
-    get: {
-      tags: ['Master Data'],
-      summary: 'Daftar penugasan unit pada satu tanggal',
-      description: 'Tanpa `date`: hari ini. Satu driver satu unit per hari, dan satu unit hanya untuk satu driver per hari.',
-      security: secured,
-      parameters: [
-        { name: 'date', in: 'query', schema: { type: 'string', format: 'date', example: '2026-11-05' } },
-        { name: 'driver_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
-        { name: 'unit_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
-        {
-          name: 'search', in: 'query', description: 'Cari nama/kode driver atau plat unit', schema: { type: 'string' }
-        },
-        { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
-        {
-          name: 'limit',
-          in: 'query',
-          schema: {
-            type: 'integer', minimum: 1, maximum: 100, default: 20
-          },
-        },
-        {
-          name: 'sort', in: 'query', description: 'driver, plat (`plate`), created_at; awalan `-` = menurun', schema: { type: 'string', example: 'driver' }
-        },
-      ],
-      responses: { 200: jsonResponse('OK', paged('UnitAssignment')), ...withValidation },
-    },
-    put: {
-      tags: ['Master Data'],
-      summary: 'Tugaskan unit ke driver (buat atau ganti)',
-      description: [
-        'Membuat penugasan (201), atau mengganti unit penugasan yang sudah ada untuk driver dan tanggal yang sama (200). Memanggil ulang dengan data yang sama aman (200).',
-        'Penugasan hari ini diperlukan driver untuk membuat P2H di unit itu.',
-        'Ditolak 422: tanggal sebelum hari ini, driver/unit tidak ada atau tidak aktif. Ditolak 409 `CONFLICT`: `details.reason = unit_sudah_ditugaskan` jika unit sudah ditugaskan ke driver lain pada tanggal itu (`details.driver` = driver pemegangnya); `details.reason = sudah_bekerja` jika penugasan lama yang akan diganti sudah dipakai: ada P2H di unit itu pada tanggal tsb, atau driver sedang mengerjakan DO dengan unit itu.',
-      ].join('\n'),
-      security: secured,
-      requestBody: jsonBody(ref('UnitAssignmentRequest')),
-      responses: {
-        200: jsonResponse('Sudah ada / diganti', envelope(ref('UnitAssignment'))),
-        201: jsonResponse('Dibuat', envelope(ref('UnitAssignment'))),
-        409: jsonResponse('Unit sudah ditugaskan ke driver lain, atau driver sudah mulai bekerja dengan unit sebelumnya', ref('Error')),
-        ...withValidation,
-      },
-    },
-  },
-  '/unit-assignments/{id}': {
-    get: {
-      tags: ['Master Data'],
-      summary: 'Detail penugasan unit',
-      security: secured,
-      parameters: idPath,
-      responses: { 200: jsonResponse('OK', envelope(ref('UnitAssignment'))), ...withValidation, ...notFound },
-    },
-    delete: {
-      tags: ['Master Data'],
-      summary: 'Cabut penugasan unit',
-      description: 'Ditolak 409 `CONFLICT` jika driver sudah mulai bekerja dengan unit itu (P2H sudah dibuat atau DO sedang berjalan).',
-      security: secured,
-      parameters: idPath,
-      responses: {
-        200: jsonResponse('OK', envelope({ type: 'object', properties: { deleted: { type: 'boolean', example: true } } })),
-        409: jsonResponse('Driver sudah mulai bekerja', ref('Error')),
-        ...withValidation,
-        ...notFound,
-      },
-    },
-  },
 }

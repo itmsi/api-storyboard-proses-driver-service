@@ -12,6 +12,7 @@ const select = (db, query) => query.select(
   'locations.name',
   'locations.address',
   'locations.city',
+  'locations.maps_url',
   'locations.lat',
   'locations.lng',
   'locations.geofence_radius_m',

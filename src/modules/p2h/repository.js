@@ -1,18 +1,16 @@
 const { withAuditNames } = require('../../utils/audit')
+const { findEffectiveUnit } = require('../../utils/driver-unit')
 const { searchColumns } = require('../../utils/pagination')
 
 const findUnit = (db, unitId) => db('units')
-  .join('unit_types', 'unit_types.id', 'units.unit_type_id')
   .where({ 'units.id': unitId, 'units.is_delete': false })
-  .select('units.id', 'units.plate', 'unit_types.name as type')
+  .select('units.id', 'units.plate', 'units.unit_type as type')
   .first()
 
-/** Driver hanya boleh mengakses unit yang ditugaskan kepadanya pada tanggal tsb. */
+/** Driver hanya boleh mengakses unit yang dipegangnya pada tanggal tsb (pengecualian harian atau unit bawaan). */
 const hasAssignment = async (db, driverId, unitId, workDate) => {
-  const row = await db('driver_unit_assignments')
-    .where({ driver_id: driverId, unit_id: unitId, work_date: workDate })
-    .first('id')
-  return Boolean(row)
+  const unit = await findEffectiveUnit(db, driverId, workDate)
+  return Boolean(unit && unit.id === unitId)
 }
 
 const getCheckItems = (db) => db('p2h_check_items')
@@ -54,7 +52,6 @@ const listAdmin = async (db, { filters, search, paging }) => {
   const filtered = () => {
     const q = db('p2h_inspections')
       .join('units', 'units.id', 'p2h_inspections.unit_id')
-      .join('unit_types', 'unit_types.id', 'units.unit_type_id')
       .join('drivers', 'drivers.id', 'p2h_inspections.checked_by')
       .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
       .where('p2h_inspections.is_delete', false)
@@ -70,7 +67,7 @@ const listAdmin = async (db, { filters, search, paging }) => {
     .select(
       'p2h_inspections.*',
       'units.plate',
-      'unit_types.name as unit_type',
+      'units.unit_type as unit_type',
       'driver_user.name as checked_by_name',
       db.raw('p2h_inspections.inspection_date::text as inspection_date_text')
     )
@@ -85,14 +82,13 @@ const listAdmin = async (db, { filters, search, paging }) => {
 const findById = (db, id) => withAuditNames(
   db('p2h_inspections')
     .join('units', 'units.id', 'p2h_inspections.unit_id')
-    .join('unit_types', 'unit_types.id', 'units.unit_type_id')
     .join('drivers', 'drivers.id', 'p2h_inspections.checked_by')
     .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
     .where({ 'p2h_inspections.id': id, 'p2h_inspections.is_delete': false })
     .select(
       'p2h_inspections.*',
       'units.plate',
-      'unit_types.name as unit_type',
+      'units.unit_type as unit_type',
       'driver_user.name as checked_by_name',
       db.raw('p2h_inspections.inspection_date::text as inspection_date_text')
     ),

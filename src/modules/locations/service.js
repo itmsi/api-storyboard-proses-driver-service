@@ -8,6 +8,21 @@ const SORTABLE = {
   name: 'locations.name', type: 'locations.type', city: 'locations.city', created_at: 'locations.created_at',
 }
 
+/**
+ * Koordinat dari tautan Google Maps panjang (`/@-6.18,106.94,17z`, `!3d-6.18!4d106.94`, atau `?q=-6.18,106.94`).
+ * Tautan pendek (maps.app.goo.gl) tidak bisa dibaca tanpa membuka tautannya, jadi tidak menghasilkan koordinat.
+ */
+const coordsFromMapsUrl = (url) => {
+  if (!url) return null
+  const m = url.match(/@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/)
+    || url.match(/!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/)
+    || url.match(/[?&](?:q|query|ll)=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/)
+  if (!m) return null
+  const lat = Number(m[1])
+  const lng = Number(m[2])
+  return Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null
+}
+
 const num = (v) => (v === null || v === undefined ? null : Number(v))
 
 const serialize = (row) => ({
@@ -16,6 +31,7 @@ const serialize = (row) => ({
   name: row.name,
   address: row.address,
   city: row.city,
+  maps_url: row.maps_url,
   gps: row.lat === null ? null : { lat: num(row.lat), lng: num(row.lng) },
   geofence_radius_m: row.geofence_radius_m,
   operating_hours: row.operating_hours,
@@ -52,7 +68,7 @@ const columns = (body) => {
   ['type', 'name', 'address', 'lat', 'lng', 'geofence_radius_m', 'customer_id'].forEach((k) => {
     if (body[k] !== undefined) out[k] = body[k]
   });
-  ['city', 'operating_hours', 'pic_name', 'pic_phone'].forEach((k) => {
+  ['city', 'maps_url', 'operating_hours', 'pic_name', 'pic_phone'].forEach((k) => {
     if (body[k] !== undefined) out[k] = body[k] || null
   })
   return out
@@ -72,6 +88,8 @@ const create = async (db, admin, body) => {
   const data = {
     customer_id: null, lat: null, lng: null, geofence_radius_m: 200, ...columns(body),
   }
+  // Koordinat belum diisi: ambil dari tautan peta bila bisa dibaca
+  if (data.lat === null && data.lng === null) Object.assign(data, coordsFromMapsUrl(data.maps_url))
   await checkRules(db, data)
   const id = await repo.insert(db, { ...data, created_by: admin.id, updated_by: admin.id })
   return get(db, id)
@@ -91,6 +109,14 @@ const update = async (db, admin, id, body) => {
   if (changes.type && changes.type !== 'customer_site' && changes.customer_id === undefined) {
     merged.customer_id = null
     changes.customer_id = null
+  }
+  // Tautan peta diubah tanpa koordinat baru: ikuti koordinat dari tautan itu bila bisa dibaca
+  if (changes.maps_url && changes.lat === undefined && changes.lng === undefined) {
+    const c = coordsFromMapsUrl(changes.maps_url)
+    if (c) {
+      Object.assign(changes, c)
+      Object.assign(merged, c)
+    }
   }
   await checkRules(db, merged)
   await repo.update(db, id, { ...changes, updated_by: admin.id })

@@ -35,17 +35,13 @@ exports.seed = async (knex) => {
   }).onConflict('code').ignore()
 
   // Unit B 9123 KZ + penugasan hari ini untuk Andi
-  // Tipe unit bawaan sudah dibuat migrasi; data dev memberi CDD Bak kapasitas 2500 kg (fixture)
-  await knex('unit_types').where({ code: 'CDD_BAK', is_delete: false }).update({ max_load_kg: 2500 })
-  const unitType = await knex('unit_types').where({ code: 'CDD_BAK' }).first()
   await knex('units').insert({
-    plate: 'B 9123 KZ', unit_type_id: unitType.id, brand: 'Mitsubishi', year: 2022, created_by: adminId,
+    plate: 'B 9123 KZ', unit_type: 'CDD Bak', max_load_kg: 2500, brand: 'Mitsubishi', year: 2022, created_by: adminId,
   }).onConflict().ignore()
   const unit = await knex('units').whereRaw("upper(replace(plate, ' ', '')) = 'B9123KZ'").first()
   const driver = await knex('drivers').where({ code: 'DRV-0021' }).first()
-  await knex('driver_unit_assignments').insert({
-    driver_id: driver.id, unit_id: unit.id, work_date: wibDate(), created_by: adminId,
-  }).onConflict(['driver_id', 'work_date']).merge({ unit_id: unit.id })
+  // Andi adalah driver bawaan unit ini: tidak perlu penugasan harian
+  await knex('units').where({ id: unit.id }).update({ driver_id: driver.id })
 
   // Customer + lokasi + DO-0144 (Cakung -> PT Contoh Jaya, Karawang) sesuai fixture
   await knex('customers').insert({

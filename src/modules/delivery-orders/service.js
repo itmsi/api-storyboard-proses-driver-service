@@ -7,12 +7,14 @@ const repo = require('./repository')
 
 const MAX_RANGE_DAYS = 366
 const DEFAULT_RANGE_DAYS = 30
+const { mapsUrlFor } = require('../../utils/maps')
+
 const DAY_MS = 24 * 60 * 60 * 1000
 
 const num = (value) => (value === null || value === undefined ? null : Number(value))
 const gpsOf = (snapshot) => (snapshot.lat === null || snapshot.lat === undefined ? null : { lat: snapshot.lat, lng: snapshot.lng })
 
-const mapsUrl = (snapshot) => (gpsOf(snapshot) ? `https://maps.google.com/?q=${snapshot.lat},${snapshot.lng}` : null)
+const mapsUrl = mapsUrlFor
 
 /** "Cakung → PT Contoh Jaya, Karawang" */
 const routeLabel = (row) => {
@@ -35,6 +37,7 @@ const serialize = (row, extra = {}) => ({
     name: row.origin_snapshot.name,
     address: row.origin_snapshot.address,
     gps: gpsOf(row.origin_snapshot),
+    maps_url: mapsUrl(row.origin_snapshot),
     load_time: toWib(row.planned_load_at),
   },
   destination: {

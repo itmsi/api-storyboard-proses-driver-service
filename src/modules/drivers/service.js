@@ -24,6 +24,7 @@ const serialize = (row, extra = {}) => ({
     expires_on: row.license_expires_on,
   },
   unit_today: row.unit_id ? { id: row.unit_id, plate: row.unit_plate } : null,
+  default_unit: row.default_unit_id ? { id: row.default_unit_id, plate: row.default_unit_plate } : null, // diatur di master unit (driver_id)
   last_login_at: toWib(row.last_login_at),
   locked: Boolean(row.locked_until && new Date(row.locked_until) > new Date()),
   locked_until: row.locked_until && new Date(row.locked_until) > new Date() ? toWib(row.locked_until) : null,

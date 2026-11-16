@@ -7,7 +7,6 @@ const base = (db) => db('delivery_orders')
   .join('drivers', 'drivers.id', 'delivery_orders.driver_id')
   .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
   .join('units', 'units.id', 'delivery_orders.unit_id')
-  .join('unit_types', 'unit_types.id', 'units.unit_type_id')
   .leftJoin('customers', 'customers.id', 'delivery_orders.customer_id')
 
 const select = (query) => query.select(
@@ -15,7 +14,7 @@ const select = (query) => query.select(
   'drivers.code as driver_code',
   'driver_user.name as driver_name',
   'units.plate as unit_plate',
-  'unit_types.name as unit_type',
+  'units.unit_type as unit_type',
   'customers.name as customer_name'
 )
 
@@ -63,6 +62,7 @@ const findLocation = (db, id) => db('locations').where({ id, is_delete: false })
   'name',
   'address',
   'city',
+  'maps_url',
   'lat',
   'lng',
   'customer_id',

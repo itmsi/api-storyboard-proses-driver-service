@@ -1,3 +1,4 @@
+const { findEffectiveUnit } = require('../../utils/driver-unit')
 const { withAuditNames } = require('../../utils/audit')
 
 const getProfile = (db, userId, deviceUuid) => withAuditNames(
@@ -26,13 +27,11 @@ const getProfile = (db, userId, deviceUuid) => withAuditNames(
   'drivers'
 ).first()
 
-/** Unit yang ditugaskan ke driver pada tanggal kerja tsb (unit_today). */
-const getUnitForDate = (db, driverId, workDate) => db('driver_unit_assignments')
-  .join('units', 'units.id', 'driver_unit_assignments.unit_id')
-  .join('unit_types', 'unit_types.id', 'units.unit_type_id')
-  .where({ 'driver_unit_assignments.driver_id': driverId, 'driver_unit_assignments.work_date': workDate, 'units.is_delete': false })
-  .select('units.id', 'units.plate', 'unit_types.name as type')
-  .first()
+/** Unit yang dipegang driver pada tanggal kerja tsb (unit_today): pengecualian harian, selain itu unit bawaan driver. */
+const getUnitForDate = async (db, driverId, workDate) => {
+  const unit = await findEffectiveUnit(db, driverId, workDate)
+  return unit ? { id: unit.id, plate: unit.plate, type: unit.type } : undefined
+}
 
 const updateLanguage = (db, userId, language) => db('users')
   .where({ id: userId })

@@ -4,8 +4,9 @@ const { toWib, wibDate } = require('../../utils/date')
 const pagination = require('../../utils/pagination')
 const { fail } = require('../../utils/accounts')
 const master = require('../../utils/master')
+const { mapsUrlFor } = require('../../utils/maps')
 const { serializeMedia } = require('../media/serializer')
-const assignments = require('../unit-assignments/service')
+const assignments = require('./unit-assignment')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
 
@@ -38,8 +39,8 @@ const serializeListItem = (row) => ({
   unit: { id: row.unit_id, plate: row.unit_plate, type: row.unit_type },
   customer: row.customer_id ? { id: row.customer_id, name: row.customer_name } : null,
   route: routeLabel(row),
-  origin: { name: row.origin_snapshot.name, city: row.origin_snapshot.city || null },
-  destination: { name: row.destination_snapshot.name, city: row.destination_snapshot.city || null },
+  origin: { name: row.origin_snapshot.name, city: row.origin_snapshot.city || null, maps_url: mapsUrlFor(row.origin_snapshot) },
+  destination: { name: row.destination_snapshot.name, city: row.destination_snapshot.city || null, maps_url: mapsUrlFor(row.destination_snapshot) },
   planned_load_at: toWib(row.planned_load_at),
   assigned_at: toWib(row.assigned_at),
   cargo: { description: row.cargo_description, quantity: num(row.cargo_quantity), unit: row.cargo_unit },
@@ -92,8 +93,12 @@ const serializeDetail = async (db, row) => {
 
   return {
     ...serializeListItem(row),
-    origin: { ...row.origin_snapshot, gps: gps(row.origin_snapshot), location_id: row.origin_location_id },
-    destination: { ...row.destination_snapshot, gps: gps(row.destination_snapshot), location_id: row.destination_location_id },
+    origin: {
+      ...row.origin_snapshot, gps: gps(row.origin_snapshot), maps_url: mapsUrlFor(row.origin_snapshot), location_id: row.origin_location_id,
+    },
+    destination: {
+      ...row.destination_snapshot, gps: gps(row.destination_snapshot), maps_url: mapsUrlFor(row.destination_snapshot), location_id: row.destination_location_id,
+    },
     travel_allowance: { amount: num(row.travel_allowance_amount), received_at: toWib(row.travel_allowance_received_at) },
     timeline: events.map((e) => ({
       id: Number(e.id),
@@ -161,13 +166,14 @@ const load = async (db, id) => {
 }
 
 const snapshotOrigin = (loc) => ({
-  name: loc.name, address: loc.address, city: loc.city, lat: num(loc.lat), lng: num(loc.lng),
+  name: loc.name, address: loc.address, city: loc.city, maps_url: loc.maps_url || null, lat: num(loc.lat), lng: num(loc.lng),
 })
 
 const snapshotDestination = (loc) => ({
   name: loc.name,
   city: loc.city,
   address: loc.address,
+  maps_url: loc.maps_url || null,
   lat: num(loc.lat),
   lng: num(loc.lng),
   operating_hours: loc.operating_hours,

@@ -6,7 +6,12 @@ const base = (db, today) => db('users')
   .join('drivers', 'drivers.user_id', 'users.id')
   .leftJoin('roles', 'roles.id', 'users.role_id')
   .leftJoin('driver_unit_assignments as dua', (j) => j.on('dua.driver_id', 'drivers.id').andOn('dua.work_date', db.raw('?', [today])))
-  .leftJoin('units as unit_today', 'unit_today.id', 'dua.unit_id')
+  // Unit bawaan driver ini (units.driver_id)
+  .leftJoin('units as default_unit', (j) => j.on('default_unit.driver_id', 'drivers.id').andOn('default_unit.is_delete', db.raw('false')))
+  // Unit hari ini: pengecualian harian menang; selain itu unit bawaan, kecuali dipegang driver lain hari itu lewat pengecualian
+  .joinRaw(`LEFT JOIN units AS unit_today ON unit_today.id = COALESCE(dua.unit_id, (CASE WHEN default_unit.id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM driver_unit_assignments AS other WHERE other.unit_id = default_unit.id AND other.work_date = ? AND other.driver_id <> drivers.id
+  ) THEN default_unit.id END))`, [today])
   .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'roles.user_type': 'driver' })
 
 const select = (db, query) => query.select(
@@ -26,6 +31,8 @@ const select = (db, query) => query.select(
   'users.locked_until',
   'unit_today.id as unit_id',
   'unit_today.plate as unit_plate',
+  'default_unit.id as default_unit_id',
+  'default_unit.plate as default_unit_plate',
   'drivers.created_at',
   'drivers.created_by',
   'drivers.updated_at',
@@ -90,6 +97,8 @@ const softDelete = async (trx, row, actorId) => {
   }
   await trx('users').where({ id: row.user_id }).update(gone)
   await trx('drivers').where({ id: row.id }).update(gone)
+  // Driver dihapus: tidak lagi jadi driver bawaan unit mana pun
+  await trx('units').where({ driver_id: row.id }).update({ driver_id: null, updated_by: actorId })
 }
 
 module.exports = {
