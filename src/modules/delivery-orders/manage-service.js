@@ -10,7 +10,7 @@ const assignments = require('./unit-assignment')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
 
-// Pengelolaan DO oleh admin: buat, daftar, detail, ubah (hanya saat belum diterima driver), batalkan.
+// Pengelolaan DO oleh admin: buat, daftar, detail, ubah (hanya saat belum diterima driver), tahan (onhold)/lanjutkan, batalkan.
 
 const SORTABLE = {
   no: 'delivery_orders.no',
@@ -53,6 +53,8 @@ const serializeListItem = (row) => ({
   accepted_at: toWib(row.accepted_at),
   started_at: toWib(row.started_at),
   completed_at: toWib(row.completed_at),
+  on_hold_at: toWib(row.on_hold_at),
+  on_hold_reason: row.on_hold_reason ?? null,
   cancelled_at: toWib(row.cancelled_at),
   cancel_reason: row.cancel_reason,
   ...auditFields(row),
@@ -233,17 +235,80 @@ const list = async (db, query) => {
 
 const get = async (db, id) => serializeDetail(db, await load(db, id))
 
-/** Tanggal penugasan unit harian untuk sebuah DO: tanggal rencana muat (WIB); tanpa rencana muat = hari ini. */
-const assignmentDate = (plannedLoadAt) => wibDate(plannedLoadAt ? new Date(plannedLoadAt) : new Date())
+/**
+ * Tanggal kerja DO (WIB): tanggal rencana muat; tanpa rencana muat = tanggal DO ditugaskan (DO baru: hari ini).
+ * Sama dengan DO_WORK_DATE di manage-repository.
+ */
+const assignmentDate = (plannedLoadAt, assignedAt = null) => wibDate(new Date(plannedLoadAt || assignedAt || Date.now()))
+
+const ddmmyyyy = (date) => date.split('-').reverse().join('-')
+
+/**
+ * Aturan satu driver satu unit per tanggal, dilihat dari DO-nya:
+ * driver tidak boleh punya dua DO dengan unit berbeda pada tanggal kerja yang sama.
+ *
+ * Contoh (driver A, tanggal 16-11-2026):
+ *   DO1 unit AA assigned + DO2 unit AA  → boleh (unit sama)
+ *   DO1 unit AA assigned + DO2 unit BB  → 409; DO1 harus di-onhold dulu, baru DO2 bisa di-assign
+ *   DO1 unit AA onhold/cancelled + DO2 unit BB → boleh (DO1 tidak lagi memakai hari kerja driver)
+ *   DO1 unit AA sudah diterima/berjalan/selesai + DO2 unit BB → 409; tidak bisa di-onhold, gunakan unit AA atau ganti driver
+ *
+ * Dipanggil di dalam transaksi setelah baris driver dikunci (lockDriver), supaya dua admin tidak lolos bersamaan.
+ */
+const assertDriverDayFree = async (trx, {
+  driver, unitId, workDate, exceptId = null, orderNo = null,
+}) => {
+  const rows = await repo.findDriverOrdersOnDate(trx, {
+    driverId: driver.id, date: workDate, statuses: master.DAY_BOUND_DO_STATUSES, exceptId,
+  })
+  const clashes = rows.filter((r) => r.unit_id !== unitId)
+  if (!clashes.length) return
+
+  const tanggal = ddmmyyyy(workDate)
+  const target = orderNo || 'DO ini'
+  const details = {
+    reason: 'driver_beda_unit_tanggal_sama',
+    work_date: workDate,
+    driver: { id: driver.id, code: driver.code, name: driver.name },
+    conflicting_orders: clashes.map((r) => ({
+      id: r.id, no: r.no, status: r.status, unit: { id: r.unit_id, plate: r.unit_plate }, can_hold: r.status === 'assigned',
+    })),
+  }
+
+  // DO yang sudah diterima/berjalan/selesai tidak bisa di-onhold
+  const locked = clashes.find((r) => r.status !== 'assigned')
+  if (locked) {
+    throw new AppError('CONFLICT', {
+      message: `Maaf, Delivery Order tidak bisa di-assign karena driver ${driver.name} sudah `
+        + `${locked.status === 'completed' ? 'menyelesaikan' : 'menjalankan'} ${locked.no} dengan unit ${locked.unit_plate} `
+        + `pada tanggal ${tanggal}. DO tersebut tidak bisa di-onhold; gunakan unit ${locked.unit_plate} atau ganti driver.`,
+      details,
+    })
+  }
+
+  const nos = clashes.map((r) => r.no).join(', ')
+  throw new AppError('CONFLICT', {
+    message: `Maaf, Delivery Order tidak bisa di-assign karena driver ${driver.name} sudah memiliki DO dengan unit yang berbeda `
+      + `pada tanggal yang sama (${clashes.map((r) => `${r.no} unit ${r.unit_plate}`).join(', ')}, ${tanggal}). `
+      + `Silakan ubah status ${nos} menjadi 'onhold' agar ${target} dapat di-assign.`,
+    details,
+  })
+}
+
+/** Kunci baris driver selama transaksi: pemeriksaan "satu unit per tanggal" dan penyimpanan DO jadi berurutan per driver. */
+const lockDriver = (trx, driverId) => trx('drivers').where({ id: driverId }).forUpdate().first('id')
 
 const create = async (db, admin, body) => {
   const refs = await resolveRefs(db, body)
   const no = await repo.nextNumber(db)
   let unitAssignment = null
+  const workDate = assignmentDate(body.planned_load_at)
   const id = await db.transaction(async (trx) => {
+    await lockDriver(trx, body.driver_id)
+    await assertDriverDayFree(trx, { driver: refs.driver, unitId: body.unit_id, workDate })
     // Penugasan unit harian disiapkan sekalian; bentrok = DO tidak dibuat
     unitAssignment = await assignments.ensureForOrder(trx, admin, {
-      driverId: body.driver_id, unitId: body.unit_id, unit: refs.unit, workDate: assignmentDate(body.planned_load_at),
+      driverId: body.driver_id, unitId: body.unit_id, unit: refs.unit, workDate,
     })
     const created = await repo.insert(trx, {
       no,
@@ -291,6 +356,12 @@ const assertEditable = (row) => {
 const update = async (db, admin, id, body) => {
   const row = await load(db, id)
   assertEditable(row)
+  if (row.status === 'onhold') {
+    throw new AppError('INVALID_STATE', {
+      message: 'DO sedang onhold. Lanjutkan dulu (resume) sebelum diubah.',
+      details: { status: row.status, expected: ['assigned'] },
+    })
+  }
   if (row.status !== 'assigned') {
     throw new AppError('INVALID_STATE', {
       message: 'DO yang sudah diterima driver tidak bisa diubah. Batalkan lalu buat DO baru.',
@@ -327,8 +398,13 @@ const update = async (db, admin, id, body) => {
     // Driver, unit, atau tanggal muat berubah: siapkan penugasan harian untuk kombinasi barunya
     if (['driver_id', 'unit_id', 'planned_load_at'].some((k) => body[k] !== undefined)) {
       const planned = body.planned_load_at !== undefined ? body.planned_load_at : row.planned_load_at
+      const workDate = assignmentDate(planned, row.assigned_at)
+      await lockDriver(trx, merged.driver_id)
+      await assertDriverDayFree(trx, {
+        driver: refs.driver, unitId: merged.unit_id, workDate, exceptId: id, orderNo: row.no,
+      })
       unitAssignment = await assignments.ensureForOrder(trx, admin, {
-        driverId: merged.driver_id, unitId: merged.unit_id, unit: refs.unit, workDate: assignmentDate(planned),
+        driverId: merged.driver_id, unitId: merged.unit_id, unit: refs.unit, workDate, exceptOrderId: id,
       })
     }
     const done = await doRepo.updateIfStatus(trx, id, ['assigned'], fields)
@@ -344,6 +420,78 @@ const update = async (db, admin, id, body) => {
     })
   })
   return { ...(await get(db, id)), ...(unitAssignment ? { unit_assignment: unitAssignment } : {}) }
+}
+
+/**
+ * Tahan DO (assigned → onhold). Hanya selagi belum diterima driver. DO onhold hilang dari aplikasi driver, tidak bisa diterima,
+ * dan tidak lagi memakai hari kerja driver: driver boleh mendapat DO lain dengan unit berbeda pada tanggal yang sama.
+ */
+const hold = async (db, admin, id, { reason = null } = {}) => {
+  const row = await load(db, id)
+  assertEditable(row)
+  if (row.status === 'onhold') throw new AppError('INVALID_STATE', { message: 'DO ini sudah onhold.', details: { status: 'onhold' } })
+  if (row.status !== 'assigned') {
+    throw new AppError('INVALID_STATE', {
+      message: 'Hanya DO yang belum diterima driver (assigned) yang bisa di-onhold.',
+      details: { status: row.status, expected: ['assigned'] },
+    })
+  }
+
+  await db.transaction(async (trx) => {
+    const done = await doRepo.updateIfStatus(trx, id, ['assigned'], {
+      status: 'onhold', on_hold_at: trx.fn.now(), on_hold_reason: reason, updated_by: admin.id,
+    })
+    if (!done) throw new AppError('INVALID_STATE', { message: 'DO baru saja diterima driver dan tidak bisa di-onhold lagi.', details: { expected: ['assigned'] } })
+    await doRepo.insertEvent(trx, {
+      delivery_order_id: id,
+      event: 'on_hold',
+      from_status: 'assigned',
+      to_status: 'onhold',
+      actor_id: admin.id,
+      occurred_at: new Date(),
+      payload: { reason },
+    })
+  })
+  return get(db, id)
+}
+
+/**
+ * Lanjutkan DO yang ditahan (onhold → assigned). Aturan satu driver satu unit per tanggal diperiksa lagi, jadi bila driver sudah
+ * mendapat DO lain dengan unit berbeda pada tanggal itu, DO lain tersebut harus di-onhold dulu (409).
+ */
+const resume = async (db, admin, id) => {
+  const row = await load(db, id)
+  assertEditable(row)
+  if (row.status !== 'onhold') {
+    throw new AppError('INVALID_STATE', { message: 'Hanya DO onhold yang bisa dilanjutkan.', details: { status: row.status, expected: ['onhold'] } })
+  }
+  const refs = await resolveRefs(db, { ...row, customer_id: null }) // driver/unit/lokasi bisa saja sudah dinonaktifkan selama DO ditahan
+  const workDate = assignmentDate(row.planned_load_at, row.assigned_at)
+
+  let unitAssignment = null
+  await db.transaction(async (trx) => {
+    await lockDriver(trx, row.driver_id)
+    await assertDriverDayFree(trx, {
+      driver: refs.driver, unitId: row.unit_id, workDate, exceptId: id, orderNo: row.no,
+    })
+    unitAssignment = await assignments.ensureForOrder(trx, admin, {
+      driverId: row.driver_id, unitId: row.unit_id, unit: refs.unit, workDate, exceptOrderId: id,
+    })
+    const done = await doRepo.updateIfStatus(trx, id, ['onhold'], {
+      status: 'assigned', on_hold_at: null, on_hold_reason: null, updated_by: admin.id,
+    })
+    if (!done) throw new AppError('INVALID_STATE', { message: 'Status DO baru saja berubah, muat ulang lalu coba lagi.', details: { expected: ['onhold'] } })
+    await doRepo.insertEvent(trx, {
+      delivery_order_id: id,
+      event: 'resumed',
+      from_status: 'onhold',
+      to_status: 'assigned',
+      actor_id: admin.id,
+      occurred_at: new Date(),
+      payload: { on_hold_reason: row.on_hold_reason },
+    })
+  })
+  return { ...(await get(db, id)), unit_assignment: unitAssignment }
 }
 
 /** Batalkan DO yang belum selesai. Foto, biaya, dan jejak yang sudah ada tidak dihapus. */
@@ -371,5 +519,5 @@ const cancel = async (db, admin, id, { reason }) => {
 }
 
 module.exports = {
-  list, get, create, update, cancel,
+  list, get, create, update, hold, resume, cancel,
 }

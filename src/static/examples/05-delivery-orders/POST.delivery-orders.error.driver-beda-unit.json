@@ -1,0 +1,22 @@
+{
+  "success": false,
+  "error": {
+    "code": "CONFLICT",
+    "message": "Maaf, Delivery Order tidak bisa di-assign karena driver Andi sudah memiliki DO dengan unit yang berbeda pada tanggal yang sama (DO-0001 unit B 9123 KZ, 16-11-2026). Silakan ubah status DO-0001 menjadi 'onhold' agar DO ini dapat di-assign.",
+    "http_status": 409,
+    "details": {
+      "reason": "driver_beda_unit_tanggal_sama",
+      "work_date": "2026-11-16",
+      "driver": { "id": "952975ba-bcf9-4a57-ac3b-be20940d8b25", "code": "DRV-0021", "name": "Andi" },
+      "conflicting_orders": [
+        {
+          "id": "2fb9f57e-a6e7-4890-b957-30261a15b471",
+          "no": "DO-0001",
+          "status": "assigned",
+          "unit": { "id": "fc06e493-e9c6-429b-9529-bc07084818ee", "plate": "B 9123 KZ" },
+          "can_hold": true
+        }
+      ]
+    }
+  }
+}

@@ -21,8 +21,8 @@ module.exports = {
           name: 'status',
           in: 'query',
           required: false,
-          description: 'Driver: assigned, accepted, loading, in_transit, handover. Admin: semua status termasuk completed dan cancelled.',
-          schema: { type: 'string', enum: ['assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled'], example: 'assigned' },
+          description: 'Driver: assigned, accepted, loading, in_transit, handover. Admin: semua status termasuk onhold, completed, dan cancelled.',
+          schema: { type: 'string', enum: ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled'], example: 'assigned' },
         },
         {
           name: 'page', in: 'query', description: 'Hanya admin', schema: { type: 'integer', minimum: 1, default: 1 }

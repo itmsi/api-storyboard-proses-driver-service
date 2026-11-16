@@ -1,5 +1,7 @@
 const { AppError } = require('../../utils/errors')
 const { wibDate } = require('../../utils/date')
+const { DAY_BOUND_DO_STATUSES } = require('../../utils/master')
+const { findDriverOrdersOnDate } = require('./manage-repository')
 
 // Penugasan unit harian (driver_unit_assignments) hanya berupa PENGECUALIAN dari driver bawaan unit (units.driver_id) dan dibuat
 // otomatis oleh DO; tidak ada endpoint tersendiri. Admin melihat hasilnya di respons DO (unit_assignment).
@@ -36,35 +38,59 @@ const unitTaken = (unit, workDate, other) => new AppError('CONFLICT', {
  *    unit itu tidak dipegang driver lain lewat pengecualian pada tanggal tersebut.
  *  - Sudah ada penugasan yang sama: tidak berubah (created: false).
  *  - Belum ada: dibuat sebagai pengecualian harian (created: true), mis. driver pengganti atau unit pengganti.
- *  - Driver sudah punya unit lain pada tanggal itu, atau unit itu sudah dipegang driver lain: 409 (tidak menimpa diam-diam).
+ *  - Driver sudah punya penugasan unit lain pada tanggal itu:
+ *      · unit lama masih dipakai DO lain (assigned/berjalan/selesai) pada tanggal itu: 409 (tidak menimpa diam-diam);
+ *      · unit lama tidak dipakai DO mana pun lagi (mis. DO-nya di-onhold atau dibatalkan): penugasan dipindah ke unit baru
+ *        (moved_from_unit_id), atau dihapus bila unit baru adalah unit bawaan driver.
+ *  - Unit itu sudah dipegang driver lain: 409.
  *  - Tanggal sebelum hari ini: tidak disiapkan (null).
+ * exceptOrderId: DO yang sedang diubah/dilanjutkan, tidak dihitung sebagai pemakai unit lama.
  */
 const ensureForOrder = async (db, admin, {
-  driverId, unitId, unit, workDate
+  driverId, unitId, unit, workDate, exceptOrderId = null,
 }) => {
   if (workDate < wibDate()) return null
 
   const existing = await findByDriverDate(db, driverId, workDate)
-  if (existing) {
-    if (existing.unit_id === unitId) {
-      return {
-        id: existing.id, work_date: workDate, created: false, source: 'override'
-      }
+  if (existing && existing.unit_id === unitId) {
+    return {
+      id: existing.id, work_date: workDate, created: false, source: 'override'
     }
-    throw new AppError('CONFLICT', {
-      message: `Driver sudah memegang unit lain pada ${workDate}. Gunakan unit yang sama, atau ganti driver/unit DO ini.`,
-      details: { reason: 'penugasan_beda_unit', assignment_id: existing.id, work_date: workDate },
-    })
+  }
+  if (existing) {
+    const stillUsed = await findDriverOrdersOnDate(db, {
+      driverId, date: workDate, statuses: DAY_BOUND_DO_STATUSES, exceptId: exceptOrderId, unitId: existing.unit_id,
+    }).first()
+    if (stillUsed) {
+      throw new AppError('CONFLICT', {
+        message: `Driver sudah memegang unit lain pada ${workDate}. Gunakan unit yang sama, atau ganti driver/unit DO ini.`,
+        details: { reason: 'penugasan_beda_unit', assignment_id: existing.id, work_date: workDate },
+      })
+    }
   }
 
   const other = await findUnitTaken(db, unitId, workDate, driverId)
   if (other) throw unitTaken(unit, workDate, other)
 
-  // Driver bawaan unit ini: tidak perlu penugasan harian
+  // Driver bawaan unit ini: tidak perlu penugasan harian (pengecualian lama yang sudah tidak dipakai dibuang)
   const owner = await db('units').where({ id: unitId }).first('driver_id')
   if (owner && owner.driver_id === driverId) {
+    if (existing) await db('driver_unit_assignments').where({ id: existing.id }).del()
     return {
-      id: null, work_date: workDate, created: false, source: 'default'
+      id: null, work_date: workDate, created: false, source: 'default', ...(existing ? { moved_from_unit_id: existing.unit_id } : {}),
+    }
+  }
+
+  // Penugasan lama sudah tidak dipakai DO mana pun: pindahkan ke unit baru
+  if (existing) {
+    try {
+      await db('driver_unit_assignments').where({ id: existing.id }).update({ unit_id: unitId, updated_by: admin.id })
+    } catch (err) {
+      if (err.code === '23505' && err.constraint === UNIT_DATE_CONSTRAINT) throw unitTaken(unit, workDate)
+      throw err
+    }
+    return {
+      id: existing.id, work_date: workDate, created: false, source: 'override', moved_from_unit_id: existing.unit_id,
     }
   }
 

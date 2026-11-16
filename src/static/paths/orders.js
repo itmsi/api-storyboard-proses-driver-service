@@ -27,13 +27,16 @@ module.exports = {
         '`customer_id` boleh dikosongkan (diturunkan dari lokasi tujuan). Driver harus aktif dan unit harus berstatus `active`.',
         'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
         '**Penugasan unit harian disiapkan sekalian** untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini), sehingga driver langsung bisa P2H di unit itu. Hasilnya ada di `unit_assignment` (`created` true = dibuat otomatis, false = sudah ada). Bila tanggal muat sudah lewat, penugasan tidak disiapkan (`unit_assignment: null`).',
-        'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `penugasan_beda_unit` (driver sudah punya unit lain pada tanggal itu; gunakan unit yang sama atau ganti driver/unit DO) atau `unit_sudah_ditugaskan` (unit itu dipegang driver lain pada tanggal itu).',
+        '**Satu driver satu unit per tanggal** (tanggal `planned_load_at` WIB; tanpa rencana muat = tanggal penugasan): driver yang sudah punya DO `assigned`/berjalan/selesai dengan unit **berbeda** pada tanggal itu ditolak 409 `CONFLICT` reason `driver_beda_unit_tanggal_sama` (`details.conflicting_orders`, `can_hold`). Unit sama = boleh. Bila DO lama masih `assigned`, ubah dulu ke `onhold` (`POST /delivery-orders/{id}/hold`), lalu DO baru bisa di-assign. DO `onhold`/`cancelled` tidak dihitung.',
+        'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `driver_beda_unit_tanggal_sama` (lihat di atas), `penugasan_beda_unit` (driver sudah punya unit lain pada tanggal itu; gunakan unit yang sama atau ganti driver/unit DO) atau `unit_sudah_ditugaskan` (unit itu dipegang driver lain pada tanggal itu).',
       ].join('\n'),
       security: secured,
       requestBody: jsonBody(ref('AdminDeliveryOrderCreate')),
       responses: {
         201: jsonResponse('Dibuat', envelope(ref('AdminDeliveryOrderDetail'))),
-        409: jsonResponse('Penugasan unit harian bentrok (`penugasan_beda_unit` / `unit_sudah_ditugaskan`)', ref('Error')),
+        409: jsonResponse('Bentrok (`driver_beda_unit_tanggal_sama` / `penugasan_beda_unit` / `unit_sudah_ditugaskan`)', ref('Error'), {
+          'Driver sudah punya DO dengan unit lain di tanggal yang sama': '05-delivery-orders/POST.delivery-orders.error.driver-beda-unit.json',
+        }),
         ...withValidation,
       },
     },
@@ -43,10 +46,10 @@ module.exports = {
       tags: ['Delivery Order'],
       summary: 'Ubah DO (admin)',
       description: [
-        'Hanya saat DO masih `assigned` (belum diterima driver). Kirim hanya field yang ingin diubah; `cargo` juga boleh sebagian.',
+        'Hanya saat DO masih `assigned` (belum diterima driver). DO `onhold` harus dilanjutkan dulu (resume). Kirim hanya field yang ingin diubah; `cargo` juga boleh sebagian.',
         'Sesudah diterima, data DO adalah bukti kerja driver: koreksinya lewat pembatalan lalu pembuatan DO baru (409 `INVALID_STATE`).',
         'DO selesai: 409 `DO_LOCKED`. DO dibatalkan: 409 `DO_CANCELLED`.',
-        'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, penugasan unit harian untuk kombinasi barunya disiapkan (respons memuat `unit_assignment`); penugasan lama dibiarkan. Bentrok = 409 seperti pada pembuatan DO dan DO tidak berubah.',
+        'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, penugasan unit harian untuk kombinasi barunya disiapkan (respons memuat `unit_assignment`); penugasan lama dibiarkan. Bentrok = 409 seperti pada pembuatan DO (termasuk `driver_beda_unit_tanggal_sama`) dan DO tidak berubah.',
       ].join('\n'),
       security: secured,
       parameters: idPath,
@@ -59,12 +62,52 @@ module.exports = {
       },
     },
   },
+  '/delivery-orders/{id}/hold': {
+    post: {
+      tags: ['Delivery Order'],
+      summary: 'Tahan DO / onhold (admin)',
+      description: [
+        'Hanya dari `assigned` (belum diterima driver) → `onhold`. `reason` opsional.',
+        'DO onhold hilang dari aplikasi driver, tidak bisa diterima, dan **tidak lagi memakai hari kerja driver**: driver yang sama boleh mendapat DO lain dengan unit berbeda pada tanggal yang sama.',
+        'Penugasan unit harian milik DO ini dipindah ke unit DO baru saat DO baru dibuat (bila tidak dipakai DO lain).',
+        'Sudah onhold / sudah diterima driver: 409 `INVALID_STATE`. DO selesai: 409 `DO_LOCKED`. DO dibatalkan: 409 `DO_CANCELLED`.',
+      ].join('\n'),
+      security: secured,
+      parameters: idPath,
+      requestBody: jsonBody(ref('HoldDeliveryOrderRequest')),
+      responses: {
+        200: jsonResponse('OK', envelope(ref('AdminDeliveryOrderDetail'))),
+        409: jsonResponse('Bukan assigned / selesai / dibatalkan', ref('Error')),
+        ...withValidation,
+        ...notFound,
+      },
+    },
+  },
+  '/delivery-orders/{id}/resume': {
+    post: {
+      tags: ['Delivery Order'],
+      summary: 'Lanjutkan DO onhold (admin)',
+      description: [
+        '`onhold` → `assigned`; DO muncul lagi di aplikasi driver.',
+        'Aturan satu driver satu unit per tanggal diperiksa lagi: bila driver sudah punya DO lain dengan unit berbeda pada tanggal itu, 409 `CONFLICT` `driver_beda_unit_tanggal_sama` (onhold-kan DO lain itu dulu).',
+        'Penugasan unit harian disiapkan lagi (respons memuat `unit_assignment`). Bukan onhold: 409 `INVALID_STATE`.',
+      ].join('\n'),
+      security: secured,
+      parameters: idPath,
+      responses: {
+        200: jsonResponse('OK', envelope(ref('AdminDeliveryOrderDetail'))),
+        409: jsonResponse('Bukan onhold / bentrok unit', ref('Error')),
+        ...errors,
+        ...notFound,
+      },
+    },
+  },
   '/delivery-orders/{id}/cancel': {
     post: {
       tags: ['Delivery Order'],
       summary: 'Batalkan DO (admin)',
       description: [
-        'Dari status mana pun selain `completed`. Foto, biaya, dan jejak yang sudah ada tidak dihapus.',
+        'Dari status mana pun selain `completed` (termasuk `onhold`). Foto, biaya, dan jejak yang sudah ada tidak dihapus.',
         'Di aplikasi driver DO itu hilang dari layar Berjalan dan DO ditugaskan, dan langkah yang masih dikirim (termasuk lewat sync) dijawab 409 `DO_CANCELLED`.',
         'Membatalkan DO yang sudah dibatalkan: 409 `INVALID_STATE`; DO selesai: 409 `DO_LOCKED`.',
       ].join('\n'),

@@ -27,7 +27,7 @@ const MEDIA_KINDS = [
 ]
 const FUEL_LEVELS = ['empty', 'quarter', 'half', 'three_quarter', 'full']
 const P2H_STATUS = ['belum', 'layak', 'catatan', 'tidak_layak']
-const DO_STATUS = ['assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled']
+const DO_STATUS = ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled']
 const DELIVERY_STATUS = ['terkirim_lengkap', 'terkirim_catatan', 'gagal_kirim']
 const NEXT_STEP = ['loading', 'odometer_start', 'in_transit', 'handover', 'odometer_end', 'complete']
 const EXPENSE_CATEGORY = ['bbm', 'tol', 'parkir', 'lainnya']
@@ -972,6 +972,8 @@ const schemas = {
     accepted_at: nullable(dt()),
     started_at: nullable(dt()),
     completed_at: nullable(dt()),
+    on_hold_at: nullable(dt(), { description: 'Diisi saat DO di-onhold; kosong lagi setelah dilanjutkan' }),
+    on_hold_reason: nullable(str('Driver dialihkan ke unit lain hari ini')),
     cancelled_at: nullable(dt()),
     cancel_reason: nullable(str('Pelanggan membatalkan pesanan')),
     ...auditProps,
@@ -1005,7 +1007,7 @@ const schemas = {
       travel_allowance: obj({ amount: money(600000), received_at: nullable(dt()) }),
       timeline: arr(obj({
         id: int(1),
-        event: str('assigned', { description: 'assigned, updated, accepted, loaded, odometer_start, expense_added, handover, odometer_end, completed, cancelled' }),
+        event: str('assigned', { description: 'assigned, updated, on_hold, resumed, accepted, loaded, odometer_start, expense_added, handover, odometer_end, completed, cancelled' }),
         from_status: nullable(str('assigned')),
         to_status: nullable(str('accepted')),
         occurred_at: dt(),
@@ -1098,6 +1100,7 @@ const schemas = {
     estimated_distance_km: nullable(num(70)),
     travel_allowance_amount: money(600000),
   }),
+  HoldDeliveryOrderRequest: obj({ reason: nullable(str('Driver dialihkan ke unit lain hari ini', { description: 'Opsional, 3-300 karakter' })) }),
   CancelDeliveryOrderRequest: obj({ reason: str('Pelanggan membatalkan pesanan', { description: '3-300 karakter' }) }, ['reason']),
   // ---------- Admin - P2H ulang, Biaya, Rekap Uang Jalan ----------
   P2HRecheckRequest: obj({ note: str('Lampu sein sudah diganti, mohon P2H ulang', { description: '3-300 karakter; dilihat driver di aplikasi' }) }, ['note']),

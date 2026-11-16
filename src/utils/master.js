@@ -15,9 +15,13 @@ const softDelete = (db, table, id, actorId) => db(table).where({ id }).update({
   is_delete: true, deleted_at: db.fn.now(), deleted_by: actorId, updated_by: actorId,
 })
 
-// DO belum final: masih bisa dikerjakan driver, jadi data master yang dirujuknya tidak boleh hilang
-const OPEN_DO_STATUSES = ['assigned', 'accepted', 'loading', 'in_transit', 'handover']
+// DO belum final: masih bisa dikerjakan driver (onhold: bisa dilanjutkan lagi), jadi data master yang dirujuknya tidak boleh hilang
+const OPEN_DO_STATUSES = ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover']
+
+// DO yang "memakai" hari kerja driver pada tanggalnya: driver tidak boleh mendapat DO lain dengan unit berbeda di tanggal itu.
+// onhold dan cancelled tidak dihitung (DO onhold melepaskan hari kerja driver).
+const DAY_BOUND_DO_STATUSES = ['assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed']
 
 module.exports = {
-  notFound, inUse, softDelete, OPEN_DO_STATUSES,
+  notFound, inUse, softDelete, OPEN_DO_STATUSES, DAY_BOUND_DO_STATUSES,
 }

@@ -288,7 +288,7 @@ CREATE TABLE delivery_orders (
 
   -- status alur kerja
   status                   text NOT NULL DEFAULT 'assigned' CHECK (status IN (
-                             'assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled')),
+                             'assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled')),
   -- hasil pengiriman (diisi saat handover)
   delivery_status          text CHECK (delivery_status IN ('terkirim_lengkap', 'terkirim_catatan', 'gagal_kirim')),
 

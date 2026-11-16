@@ -3,7 +3,41 @@ const { listQuery } = require('../../utils/pagination')
 
 // Validasi pengelolaan DO oleh admin (buat, daftar, ubah, batalkan). Validasi untuk driver ada di validation.js.
 
-const STATUSES = ['assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled']
+/**
+ * Siklus status Delivery Order (DO). Alur normal:
+ *   assigned → accepted → loading → in_transit → handover → completed
+ * Admin bisa menahan DO yang belum diterima: assigned ⇄ onhold.
+ * Dari status mana pun sebelum completed, admin bisa membatalkan → cancelled.
+ *
+ * - assigned   : DO baru dibuat admin dan ditugaskan ke driver + unit, belum diterima driver.
+ *                Satu-satunya status yang datanya masih boleh diubah admin (manage-service update).
+ *                Driver bisa menerima jika unit sudah P2H hari ini & layak operasi, dan driver
+ *                tidak sedang punya DO aktif lain.
+ *                Aturan: satu driver hanya boleh punya DO dengan SATU unit per tanggal kerja
+ *                (tanggal rencana muat WIB). DO kedua dengan unit berbeda ditolak 409 sampai DO pertama di-onhold.
+ * - onhold     : DO ditahan admin (assigned → onhold, POST /:id/hold). Tidak tampil & tidak bisa diterima driver,
+ *                dan tidak memakai hari kerja driver, sehingga driver boleh mendapat DO lain dengan unit berbeda
+ *                di tanggal yang sama. Dilanjutkan dengan POST /:id/resume (→ assigned, aturan unit diperiksa lagi)
+ *                atau dibatalkan (→ cancelled).
+ * - accepted   : Driver sudah menerima DO (assigned → accepted). DO mulai dihitung "aktif"
+ *                (satu driver hanya boleh punya satu DO aktif). Langkah berikutnya: muat barang.
+ * - loading    : Driver sudah mencatat muat barang (foto muatan + surat jalan) di lokasi asal
+ *                (accepted → loading, modul loading). Langkah berikutnya: odometer awal.
+ * - in_transit : Driver sudah mencatat odometer awal, perjalanan dimulai; started_at dan
+ *                odometer_start_km terisi (loading → in_transit, modul odometer type=start).
+ * - handover   : Barang sudah diserahterimakan di tujuan (surat jalan berstempel, tanda tangan
+ *                penerima, kondisi barang → delivery_status) (in_transit → handover, modul handover).
+ *                Status tetap handover saat odometer akhir dicatat (odometer_end_km terisi).
+ * - completed  : Driver menyelesaikan DO setelah odometer akhir tercatat (handover → completed,
+ *                modul summary). completed_at & locked_at terisi; DO terkunci (DO_LOCKED),
+ *                tidak bisa diubah maupun dibatalkan.
+ * - cancelled  : DO dibatalkan admin (beserta cancel_reason & cancelled_at) dari status apa pun
+ *                selain completed. Final: tidak bisa diubah, driver berhenti mengerjakannya (DO_CANCELLED).
+ *
+ * Status aktif (dikerjakan driver): accepted, loading, in_transit, handover. Status tertahan: onhold.
+ * Status final: completed, cancelled.
+ */
+const STATUSES = ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled']
 
 const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).custom((value, helpers) => (
   Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()) ? helpers.error('any.invalid') : value
@@ -59,6 +93,11 @@ const cancel = Joi.object({
     .required(),
 })
 
+const hold = Joi.object({
+  reason: Joi.string().trim().min(3).max(300)
+    .allow(null),
+})
+
 module.exports = {
-  list, create, update, cancel, STATUSES,
+  list, create, update, hold, cancel, STATUSES,
 }
