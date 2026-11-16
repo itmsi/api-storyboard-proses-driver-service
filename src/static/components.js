@@ -956,6 +956,10 @@ const schemas = {
     delivery_status: nullable(enumOf(DELIVERY_STATUS, 'terkirim_lengkap')),
     driver: obj({ id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'), code: str('DRV-0021'), name: str('Andi') }),
     unit: obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ'), type: str('CDD Bak') }),
+    unit_assignment: obj({
+      work_date: str('2026-11-19', { description: 'Tanggal kerja DO = tanggal rencana muat (WIB), atau hari ini bila tanpa rencana muat' }),
+      source: enumOf(['default', 'override'], 'override', { description: 'default = driver adalah driver bawaan unit; override = driver atau unit pengganti' }),
+    }, undefined, { description: 'Unit driver pada tanggal kerja DO ini. Ada di daftar, detail, dan respons buat/ubah/lanjutkan. Tidak ada tabel penugasan terpisah: unit driver per hari dibaca dari DO dan driver bawaan unit.' }),
     customer: nullable(obj({ id: str('6a1d4e72-8b35-4c09-9f27-0e5b3d8a1c64'), name: str('PT Contoh Jaya') })),
     route: str('Cakung → PT Contoh Jaya, Karawang'),
     origin: obj({ name: str('Gudang Cakung'), city: nullable(str('Cakung')), maps_url: nullable(str('https://maps.app.goo.gl/AbCdEf123', { description: 'Tautan Google Maps: maps_url lokasi bila diisi admin, kalau kosong dibuat dari koordinat, null bila koordinat juga kosong' })) }),
@@ -980,10 +984,6 @@ const schemas = {
   }),
   AdminDeliveryOrderDetail: {
     allOf: [ref('AdminDeliveryOrder'), obj({
-      unit_assignment: nullable(obj({
-        work_date: str('2026-11-19', { description: 'Tanggal kerja DO = tanggal rencana muat (WIB), atau hari ini bila tanpa rencana muat' }),
-        source: enumOf(['default', 'override'], 'override', { description: 'default = driver adalah driver bawaan unit; override = driver atau unit pengganti' }),
-      }, undefined, { description: 'Unit driver pada tanggal kerja DO ini, selalu ada di detail DO (dan respons buat/ubah/lanjutkan). Tidak ada tabel penugasan terpisah: unit driver per hari dibaca dari DO dan driver bawaan unit.' })),
       origin: obj({
         location_id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a22'),
         name: str('Gudang Cakung'),

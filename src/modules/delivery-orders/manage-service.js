@@ -43,6 +43,11 @@ const serializeListItem = (row) => ({
   delivery_status: row.delivery_status,
   driver: { id: row.driver_id, code: row.driver_code, name: row.driver_name },
   unit: { id: row.unit_id, plate: row.unit_plate, type: row.unit_type },
+  // Unit driver pada tanggal kerja DO ini (tanpa tabel penugasan): default = driver bawaan unit, override = pengganti
+  unit_assignment: {
+    work_date: assignmentDate(row.planned_load_at, row.assigned_at),
+    source: row.unit_default_driver_id === row.driver_id ? 'default' : 'override',
+  },
   customer: row.customer_id ? { id: row.customer_id, name: row.customer_name } : null,
   route: routeLabel(row),
   origin: { name: row.origin_snapshot.name, city: row.origin_snapshot.city || null, maps_url: mapsUrlFor(row.origin_snapshot) },
@@ -101,11 +106,6 @@ const serializeDetail = async (db, row) => {
 
   return {
     ...serializeListItem(row),
-    // Unit driver pada tanggal kerja DO ini (tanpa tabel penugasan): default = driver bawaan unit, override = pengganti
-    unit_assignment: {
-      work_date: assignmentDate(row.planned_load_at, row.assigned_at),
-      source: row.unit_default_driver_id === row.driver_id ? 'default' : 'override',
-    },
     origin: {
       ...row.origin_snapshot, gps: gps(row.origin_snapshot), maps_url: mapsUrlFor(row.origin_snapshot), location_id: row.origin_location_id,
     },
