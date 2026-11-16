@@ -1,5 +1,6 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
+const { holdsOnDateSql } = require('../../utils/master')
 
 // Query sisi admin: semua DO di perusahaan ini (tidak dibatasi ke satu driver seperti repository.js)
 
@@ -15,6 +16,7 @@ const select = (query) => query.select(
   'driver_user.name as driver_name',
   'units.plate as unit_plate',
   'units.unit_type as unit_type',
+  'units.driver_id as unit_default_driver_id',
   'customers.name as customer_name'
 )
 
@@ -71,25 +73,38 @@ const findLocation = (db, id) => db('locations').where({ id, is_delete: false })
   'pic_phone'
 )
 
-// Tanggal kerja DO (WIB): tanggal rencana muat, atau tanggal penugasan bila tanpa rencana muat (sama dengan assignmentDate di service)
-const DO_WORK_DATE = "(coalesce(delivery_orders.planned_load_at, delivery_orders.assigned_at) AT TIME ZONE 'Asia/Jakarta')::date"
-
 /**
- * DO milik driver pada tanggal kerja tsb yang masih "memakai" hari kerjanya (master.DAY_BOUND_DO_STATUSES).
+ * DO milik driver pada tanggal kerja tsb yang masih "memakai" hari kerjanya (master.holdsOnDateSql: DO pada tanggal itu
+ * assigned sampai completed, atau DO lintas hari yang masih berjalan).
  * exceptId: DO yang sedang diubah/dilanjutkan tidak dihitung. unitId: hanya DO dengan unit itu.
  */
 const findDriverOrdersOnDate = (db, {
-  driverId, date, statuses, exceptId, unitId,
+  driverId, date, exceptId, unitId,
 }) => {
   const q = db('delivery_orders')
     .join('units', 'units.id', 'delivery_orders.unit_id')
     .where('delivery_orders.driver_id', driverId)
-    .whereIn('delivery_orders.status', statuses)
-    .whereRaw(`${DO_WORK_DATE} = ?::date`, [date])
+    .whereRaw(holdsOnDateSql('delivery_orders', '?::date'), [date, date])
     .orderBy('delivery_orders.created_at')
     .select('delivery_orders.id', 'delivery_orders.no', 'delivery_orders.status', 'delivery_orders.unit_id', 'units.plate as unit_plate')
   if (exceptId) q.whereNot('delivery_orders.id', exceptId)
   if (unitId) q.where('delivery_orders.unit_id', unitId)
+  return q
+}
+
+/** DO unit itu pada tanggal kerja tsb yang dipegang driver lain (exceptDriverId = driver yang sedang diperiksa). */
+const findUnitOrdersOnDate = (db, {
+  unitId, date, exceptId, exceptDriverId,
+}) => {
+  const q = db('delivery_orders')
+    .join('drivers', 'drivers.id', 'delivery_orders.driver_id')
+    .join('users', 'users.id', 'drivers.user_id')
+    .where('delivery_orders.unit_id', unitId)
+    .whereRaw(holdsOnDateSql('delivery_orders', '?::date'), [date, date])
+    .orderBy('delivery_orders.created_at')
+    .select('delivery_orders.id', 'delivery_orders.no', 'delivery_orders.status', 'drivers.id as driver_id', 'drivers.code as driver_code', 'users.name as driver_name')
+  if (exceptId) q.whereNot('delivery_orders.id', exceptId)
+  if (exceptDriverId) q.whereNot('delivery_orders.driver_id', exceptDriverId)
   return q
 }
 
@@ -168,6 +183,7 @@ module.exports = {
   findCustomer,
   findLocation,
   findDriverOrdersOnDate,
+  findUnitOrdersOnDate,
   nextNumber,
   insert,
   events,

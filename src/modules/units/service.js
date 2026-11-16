@@ -72,17 +72,11 @@ const validVin = async (db, input, exceptId = null) => {
   return vin
 }
 
-/** Unit yang sedang dipakai (DO belum final / penugasan hari ini dan ke depan) tidak boleh dihapus atau dinonaktifkan. */
+/** Unit yang sedang dipakai DO yang belum final tidak boleh dihapus atau dinonaktifkan. */
 const assertNotInUse = async (db, id, action) => {
-  const { openDo, assignment } = await repo.findUsage(db, id, wibDate())
+  const openDo = await repo.findUsage(db, id)
   if (openDo) {
     throw master.inUse(`Unit tidak bisa ${action}: masih dipakai ${openDo.no} (${openDo.status}).`, { delivery_order_id: openDo.id, delivery_order_no: openDo.no })
-  }
-  if (assignment) {
-    throw master.inUse(
-      `Unit tidak bisa ${action}: masih ditugaskan ke ${assignment.driver_name} pada ${assignment.work_date}.`,
-      { work_date: assignment.work_date, driver_name: assignment.driver_name }
-    )
   }
 }
 

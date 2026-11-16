@@ -19,7 +19,7 @@ const { ensureDefaultRoles } = require('./default-roles')
 
 // Tabel inti yang harus ada setelah migrasi (verifikasi); migrasi terbaru dicek terpisah
 const CORE_TABLES = [
-  'users', 'drivers', 'devices', 'refresh_tokens', 'app_settings', 'units', 'driver_unit_assignments', 'customers', 'locations',
+  'users', 'drivers', 'devices', 'refresh_tokens', 'app_settings', 'units', 'customers', 'locations',
   'delivery_orders', 'delivery_order_events', 'media', 'p2h_check_items', 'p2h_inspections', 'expense_categories', 'expenses', 'loadings',
   'odometer_readings', 'handovers', 'settlements', 'sync_items',
 ]

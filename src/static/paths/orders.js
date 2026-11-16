@@ -26,15 +26,15 @@ module.exports = {
         'Nomor DO otomatis (`DO-0001`, …). Alamat asal dan tujuan **disalin** ke DO, jadi mengubah lokasi master tidak mengubah DO.',
         '`customer_id` boleh dikosongkan (diturunkan dari lokasi tujuan). Driver harus aktif dan unit harus berstatus `active`.',
         'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
-        '**Penugasan unit harian disiapkan sekalian** untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini), sehingga driver langsung bisa P2H di unit itu. Hasilnya ada di `unit_assignment` (`created` true = dibuat otomatis, false = sudah ada). Bila tanggal muat sudah lewat, penugasan tidak disiapkan (`unit_assignment: null`).',
+        '**Unit driver pada tanggal itu mengikuti DO ini** (tanpa penugasan terpisah): driver langsung bisa P2H di unit DO untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini). Hasilnya ada di `unit_assignment` (`work_date`, `source`: `default` = driver bawaan unit, `override` = driver/unit pengganti); detail DO juga selalu memuatnya. Bila tanggal muat sudah lewat, bentrok tidak diperiksa. DO yang sudah diterima dan masih berjalan dari tanggal sebelumnya tetap menahan unitnya.',
         '**Satu driver satu unit per tanggal** (tanggal `planned_load_at` WIB; tanpa rencana muat = tanggal penugasan): driver yang sudah punya DO `assigned`/berjalan/selesai dengan unit **berbeda** pada tanggal itu ditolak 409 `CONFLICT` reason `driver_beda_unit_tanggal_sama` (`details.conflicting_orders`, `can_hold`). Unit sama = boleh. Bila DO lama masih `assigned`, ubah dulu ke `onhold` (`POST /delivery-orders/{id}/hold`), lalu DO baru bisa di-assign. DO `onhold`/`cancelled` tidak dihitung.',
-        'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `driver_beda_unit_tanggal_sama` (lihat di atas), `penugasan_beda_unit` (driver sudah punya unit lain pada tanggal itu; gunakan unit yang sama atau ganti driver/unit DO) atau `unit_sudah_ditugaskan` (unit itu dipegang driver lain pada tanggal itu).',
+        'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `driver_beda_unit_tanggal_sama` (lihat di atas) atau `unit_sudah_ditugaskan` (unit itu sudah dipegang DO driver lain pada tanggal itu; `details.order` dan `details.driver` = pemegangnya).',
       ].join('\n'),
       security: secured,
       requestBody: jsonBody(ref('AdminDeliveryOrderCreate')),
       responses: {
         201: jsonResponse('Dibuat', envelope(ref('AdminDeliveryOrderDetail'))),
-        409: jsonResponse('Bentrok (`driver_beda_unit_tanggal_sama` / `penugasan_beda_unit` / `unit_sudah_ditugaskan`)', ref('Error'), {
+        409: jsonResponse('Bentrok (`driver_beda_unit_tanggal_sama` / `unit_sudah_ditugaskan`)', ref('Error'), {
           'Driver sudah punya DO dengan unit lain di tanggal yang sama': '05-delivery-orders/POST.delivery-orders.error.driver-beda-unit.json',
         }),
         ...withValidation,
@@ -49,7 +49,7 @@ module.exports = {
         'Hanya saat DO masih `assigned` (belum diterima driver). DO `onhold` harus dilanjutkan dulu (resume). Kirim hanya field yang ingin diubah; `cargo` juga boleh sebagian.',
         'Sesudah diterima, data DO adalah bukti kerja driver: koreksinya lewat pembatalan lalu pembuatan DO baru (409 `INVALID_STATE`).',
         'DO selesai: 409 `DO_LOCKED`. DO dibatalkan: 409 `DO_CANCELLED`.',
-        'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, penugasan unit harian untuk kombinasi barunya disiapkan (respons memuat `unit_assignment`); penugasan lama dibiarkan. Bentrok = 409 seperti pada pembuatan DO (termasuk `driver_beda_unit_tanggal_sama`) dan DO tidak berubah.',
+        'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, kombinasi barunya diperiksa (respons memuat `unit_assignment`). Bentrok = 409 seperti pada pembuatan DO (termasuk `driver_beda_unit_tanggal_sama`) dan DO tidak berubah.',
       ].join('\n'),
       security: secured,
       parameters: idPath,
@@ -90,7 +90,7 @@ module.exports = {
       description: [
         '`onhold` → `assigned`; DO muncul lagi di aplikasi driver.',
         'Aturan satu driver satu unit per tanggal diperiksa lagi: bila driver sudah punya DO lain dengan unit berbeda pada tanggal itu, 409 `CONFLICT` `driver_beda_unit_tanggal_sama` (onhold-kan DO lain itu dulu).',
-        'Penugasan unit harian disiapkan lagi (respons memuat `unit_assignment`). Bukan onhold: 409 `INVALID_STATE`.',
+        'Unit tanggal DO diperiksa lagi (respons memuat `unit_assignment`). Bukan onhold: 409 `INVALID_STATE`.',
       ].join('\n'),
       security: secured,
       parameters: idPath,

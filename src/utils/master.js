@@ -22,6 +22,27 @@ const OPEN_DO_STATUSES = ['assigned', 'onhold', 'accepted', 'loading', 'in_trans
 // onhold dan cancelled tidak dihitung (DO onhold melepaskan hari kerja driver).
 const DAY_BOUND_DO_STATUSES = ['assigned', 'accepted', 'loading', 'in_transit', 'handover', 'completed']
 
+// DO yang sudah diterima driver dan masih berjalan: tetap menahan unitnya walau tanggal kerjanya sudah lewat (mis. direncanakan kemarin, masih in_transit hari ini)
+const RUNNING_DO_STATUSES = ['accepted', 'loading', 'in_transit', 'handover']
+
+const DAY_BOUND_SQL = DAY_BOUND_DO_STATUSES.map((s) => `'${s}'`).join(', ')
+
+/**
+ * Tanggal kerja DO (WIB): tanggal rencana muat, atau tanggal DO ditugaskan bila tanpa rencana muat.
+ * alias = nama/alias tabel delivery_orders di query.
+ */
+const doWorkDateSql = (alias = 'delivery_orders') => `(coalesce(${alias}.planned_load_at, ${alias}.assigned_at) AT TIME ZONE 'Asia/Jakarta')::date`
+
+const RUNNING_SQL = RUNNING_DO_STATUSES.map((s) => `'${s}'`).join(', ')
+
+/**
+ * Kondisi SQL "DO ini memegang driver dan unitnya pada tanggal kerja X" (X = ekspresi tanggal, mis. '?::date'):
+ *  - DO pada tanggal X yang berstatus DAY_BOUND_DO_STATUSES (assigned sampai completed), atau
+ *  - DO yang sudah diterima dan masih berjalan (RUNNING_DO_STATUSES) dari tanggal sebelum X: tetap menahan unitnya sampai selesai.
+ */
+const holdsOnDateSql = (alias, dateExpr) => `((${alias}.status IN (${DAY_BOUND_SQL}) AND ${doWorkDateSql(alias)} = ${dateExpr})
+  OR (${alias}.status IN (${RUNNING_SQL}) AND ${doWorkDateSql(alias)} < ${dateExpr}))`
+
 module.exports = {
-  notFound, inUse, softDelete, OPEN_DO_STATUSES, DAY_BOUND_DO_STATUSES,
+  notFound, inUse, softDelete, OPEN_DO_STATUSES, DAY_BOUND_DO_STATUSES, RUNNING_DO_STATUSES, DAY_BOUND_SQL, doWorkDateSql, holdsOnDateSql,
 }

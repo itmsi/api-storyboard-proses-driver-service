@@ -6,7 +6,7 @@ const { fail } = require('../../utils/accounts')
 const master = require('../../utils/master')
 const { mapsUrlFor } = require('../../utils/maps')
 const { serializeMedia } = require('../media/serializer')
-const assignments = require('./unit-assignment')
+const unitDay = require('./unit-day')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
 
@@ -23,6 +23,12 @@ const SORTABLE = {
 const DELIVERY_STATUS = { lengkap: 'terkirim_lengkap', masalah: 'terkirim_catatan', gagal_kirim: 'gagal_kirim' }
 
 const num = (v) => (v === null || v === undefined ? null : Number(v))
+
+/**
+ * Tanggal kerja DO (WIB): tanggal rencana muat; tanpa rencana muat = tanggal DO ditugaskan (DO baru: hari ini).
+ * Sama dengan DO_WORK_DATE di manage-repository.
+ */
+const assignmentDate = (plannedLoadAt, assignedAt = null) => wibDate(new Date(plannedLoadAt || assignedAt || Date.now()))
 
 const routeLabel = (row) => {
   const from = row.origin_snapshot.city || row.origin_snapshot.name
@@ -95,6 +101,11 @@ const serializeDetail = async (db, row) => {
 
   return {
     ...serializeListItem(row),
+    // Unit driver pada tanggal kerja DO ini (tanpa tabel penugasan): default = driver bawaan unit, override = pengganti
+    unit_assignment: {
+      work_date: assignmentDate(row.planned_load_at, row.assigned_at),
+      source: row.unit_default_driver_id === row.driver_id ? 'default' : 'override',
+    },
     origin: {
       ...row.origin_snapshot, gps: gps(row.origin_snapshot), maps_url: mapsUrlFor(row.origin_snapshot), location_id: row.origin_location_id,
     },
@@ -235,12 +246,6 @@ const list = async (db, query) => {
 
 const get = async (db, id) => serializeDetail(db, await load(db, id))
 
-/**
- * Tanggal kerja DO (WIB): tanggal rencana muat; tanpa rencana muat = tanggal DO ditugaskan (DO baru: hari ini).
- * Sama dengan DO_WORK_DATE di manage-repository.
- */
-const assignmentDate = (plannedLoadAt, assignedAt = null) => wibDate(new Date(plannedLoadAt || assignedAt || Date.now()))
-
 const ddmmyyyy = (date) => date.split('-').reverse().join('-')
 
 /**
@@ -259,7 +264,7 @@ const assertDriverDayFree = async (trx, {
   driver, unitId, workDate, exceptId = null, orderNo = null,
 }) => {
   const rows = await repo.findDriverOrdersOnDate(trx, {
-    driverId: driver.id, date: workDate, statuses: master.DAY_BOUND_DO_STATUSES, exceptId,
+    driverId: driver.id, date: workDate, exceptId,
   })
   const clashes = rows.filter((r) => r.unit_id !== unitId)
   if (!clashes.length) return
@@ -301,13 +306,12 @@ const lockDriver = (trx, driverId) => trx('drivers').where({ id: driverId }).for
 const create = async (db, admin, body) => {
   const refs = await resolveRefs(db, body)
   const no = await repo.nextNumber(db)
-  let unitAssignment = null
   const workDate = assignmentDate(body.planned_load_at)
   const id = await db.transaction(async (trx) => {
     await lockDriver(trx, body.driver_id)
     await assertDriverDayFree(trx, { driver: refs.driver, unitId: body.unit_id, workDate })
-    // Penugasan unit harian disiapkan sekalian; bentrok = DO tidak dibuat
-    unitAssignment = await assignments.ensureForOrder(trx, admin, {
+    // Unit tidak boleh sedang dipegang driver lain pada tanggal itu; bentrok = DO tidak dibuat
+    await unitDay.ensureUnitFree(trx, {
       driverId: body.driver_id, unitId: body.unit_id, unit: refs.unit, workDate,
     })
     const created = await repo.insert(trx, {
@@ -340,7 +344,7 @@ const create = async (db, admin, body) => {
     })
     return created
   })
-  return { ...(await get(db, id)), unit_assignment: unitAssignment }
+  return get(db, id)
 }
 
 /** Status yang tidak boleh diubah/dibatalkan lagi, dengan pesan yang tepat. */
@@ -393,9 +397,8 @@ const update = async (db, admin, id, body) => {
   if (cargo.quantity !== undefined) fields.cargo_quantity = cargo.quantity
   if (cargo.unit !== undefined) fields.cargo_unit = cargo.unit
 
-  let unitAssignment = null
   await db.transaction(async (trx) => {
-    // Driver, unit, atau tanggal muat berubah: siapkan penugasan harian untuk kombinasi barunya
+    // Driver, unit, atau tanggal muat berubah: periksa kombinasi barunya
     if (['driver_id', 'unit_id', 'planned_load_at'].some((k) => body[k] !== undefined)) {
       const planned = body.planned_load_at !== undefined ? body.planned_load_at : row.planned_load_at
       const workDate = assignmentDate(planned, row.assigned_at)
@@ -403,7 +406,7 @@ const update = async (db, admin, id, body) => {
       await assertDriverDayFree(trx, {
         driver: refs.driver, unitId: merged.unit_id, workDate, exceptId: id, orderNo: row.no,
       })
-      unitAssignment = await assignments.ensureForOrder(trx, admin, {
+      await unitDay.ensureUnitFree(trx, {
         driverId: merged.driver_id, unitId: merged.unit_id, unit: refs.unit, workDate, exceptOrderId: id,
       })
     }
@@ -419,7 +422,7 @@ const update = async (db, admin, id, body) => {
       payload: { changed: Object.keys(body) },
     })
   })
-  return { ...(await get(db, id)), ...(unitAssignment ? { unit_assignment: unitAssignment } : {}) }
+  return get(db, id)
 }
 
 /**
@@ -468,13 +471,12 @@ const resume = async (db, admin, id) => {
   const refs = await resolveRefs(db, { ...row, customer_id: null }) // driver/unit/lokasi bisa saja sudah dinonaktifkan selama DO ditahan
   const workDate = assignmentDate(row.planned_load_at, row.assigned_at)
 
-  let unitAssignment = null
   await db.transaction(async (trx) => {
     await lockDriver(trx, row.driver_id)
     await assertDriverDayFree(trx, {
       driver: refs.driver, unitId: row.unit_id, workDate, exceptId: id, orderNo: row.no,
     })
-    unitAssignment = await assignments.ensureForOrder(trx, admin, {
+    await unitDay.ensureUnitFree(trx, {
       driverId: row.driver_id, unitId: row.unit_id, unit: refs.unit, workDate, exceptOrderId: id,
     })
     const done = await doRepo.updateIfStatus(trx, id, ['onhold'], {
@@ -491,7 +493,7 @@ const resume = async (db, admin, id) => {
       payload: { on_hold_reason: row.on_hold_reason },
     })
   })
-  return { ...(await get(db, id)), unit_assignment: unitAssignment }
+  return get(db, id)
 }
 
 /** Batalkan DO yang belum selesai. Foto, biaya, dan jejak yang sudah ada tidak dihapus. */

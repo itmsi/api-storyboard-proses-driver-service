@@ -76,20 +76,8 @@ const plateTaken = async (db, plate, exceptId) => {
   return Boolean(await q.first('id'))
 }
 
-/** Pemakaian unit yang menghalangi hapus/nonaktif: DO yang belum final, dan penugasan hari ini atau yang akan datang. */
-const findUsage = async (db, unitId, today) => {
-  const [openDo, assignment] = await Promise.all([
-    db('delivery_orders').where({ unit_id: unitId }).whereIn('status', OPEN_DO_STATUSES).first('id', 'no', 'status'),
-    db('driver_unit_assignments')
-      .join('drivers', 'drivers.id', 'driver_unit_assignments.driver_id')
-      .join('users', 'users.id', 'drivers.user_id')
-      .where({ 'driver_unit_assignments.unit_id': unitId })
-      .where('driver_unit_assignments.work_date', '>=', today)
-      .orderBy('driver_unit_assignments.work_date')
-      .first(db.raw('driver_unit_assignments.work_date::text as work_date'), 'users.name as driver_name'),
-  ])
-  return { openDo, assignment }
-}
+/** Pemakaian unit yang menghalangi hapus/nonaktif: DO yang belum final. */
+const findUsage = (db, unitId) => db('delivery_orders').where({ unit_id: unitId }).whereIn('status', OPEN_DO_STATUSES).first('id', 'no', 'status')
 
 const insert = async (db, row) => {
   const [created] = await db('units').insert(row).returning('id')

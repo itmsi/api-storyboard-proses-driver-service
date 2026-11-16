@@ -110,8 +110,8 @@ module.exports = {
     createDesc: 'Plat dinormalisasi ke bentuk baku (`b-9123-kz` menjadi `B 9123 KZ`) dan unik di antara unit aktif walau spasi/huruf besar-kecil berbeda. '
       + '`stnk_expired` / `kir_expired` pada response menandai dokumen kedaluwarsa (hanya penanda, tidak memblokir).',
     updateDesc: 'Kirim hanya field yang ingin diubah. Mengubah `status` ke selain `active` ditolak jika unit masih dipakai (lihat Hapus).',
-    deleteDesc: 'Hapus dan nonaktifkan (`status` selain `active`) ditolak jika unit masih dipakai DO yang belum final, atau masih ada penugasan hari ini / ke depan.',
-    deleteGuard: 'Unit masih dipakai DO atau penugasan',
+    deleteDesc: 'Hapus dan nonaktifkan (`status` selain `active`) ditolak jika unit masih dipakai DO yang belum final.',
+    deleteGuard: 'Unit masih dipakai DO',
   }),
   ...crud({
     tag: 'Master Data',

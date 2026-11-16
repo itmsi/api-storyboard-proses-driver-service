@@ -34,13 +34,13 @@ exports.seed = async (knex) => {
     created_by: adminId,
   }).onConflict('code').ignore()
 
-  // Unit B 9123 KZ + penugasan hari ini untuk Andi
+  // Unit B 9123 KZ, driver bawaan Andi
   await knex('units').insert({
     plate: 'B 9123 KZ', unit_type: 'CDD Bak', max_load_kg: 2500, brand: 'Mitsubishi', year: 2022, created_by: adminId,
   }).onConflict().ignore()
   const unit = await knex('units').whereRaw("upper(replace(plate, ' ', '')) = 'B9123KZ'").first()
   const driver = await knex('drivers').where({ code: 'DRV-0021' }).first()
-  // Andi adalah driver bawaan unit ini: tidak perlu penugasan harian
+  // Andi adalah driver bawaan unit ini: otomatis memegang unitnya setiap hari
   await knex('units').where({ id: unit.id }).update({ driver_id: driver.id })
 
   // Customer + lokasi + DO-0144 (Cakung -> PT Contoh Jaya, Karawang) sesuai fixture

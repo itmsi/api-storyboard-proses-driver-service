@@ -981,11 +981,9 @@ const schemas = {
   AdminDeliveryOrderDetail: {
     allOf: [ref('AdminDeliveryOrder'), obj({
       unit_assignment: nullable(obj({
-        id: nullable(str('7130d0ce-c529-4121-96ec-f1314361e654')),
-        work_date: str('2026-11-19', { description: 'Tanggal penugasan unit harian = tanggal rencana muat (WIB), atau hari ini bila tanpa rencana muat' }),
-        created: bool(true, { description: 'true = baris pengecualian dibuat otomatis oleh DO ini; false = sudah ada, atau tidak perlu (source default)' }),
-        source: enumOf(['default', 'override'], 'override', { description: 'default = driver adalah driver bawaan unit, tidak ada baris penugasan (id null); override = pengecualian harian (driver atau unit pengganti)' }),
-      }, undefined, { description: 'Hanya ada di respons POST dan PUT DO. null = tanggal muat sudah lewat, penugasan tidak disiapkan.' })),
+        work_date: str('2026-11-19', { description: 'Tanggal kerja DO = tanggal rencana muat (WIB), atau hari ini bila tanpa rencana muat' }),
+        source: enumOf(['default', 'override'], 'override', { description: 'default = driver adalah driver bawaan unit; override = driver atau unit pengganti' }),
+      }, undefined, { description: 'Unit driver pada tanggal kerja DO ini, selalu ada di detail DO (dan respons buat/ubah/lanjutkan). Tidak ada tabel penugasan terpisah: unit driver per hari dibaca dari DO dan driver bawaan unit.' })),
       origin: obj({
         location_id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a22'),
         name: str('Gudang Cakung'),

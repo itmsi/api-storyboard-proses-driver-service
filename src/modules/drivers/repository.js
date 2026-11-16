@@ -1,17 +1,22 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
+const { holdsOnDateSql, doWorkDateSql } = require('../../utils/master')
 
 // Satu driver = baris users (login) + baris drivers (profil kerja). id yang dipakai di API = drivers.id.
 const base = (db, today) => db('users')
   .join('drivers', 'drivers.user_id', 'users.id')
   .leftJoin('roles', 'roles.id', 'users.role_id')
-  .leftJoin('driver_unit_assignments as dua', (j) => j.on('dua.driver_id', 'drivers.id').andOn('dua.work_date', db.raw('?', [today])))
   // Unit bawaan driver ini (units.driver_id)
   .leftJoin('units as default_unit', (j) => j.on('default_unit.driver_id', 'drivers.id').andOn('default_unit.is_delete', db.raw('false')))
-  // Unit hari ini: pengecualian harian menang; selain itu unit bawaan, kecuali dipegang driver lain hari itu lewat pengecualian
-  .joinRaw(`LEFT JOIN units AS unit_today ON unit_today.id = COALESCE(dua.unit_id, (CASE WHEN default_unit.id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM driver_unit_assignments AS other WHERE other.unit_id = default_unit.id AND other.work_date = ? AND other.driver_id <> drivers.id
-  ) THEN default_unit.id END))`, [today])
+  // Unit hari ini: dari DO driver pada tanggal itu (unit pengganti menang); selain itu unit bawaan, kecuali dipegang driver lain lewat DO hari itu
+  .joinRaw(`LEFT JOIN units AS unit_today ON unit_today.id = COALESCE(
+    (SELECT o.unit_id FROM delivery_orders AS o
+      WHERE o.driver_id = drivers.id AND ${holdsOnDateSql('o', '?::date')}
+      ORDER BY (${doWorkDateSql('o')} = ?::date) DESC, o.created_at LIMIT 1),
+    (CASE WHEN default_unit.id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM delivery_orders AS other
+      WHERE other.unit_id = default_unit.id AND other.driver_id <> drivers.id AND ${holdsOnDateSql('other', '?::date')}
+    ) THEN default_unit.id END))`, [today, today, today, today, today])
   .where({ 'users.is_delete': false, 'drivers.is_delete': false, 'roles.user_type': 'driver' })
 
 const select = (db, query) => query.select(

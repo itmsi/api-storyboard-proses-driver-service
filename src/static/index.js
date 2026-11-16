@@ -151,7 +151,7 @@ const index = {
     { name: 'Perjalanan', description: 'Muat, odometer, biaya, serah terima, ringkasan, selesai (driver); biaya perjalanan dan rekap uang jalan (admin)' },
     { name: 'Sync', description: 'Antrean offline' },
     { name: 'Pengguna', description: 'Akun driver, akun admin, role, dan hak akses CRUD per modul' },
-    { name: 'Master Data', description: 'Tipe unit, unit, customer, lokasi, dan penugasan unit harian' },
+    { name: 'Master Data', description: 'Unit, customer, dan lokasi' },
     { name: 'Konfigurasi', description: 'Checklist P2H, kategori biaya, dan pengaturan aplikasi per perusahaan; setiap perubahan menaikkan config_version' },
     { name: 'Internal', description: 'Antar-layanan (saas-worker), di root /internal (bukan /api/v1): migrasi, seed, verifikasi database client. Header X-Internal-Key.' },
   ],
