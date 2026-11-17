@@ -129,6 +129,40 @@ const config = {
     },
   },
 
+  // Pengecekan foto dengan AI (OpenAI). API key BUKAN di sini: satu key per client, disimpan di database client (app_settings).
+  ai: {
+    enabled: bool('AI_ENABLED', false),
+    openai: {
+      baseUrl: str('OPENAI_BASE_URL', 'https://api.openai.com/v1').replace(/\/+$/, ''),
+      visionModel: str('OPENAI_VISION_MODEL', 'gpt-4o-mini'),
+      timeoutMs: num('OPENAI_TIMEOUT_MS', 30000),
+      // Batas token keluaran. Model penalaran (mis. seri o dan gpt-5) memakai token ini juga untuk "berpikir": bila terlalu kecil, seluruhnya
+      // habis dan jawaban kosong. Model biasa hanya memakai puluhan token, jadi batas besar tidak menambah biaya.
+      maxCompletionTokens: num('OPENAI_MAX_COMPLETION_TOKENS', 4000),
+      // Upaya penalaran (minimal | low | medium | high) untuk model penalaran: lebih rendah = lebih cepat dan murah. Kosong = tidak dikirim
+      // (wajib kosong untuk model biasa seperti gpt-4o-mini, yang menolak parameter ini).
+      reasoningEffort: str('OPENAI_REASONING_EFFORT'),
+    },
+    image: {
+      maxSide: num('AI_IMAGE_MAX_SIDE', 1280), // sisi terpanjang gambar yang dikirim ke AI (px)
+      jpegQuality: num('AI_IMAGE_QUALITY', 80),
+    },
+    maxChecksPerHour: num('AI_MAX_CHECKS_PER_HOUR', 60), // batas permintaan pengecekan per driver per jam (pelindung biaya)
+    // Antrean pekerjaan (RabbitMQ; broker yang sama dengan saas-api, hanya nama antrean yang berbeda)
+    queue: {
+      enabled: bool('RABBITMQ_ENABLED', true), // false = tidak menyambung ke RabbitMQ sama sekali (permintaan hanya menunggu di database)
+      url: str('RABBITMQ_URL'),
+      name: str('RABBITMQ_QUEUE_NAME', str('AI_QUEUE_NAME', 'logistics-ai-check')), // AI_QUEUE_NAME dipertahankan sebagai nama lama
+      worker: bool('AI_WORKER_ENABLED', true), // proses ini ikut memproses antrean (false = hanya menerbitkan pesan)
+      concurrency: num('AI_QUEUE_CONCURRENCY', 2), // pekerjaan yang diproses bersamaan per proses
+      maxAttempts: num('AI_MAX_ATTEMPTS', 3),
+      retryDelaysMs: list('AI_RETRY_DELAYS_MS', ['10000', '30000', '120000']).map(Number).filter((n) => Number.isFinite(n) && n > 0), // jeda sebelum percobaan ulang ke-1, ke-2, ...
+      staleQueuedMs: num('AI_STALE_QUEUED_MS', 60 * 1000), // pekerjaan baru (belum pernah diambil worker) yang menunggu selama ini dianggap pesannya tidak sampai ke antrean
+      staleMs: num('AI_STALE_MS', 5 * 60 * 1000), // pekerjaan queued/processing yang tak bergerak selama ini dianggap tersangkut dan diterbitkan ulang
+      sweepIntervalMs: num('AI_SWEEP_INTERVAL_MS', 60 * 1000),
+    },
+  },
+
   // Nilai untuk GET /config/public (dibaca aplikasi Android sebelum login)
   mobile: {
     languages: list('APP_LANGUAGES', ['id', 'en', 'zh']),

@@ -7,6 +7,8 @@ const { validate } = require('../../middlewares/validate')
 const { asyncHandler } = require('../../utils/response')
 const schema = require('./validation')
 const controller = require('./controller')
+const aiChecks = require('../ai-checks/controller')
+const aiChecksSchema = require('../ai-checks/validation')
 
 const router = express.Router()
 
@@ -27,6 +29,19 @@ router.post('/get', adminGuard, can('media', 'read'), validate({ body: schema.li
 
 // GET /api/v1/media/:id  (admin: semua; driver: foto miliknya)
 router.get('/:id', authenticate, authorize('driver', 'admin'), activeAdminOnly, adminCan('media', 'read'), driverCan('driver_media', 'read'), validate({ params: schema.idParams }), asyncHandler(controller.get))
+
+// POST /api/v1/media/:id/ai-check  (driver: foto miliknya; admin: foto mana pun, hak media:update; opsional, hasil hanya pembanding)
+// Body opsional { regenerate: true } = baca ulang foto yang hasilnya sudah ada
+router.post(
+  '/:id/ai-check',
+  authenticate,
+  authorize('driver', 'admin'),
+  activeAdminOnly,
+  adminCan('media', 'update'),
+  driverCan('driver_ai_check', 'create'),
+  validate({ params: aiChecksSchema.idParams, body: aiChecksSchema.request }),
+  asyncHandler(aiChecks.request)
+)
 
 // DELETE /api/v1/media/:id  (admin, hapus lunak; ditolak jika masih dipakai)
 router.delete('/:id', adminGuard, can('media', 'delete'), validate({ params: schema.idParams }), asyncHandler(controller.remove))

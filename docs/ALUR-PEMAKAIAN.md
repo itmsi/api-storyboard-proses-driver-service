@@ -17,7 +17,7 @@ HP driver / Web admin ──> API logistik (service ini) ──> saas-api   (min
 3. [Perusahaan baru (MSI, lewat saas-api)](#3-perusahaan-baru-msi-lewat-saas-api)
 4. [Role dan hak akses](#4-role-dan-hak-akses)
 5. [Menyiapkan data kerja (admin)](#5-menyiapkan-data-kerja-admin)
-6. [Penugasan unit harian (assign unit ke driver)](#6-penugasan-unit-harian-assign-unit-ke-driver)
+6. [Unit driver per hari (dari DO dan driver bawaan)](#6-unit-driver-per-hari-dari-do-dan-driver-bawaan)
 7. [Membuat delivery order (admin)](#7-membuat-delivery-order-admin)
 8. [Satu hari kerja driver (aplikasi HP)](#8-satu-hari-kerja-driver-aplikasi-hp)
 9. [Setelah DO selesai (admin)](#9-setelah-do-selesai-admin)
@@ -40,14 +40,14 @@ Urutan ini wajib diikuti karena tiap langkah membutuhkan data dari langkah sebel
 | 2 | MSI | Login dengan akun `msi.support` | `POST /auth/login` | `client_code` dari langkah 1 |
 | 3 | Admin | Buat role admin lain (opsional) | `POST /roles` | - |
 | 4 | Admin | Buat akun admin perusahaan | `POST /users` | `role_id` dari langkah 3 (opsional) |
-| 5 | Admin | Buat tipe unit | `POST /unit-types` | - |
+| 5 | Admin | (Tidak ada master tipe unit lagi: tipe ditulis langsung di unit, langkah 6.) | - | - |
 | 6 | Admin | Buat unit (kendaraan) | `POST /units` | `unit_type_id` dari langkah 5 |
 | 7 | Admin | Buat customer | `POST /customers` | - |
 | 8 | Admin | Buat lokasi (gudang, depot, tujuan customer) | `POST /locations` | `customer_id` dari langkah 7 (untuk `customer_site`) |
 | 9 | Admin | Atur checklist P2H, kategori biaya, pengaturan | `POST /p2h-items`, `POST /expense-categories`, `PUT /settings` | - |
 | 10 | Admin | Buat akun driver | `POST /drivers` | `role_id` driver (opsional) |
-| 11 | Admin | **Assign unit ke driver** untuk tanggal kerja | `POST /unit-assignments` | `driver_id` (langkah 10), `unit_id` (langkah 6) |
-| 12 | Admin | Buat delivery order (DO) | `POST /delivery-orders` | driver, unit (**sama dengan langkah 11**), lokasi, customer |
+| 11 | Admin | **Tetapkan driver bawaan unit** (tanpa penugasan harian; pengganti cukup dibuatkan DO) | `PUT /units/{id}` dengan `driver_id` | `driver_id` (langkah 10) |
+| 12 | Admin | Buat delivery order (DO). **Langkah 11 ikut disiapkan otomatis** untuk tanggal rencana muat | `POST /delivery-orders` | driver, unit, lokasi, customer |
 | 13 | Driver | Login di HP | `POST /auth/login` | kode driver / No. HP + password dari langkah 10 |
 | 14 | Driver | Ambil konfigurasi dan layar awal | `GET /config`, `GET /app/bootstrap` | - |
 | 15 | Driver | P2H unit hari ini | `POST /units/{unitId}/p2h` | **wajib ada assignment langkah 11** |
@@ -179,7 +179,7 @@ Respons `200`:
   }
 }
 ```
-`driver.id` adalah `drivers.id`, yaitu id yang dipakai di `/drivers/{id}`, `/unit-assignments`, dan `/delivery-orders`.
+`driver.id` adalah `drivers.id`, yaitu id yang dipakai di `/drivers/{id}` dan `/delivery-orders`.
 
 ### Login admin
 
@@ -201,7 +201,7 @@ Respons `200`:
       "name": "Dewi Admin",
       "email": "dewi@contoh.co.id",
       "role": { "id": "…", "name": "Staf Operasional", "is_system": false },
-      "permissions": { "units": ["read", "create", "update"], "unit_assignments": ["read", "create", "update"] }
+      "permissions": { "units": ["read", "create", "update"] }
     }
   }
 }
@@ -260,7 +260,7 @@ Admin mengganti password akunnya lewat `POST /users/{id}/reset-password` dengan 
 
 Catatan:
 - `msi.support` selalu berperan **Administrator** (semua hak), tidak tampil di daftar `/users`, dan tidak bisa mengganti passwordnya sendiri (password hanya berubah lewat saas-api: `reset-system-user`).
-- Seed juga menyiapkan role bawaan **Administrator** dan **Driver**, serta 7 tipe unit awal (`CDD_BAK`, `CDD_BOX`, `FUSO_BAK`, `FUSO_BOX`, `TRONTON`, `WINGBOX`, `TRAILER`).
+- Seed juga menyiapkan role bawaan **Administrator** dan **Driver**.
 - Rollout migrasi ke semua client dilakukan dari saas-api (`POST /migrations/rollout`), bukan dari service ini.
 
 ---
@@ -285,9 +285,9 @@ Catatan:
 | `DELETE ...` | `delete` |
 | `POST /<modul>/{id}/<tindakan>` (cancel, void, settle, reset-password, unlock, recheck) | `update` |
 
-Contoh: `POST /unit-assignments` butuh `unit_assignments:create`, `PUT /unit-assignments` butuh `unit_assignments:update`, `POST /unit-assignments/get` butuh `unit_assignments:read`. Daftar per endpoint ada di [bagian 12](#12-daftar-lengkap-endpoint-dan-hak-yang-dibutuhkan).
+Contoh: `POST /units` butuh `units:create`, `PUT /units/{id}` butuh `units:update`, `POST /units/get` butuh `units:read`. Daftar per endpoint ada di [bagian 12](#12-daftar-lengkap-endpoint-dan-hak-yang-dibutuhkan).
 
-**Modul hak admin:** `drivers`, `users`, `roles`, `unit_types`, `units`, `customers`, `locations`, `unit_assignments`, `delivery_orders`, `expenses`, `settlements`, `p2h`, `media`, `p2h_items`, `expense_categories`, `settings`.
+**Modul hak admin:** `drivers`, `users`, `roles`, `units`, `customers`, `locations`, `delivery_orders`, `expenses`, `settlements`, `p2h`, `media`, `p2h_items`, `expense_categories`, `settings`.
 
 **Modul hak driver** (role Driver bawaan memegang semuanya):
 
@@ -317,7 +317,6 @@ Role driver wajib memuat `driver_profile:read`; tanpa itu aplikasi HP tidak bisa
   "permissions": {
     "units": ["read", "create", "update"],
     "drivers": ["read"],
-    "unit_assignments": ["read", "create", "update", "delete"],
     "delivery_orders": ["read", "create", "update"]
   },
   "is_active": true
@@ -367,21 +366,14 @@ Semua master data memakai pola endpoint yang sama:
 | Ubah (parsial) | `PUT /<modul>/{id}` | `update` |
 | Hapus (hapus lunak) | `DELETE /<modul>/{id}` | `delete` |
 
-### Tipe unit
-
-`POST /unit-types`
-```json
-{ "code": "CDD_BAK", "name": "CDD Bak", "max_load_kg": 2500 }
-```
-`code` 2-30 karakter (huruf besar, angka, `_`, `-`), unik, **tidak bisa diubah** setelah dibuat. Hapus ditolak bila masih dipakai unit aktif.
-
 ### Unit (kendaraan)
 
 `POST /units`
 ```json
 {
   "plate": "B 9123 KZ",
-  "unit_type_id": "3b9e6f10-5c4d-4a72-8e1b-7d2c9a0f4e55",
+  "unit_type": "CDD Bak",
+  "max_load_kg": 2500,
   "brand": "Mitsubishi",
   "year": 2022,
   "last_odometer_km": 45000,
@@ -414,6 +406,7 @@ Semua master data memakai pola endpoint yang sama:
   "name": "Gudang Cakung",
   "address": "Jl. Raya Cakung Cilincing, Jakarta Timur",
   "city": "Cakung",
+  "maps_url": "https://maps.app.goo.gl/AbCdEf123",
   "lat": -6.18,
   "lng": 106.94,
   "geofence_radius_m": 200,
@@ -432,6 +425,8 @@ Semua master data memakai pola endpoint yang sama:
 }
 ```
 `geofence_radius_m` bawaan 200 (10-5000). `operating_hours` format `HH:mm-HH:mm`. Filter daftar: `{ "type": "customer_site", "customer_id": "..." }`. Mengubah lokasi tidak mengubah DO lama (DO menyimpan salinan alamat).
+
+`maps_url` = tautan Google Maps (tempel dari tombol Bagikan; tampil juga di `origin.maps_url` dan `destination.maps_url` pada respons `/delivery-orders` (daftar dan detail): isi `maps_url` lokasi bila ada, kalau kosong dibuat otomatis dari lat/lng, null bila koordinat juga kosong. Nilainya ikut disalin ke DO saat dibuat; wajib http/https, maks 500 karakter). Bila `lat`/`lng` kosong dan tautannya panjang (`google.com/maps/...@-6.18,106.94`), koordinat diisi otomatis; tautan pendek `maps.app.goo.gl` hanya disimpan (koordinat tidak bisa dibaca tanpa membuka tautan). `lat`/`lng` yang dikirim eksplisit selalu menang.
 
 ### Akun driver
 
@@ -496,109 +491,54 @@ Setiap perubahan konfigurasi menaikkan `config_version`, sehingga aplikasi HP me
 
 ---
 
-## 6. Penugasan unit harian (assign unit ke driver)
+## 6. Unit driver per hari (dari DO dan driver bawaan)
 
-Penugasan menentukan **unit mana yang dibawa seorang driver pada tanggal tertentu**. Data disimpan di tabel `driver_unit_assignments`.
+**Tidak ada tabel atau endpoint penugasan unit.** Unit yang dipegang seorang driver pada suatu tanggal dibaca dari dua hal saja:
 
-**Siapa:** admin dengan hak `unit_assignments` (Administrator punya semuanya).
+1. **DO driver itu pada tanggal tersebut** (tanggal rencana muat WIB, atau tanggal DO ditugaskan bila tanpa rencana muat). Status yang dihitung: `assigned`, `accepted`, `loading`, `in_transit`, `handover`, `completed`. DO `onhold` dan `cancelled` tidak dihitung. Unit DO itulah unit driver hari itu. DO yang sudah diterima dan masih berjalan dari tanggal sebelumnya (mis. direncanakan kemarin, masih `in_transit`) **tetap menahan unitnya** sampai selesai atau dibatalkan.
+2. **Driver bawaan unit** (`units.driver_id`), bila driver tidak punya DO hari itu. Isi `driver_id` di master unit (`POST /units` atau `PUT /units/{id}`, null = tanpa driver bawaan). Satu driver hanya bisa jadi bawaan satu unit (422 bila sudah dipakai unit lain), dan driver harus aktif. Menghapus driver melepas unit bawaannya. Bila unit bawaan sedang dipakai DO driver lain pada tanggal itu, driver bawaannya tidak memegang unit itu hari itu.
 
-**Kenapa penting:** penugasan adalah syarat pertama hari kerja driver.
-- Tanpa penugasan hari ini, `unit_today` di aplikasi HP kosong.
-- Driver hanya boleh P2H unit yang di-assign kepadanya hari ini (selain itu `403 FORBIDDEN`).
+**Pengganti = DO.** Driver pengganti atau unit pengganti cukup dibuatkan DO-nya. Bila driver bawaan berhalangan, `onhold`kan atau batalkan DO-nya lebih dulu, lalu buat DO untuk pengganti dengan unit tersebut. Di daftar driver, `unit_today` adalah unit yang dipegang hari ini dan `default_unit` adalah unit bawaannya.
+
+**Kenapa penting:** unit yang dipegang adalah syarat pertama hari kerja driver.
+- Tanpa DO dan tanpa unit bawaan, `unit_today` di aplikasi HP kosong.
+- Driver hanya boleh P2H unit yang dipegangnya hari ini (selain itu `403 FORBIDDEN`).
 - DO baru bisa diterima bila unit DO sudah P2H layak hari ini.
 
 ### Aturan
 
 | Aturan | Akibat bila dilanggar |
 |---|---|
-| Satu driver hanya punya **satu unit per tanggal**. Mengirim lagi untuk driver dan tanggal yang sama akan **mengganti unitnya**. | - (bukan error, data ditimpa) |
-| Satu unit hanya untuk **satu driver per tanggal**. Unit yang sudah dipegang driver lain di tanggal itu tidak bisa di-assign lagi. | `409 CONFLICT`, `details.reason: unit_sudah_ditugaskan`, `details.driver` = driver pemegangnya |
-| `work_date` hari ini atau ke depan (WIB). | `422`, field `work_date` |
-| Driver ada dan berstatus aktif. | `422`, field `driver_id` |
-| Unit ada dan berstatus `active` (bukan `maintenance` / `inactive`). | `422`, field `unit_id` |
-| Penugasan tidak bisa diganti unitnya atau dicabut bila driver **sudah mulai bekerja** dengan unit itu: sudah P2H unit itu di tanggal tsb, atau punya DO berjalan dengan unit itu. | `409 CONFLICT`, `details.reason: sudah_bekerja` |
+| Satu driver hanya punya **satu unit per tanggal** | DO ditolak `409`, `details.reason: driver_beda_unit_tanggal_sama` |
+| Satu unit hanya untuk **satu driver per tanggal** | DO ditolak `409`, `details.reason: unit_sudah_ditugaskan`, `details.driver` dan `details.order` = pemegangnya |
+| Tanggal muat sudah lewat | DO tetap dibuat, bentrok tidak diperiksa |
+| Unit masih ditahan DO lintas hari (sudah diterima, belum selesai) | **409** `unit_sudah_ditugaskan` untuk driver lain |
 
-### Langkah di web admin
+Unit tidak bisa dihapus atau dinonaktifkan selama masih dipakai DO yang belum final.
 
-1. Ambil daftar driver aktif: `POST /drivers/get` dengan `{ "status": "active" }`. Simpan `id` driver.
-2. Ambil daftar unit aktif: `POST /units/get` dengan `{ "status": "active" }`. Simpan `id` unit.
-3. Kirim penugasan.
-4. Tampilkan daftar penugasan tanggal itu untuk konfirmasi.
-
-### Buat atau ganti penugasan
-
-`POST /unit-assignments` (hak `unit_assignments:create`) atau `PUT /unit-assignments` (hak `unit_assignments:update`). Keduanya berperilaku sama (buat baru atau timpa).
-```json
-{
-  "driver_id": "3b9e6f10-5c4d-4a72-8e1b-7d2c9a0f4e55",
-  "unit_id": "fc06e493-e9c6-429b-9529-bc07084818ee",
-  "work_date": "2026-11-12"
-}
-```
-`driver_id` adalah `drivers.id` (id dari `/drivers`), bukan id akun `users`.
-
-Respons:
-- `201` = penugasan baru dibuat.
-- `200` = penugasan yang ada diganti unitnya, atau data yang dikirim sama persis dengan yang ada (aman dikirim berulang).
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "a7c1…",
-    "work_date": "2026-11-12",
-    "driver": { "id": "3b9e6f10-…", "code": "DRV-0021", "name": "Andi Pratama" },
-    "unit": { "id": "fc06e493-…", "plate": "B 9123 KZ", "type": "CDD Bak" },
-    "created_at": "2026-11-11T16:00:00+07:00",
-    "created_by": { "id": "…", "name": "Dewi Admin" },
-    "updated_at": "2026-11-11T16:00:00+07:00",
-    "updated_by": { "id": "…", "name": "Dewi Admin" }
-  }
-}
-```
-
-Contoh penolakan ganti unit:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "CONFLICT",
-    "message": "Penugasan tidak bisa diganti: P2H unit ini sudah dibuat pada 2026-11-12.",
-    "http_status": 409,
-    "details": { "reason": "sudah_bekerja", "p2h": true }
-  }
-}
-```
-
-Contoh penolakan karena unit sudah dipegang driver lain:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "CONFLICT",
-    "message": "Unit B 9123 KZ sudah ditugaskan ke Budi Santoso (DRV-0007) pada 2026-11-12.",
-    "http_status": 409,
-    "details": {
-      "reason": "unit_sudah_ditugaskan",
-      "assignment_id": "c41e…",
-      "driver": { "id": "…", "code": "DRV-0007", "name": "Budi Santoso" }
-    }
-  }
-}
-```
-Untuk memindahkan unit dari Budi ke Andi: cabut dulu penugasan Budi (`DELETE /unit-assignments/{assignment_id}`) atau ganti unit Budi, lalu assign unit itu ke Andi.
-
-Tip web admin: saat memilih unit di form penugasan, panggil `POST /unit-assignments/get` dengan `{ "date": "<tanggal>" }` dan tandai unit yang sudah terpakai, supaya admin tidak memilih unit yang pasti ditolak.
-
-### Lihat, detail, cabut
-
-- **Daftar** `POST /unit-assignments/get`: `{ "date": "2026-11-12", "driver_id": "...", "unit_id": "...", "search": "B 9123" }`. Tanpa `date` = hari ini. `search` mencari nama driver, kode driver, atau plat. `sort`: `driver`, `plate`, `created_at`.
-- **Detail** `GET /unit-assignments/{id}`.
-- **Cabut** `DELETE /unit-assignments/{id}` (hak `unit_assignments:delete`). Data dihapus permanen. Ditolak `409 sudah_bekerja` dengan aturan yang sama seperti ganti unit.
+Catatan: driver bawaan yang sudah P2H hari itu tetap boleh unitnya dipakai pengganti (tidak ada penolakan atau peringatan).
 
 ---
 
 ## 7. Membuat delivery order (admin)
+
+**Unit driver pada tanggal itu mengikuti DO ini** (tidak ada penugasan terpisah). Server memeriksa bebas bentrok (lihat [bagian 6](#6-unit-driver-per-hari-dari-do-dan-driver-bawaan)) dan memuat hasilnya di respons:
+
+```json
+"unit_assignment": { "work_date": "2026-11-19", "source": "override" }
+```
+
+`source`: `default` = driver adalah driver bawaan unit itu, `override` = driver/unit pengganti. Field ini selalu ada di daftar DO (`POST /delivery-orders/get`), detail DO (`GET /delivery-orders/{id}`), dan di respons `POST`, `PUT`, dan `resume`; admin melihat unit pengganti dari sini.
+
+| Kondisi pada tanggal itu | Hasil |
+|---|---|
+| Driver adalah driver bawaan unit itu | `source: "default"` |
+| Driver atau unit pengganti | `source: "override"` |
+| Driver sudah punya DO dengan **unit lain** | **409** `driver_beda_unit_tanggal_sama`, DO **tidak dibuat**. `onhold`kan DO lama (bila masih `assigned`), atau pakai unit yang sama |
+| Unit itu sudah dipegang DO **driver lain** | **409** `unit_sudah_ditugaskan`, DO **tidak dibuat** |
+| Tanggal muat sudah lewat | DO dibuat, bentrok tidak diperiksa |
+
+Mengubah DO (`PUT /delivery-orders/{id}`) dengan `driver_id`, `unit_id`, atau `planned_load_at` yang baru memeriksa kombinasi barunya dengan aturan yang sama (bentrok = 409 dan DO tidak berubah).
 
 `POST /delivery-orders` (hak `delivery_orders:create`)
 ```json
@@ -619,7 +559,7 @@ Aturan:
 - `customer_id` boleh kosong (diambil dari customer lokasi tujuan). Bila diisi, harus sama dengan customer lokasi tujuan.
 - DO baru berstatus `assigned` dan langsung muncul di aplikasi HP driver.
 
-> **Penting:** server tidak memaksa `unit_id` DO sama dengan unit hasil penugasan, tetapi driver hanya bisa P2H unit hasil penugasan, dan DO hanya bisa diterima bila unit DO sudah P2H layak. **Web admin sebaiknya mengisi `unit_id` otomatis dari penugasan driver pada tanggal `planned_load_at`** (`POST /unit-assignments/get` dengan `{ "date": "...", "driver_id": "..." }`), supaya driver tidak terhenti di langkah terima DO.
+> **Penting:** server tidak memaksa `unit_id` DO sama dengan unit hasil penugasan, tetapi driver hanya bisa P2H unit hasil penugasan, dan DO hanya bisa diterima bila unit DO sudah P2H layak. **Web admin sebaiknya mengisi `unit_id` otomatis dari unit bawaan driver** (`default_unit` di `POST /drivers/get`), supaya driver tidak terhenti di langkah terima DO.
 
 Lainnya:
 - **Ubah** `PUT /delivery-orders/{id}` (parsial, hanya selama status masih `assigned`).
@@ -1011,11 +951,10 @@ Semua path di bawah `/api/v1`. "Hak" untuk admin = `<modul>:<aksi>` dari role ad
 | `users` | `POST /users/get` (read), `GET /users/{id}` (read), `POST /users` (create), `PUT /users/{id}` (update), `POST /users/{id}/reset-password` (update), `DELETE /users/{id}` (delete) |
 | `roles` | `GET /roles/catalog` (read), `POST /roles/get` (read), `GET /roles/{id}` (read), `POST /roles` (create), `PUT /roles/{id}` (update), `DELETE /roles/{id}` (delete) |
 | `drivers` | `POST /drivers/get` (read), `GET /drivers/{id}` (read), `POST /drivers` (create), `PUT /drivers/{id}` (update), `POST /drivers/{id}/reset-password` (update), `POST /drivers/{id}/unlock` (update), `DELETE /drivers/{id}` (delete) |
-| `unit_types` | `POST /unit-types/get`, `GET /unit-types/{id}`, `POST /unit-types`, `PUT /unit-types/{id}`, `DELETE /unit-types/{id}` |
 | `units` | `POST /units/get`, `GET /units/{id}`, `POST /units`, `PUT /units/{id}`, `DELETE /units/{id}` |
 | `customers` | `POST /customers/get`, `GET /customers/{id}`, `POST /customers`, `PUT /customers/{id}`, `DELETE /customers/{id}` |
 | `locations` | `POST /locations/get`, `GET /locations/{id}`, `POST /locations`, `PUT /locations/{id}`, `DELETE /locations/{id}` |
-| `unit_assignments` | `POST /unit-assignments/get` (read), `GET /unit-assignments/{id}` (read), `POST /unit-assignments` (create), `PUT /unit-assignments` (update), `DELETE /unit-assignments/{id}` (delete) |
+
 | `delivery_orders` | `POST /delivery-orders/get` (read), `GET /delivery-orders/{id}` (read), `POST /delivery-orders` (create), `PUT /delivery-orders/{id}` (update), `POST /delivery-orders/{id}/cancel` (update) |
 | `p2h` | `POST /p2h/get` (read), `GET /p2h/{id}` (read), `PUT /p2h/{id}` (update), `POST /units/{unitId}/p2h/recheck` (update), `DELETE /p2h/{id}` (delete) |
 | `media` | `POST /media/get` (read), `GET /media/{id}` (read), `DELETE /media/{id}` (delete) |

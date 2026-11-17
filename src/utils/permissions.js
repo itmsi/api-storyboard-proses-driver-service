@@ -39,6 +39,7 @@ const DRIVER_RESOURCES = {
   driver_media: { label: 'Foto milik sendiri', actions: ['read', 'create'] },
   driver_sync: { label: 'Sinkronisasi antrean offline', actions: ['create'] },
   driver_device: { label: 'Token notifikasi perangkat', actions: ['create'] },
+  driver_ai_check: { label: 'Pengecekan foto dengan AI (minta dan lihat hasil)', actions: ['read', 'create'] },
 }
 
 /** Modul dan aksi yang boleh dimiliki sebuah jenis akun: { <modul>: { label, actions } }. */

@@ -15,4 +15,9 @@ router.use(permit('settings'))
 router.get('/', asyncHandler(controller.get))
 router.put('/', validate({ body: schema.update }), asyncHandler(controller.update))
 
+// API key OpenAI client (write-only: tidak pernah dikembalikan). Hak: settings:read (status, cek) dan settings:update (isi/ganti/hapus).
+router.get('/ai', asyncHandler(controller.aiStatus))
+router.put('/ai', validate({ body: schema.aiUpdate }), asyncHandler(controller.aiUpdate))
+router.get('/ai/check', asyncHandler(controller.aiCheck))
+
 module.exports = router

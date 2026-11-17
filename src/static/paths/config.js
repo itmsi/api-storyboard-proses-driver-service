@@ -176,4 +176,34 @@ module.exports = {
       responses: { 200: jsonResponse('OK', envelope(ref('AdminSettings'))), ...withValidation },
     },
   },
+  '/settings/ai': {
+    get: {
+      tags: ['Konfigurasi'],
+      summary: 'Status API key OpenAI client',
+      description: 'Satu API key per client untuk pengecekan foto dengan AI. **API key tidak pernah dikembalikan**: hanya status terisi, 4 karakter terakhir (`key_hint`), dan siapa yang terakhir mengubahnya. Hak: `settings:read`.',
+      security: secured,
+      responses: { 200: jsonResponse('OK', envelope(ref('AdminAiSettings'))), ...errors },
+    },
+    put: {
+      tags: ['Konfigurasi'],
+      summary: 'Isi, ganti, atau hapus API key OpenAI client',
+      description: [
+        'Kirim `api_key` (`sk-...`) untuk mengisi atau mengganti; kirim `api_key: null` untuk menghapus. Field `api_key` wajib ada.',
+        'Disimpan terenkripsi (AES-256-GCM) di database client, dan tidak ikut ke `GET /config` (aplikasi HP) maupun `GET /settings`. Tidak menaikkan `config_version`.',
+        'Hak: `settings:update`. Format yang salah ditolak 422. Tidak memeriksa ke OpenAI; gunakan `GET /settings/ai/check`.',
+      ].join('\n'),
+      security: secured,
+      requestBody: jsonBody(ref('AdminAiSettingsUpdate')),
+      responses: { 200: jsonResponse('OK', envelope(ref('AdminAiSettings'))), ...withValidation },
+    },
+  },
+  '/settings/ai/check': {
+    get: {
+      tags: ['Konfigurasi'],
+      summary: 'Cek API key OpenAI client ke OpenAI',
+      description: 'Server memanggil OpenAI (`GET /models`, tidak memakai kuota dan tidak ada biayanya) dengan API key client. `valid: true` = diterima, `false` = belum diisi atau ditolak, `null` = belum bisa dipastikan karena OpenAI tidak terjangkau atau batas pemakaian. Hak: `settings:read`.',
+      security: secured,
+      responses: { 200: jsonResponse('OK', envelope(ref('AdminAiCheck'))), ...errors },
+    },
+  },
 }

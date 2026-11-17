@@ -2,6 +2,7 @@ const config = require('./config')
 const logger = require('./utils/logger')
 const tenant = require('./database/tenant')
 const app = require('./app')
+const aiChecks = require('./modules/ai-checks/bootstrap')
 
 const server = app.listen(config.app.port, () => {
   logger.info(`${config.app.name} (${config.app.env}) listening on port ${config.app.port}`)
@@ -10,6 +11,10 @@ const server = app.listen(config.app.port, () => {
   }
 })
 
+// Antrean pengecekan AI (pengirim pesan dan worker); gagal terhubung tidak menjatuhkan server
+let aiQueue = { stop: async () => {} }
+aiChecks.start().then((started) => { aiQueue = started }).catch((err) => logger.error(`Antrean pengecekan AI gagal dipasang: ${err.message}`))
+
 let shuttingDown = false
 const shutdown = (signal, exitCode = 0) => {
   if (shuttingDown) return
@@ -17,6 +22,7 @@ const shutdown = (signal, exitCode = 0) => {
   logger.info(`${signal} diterima, menutup server...`)
 
   server.close(async () => {
+    await aiQueue.stop().catch(() => {})
     await tenant.closeAll().catch(() => {})
     logger.info('Server ditutup')
     process.exit(exitCode)

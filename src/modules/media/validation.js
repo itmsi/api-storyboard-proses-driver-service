@@ -36,8 +36,9 @@ const upload = Joi.object({
   captured_at: Joi.date().iso().required()
     .custom((value, helpers) => (value.getTime() > Date.now() + MAX_FUTURE_MS ? helpers.error('date.future') : value))
     .messages({ 'date.future': 'Waktu foto tidak boleh di masa depan.' }),
-  gps: gpsField,
-  side: Joi.string().valid(...SIDES).when('kind', { is: 'p2h_body', then: Joi.required(), otherwise: Joi.forbidden() }),
+  // Formulir multipart (Swagger UI, beberapa klien HTTP) mengirim field opsional yang dikosongkan sebagai teks kosong: dianggap tidak dikirim
+  gps: gpsField.empty(''),
+  side: Joi.string().empty('').valid(...SIDES).when('kind', { is: 'p2h_body', then: Joi.required(), otherwise: Joi.forbidden() }),
 })
 
 const idParams = Joi.object({

@@ -68,6 +68,7 @@ const serializeListItem = (row) => ({
   on_hold_reason: row.on_hold_reason ?? null,
   cancelled_at: toWib(row.cancelled_at),
   cancel_reason: row.cancel_reason,
+  needs_review: Boolean(row.needs_review), // ada bacaan odometer/struk yang perlu dilihat admin (lihat detail untuk alasannya)
   ...auditFields(row),
 })
 
@@ -91,16 +92,49 @@ const serializeDetail = async (db, row) => {
     repo.settlement(db, row.id),
     repo.media(db, row.id),
   ])
+  // Foto dan status pengecekan AI bacaan/struk, diambil sekali untuk semuanya (dua query, bukan per baris)
+  const [photoRows, checkRows] = await Promise.all([
+    repo.mediaByIds(db, [...odometers.map((o) => o.media_id), ...expenses.map((e) => e.proof_media_id)].filter(Boolean)),
+    repo.aiChecksByIds(db, [...odometers.map((o) => o.ai_check_id), ...expenses.map((e) => e.ai_check_id)].filter(Boolean)),
+  ])
+  const photoOf = (id) => {
+    const m = photoRows.find((x) => x.id === id)
+    return m ? serializeMedia(m) : null
+  }
+  const checkOf = (id) => checkRows.find((c) => c.id === id) || null
+  const aiState = (check, values) => {
+    if (!check) return null
+    // Nilai dari hasil sebelumnya tetap tampil selama dibaca ulang (status queued/processing) atau bila pembacaan ulang gagal
+    const present = Object.values(values).some((v) => v !== null && v !== undefined)
+    return {
+      status: check.status,
+      ...(check.status === 'done' || present ? values : {}),
+      ...(check.display_mode ? { display_mode: check.display_mode } : {}), // odo | trip | unknown: layar yang dibaca AI untuk km
+      ...(check.note ? { note: check.note } : {}), // alasan AI bila ada yang tidak terbaca
+      ...(check.status === 'failed' ? { error: { code: check.error_code, message: check.error_message } } : {}),
+    }
+  }
+
   const reading = (type) => {
     const o = odometers.find((x) => x.type === type)
     if (!o) return null
+    const corrected = o.corrected_km === null && o.corrected_fuel_level === null ? null : {
+      ...(o.corrected_km === null ? {} : { km: o.corrected_km }),
+      ...(o.corrected_fuel_level === null ? {} : { fuel_level: o.corrected_fuel_level }),
+    }
     return {
       km: o.effective_km,
       source: o.effective_source,
       fuel_level: o.effective_fuel_level,
       captured_at: toWib(o.captured_at),
+      // Tiga nilai terpisah untuk dicek admin terhadap foto: OCR FE, AI (pembanding, tidak pernah jadi nilai efektif), dan koreksi driver
+      photo: photoOf(o.media_id),
       ocr: o.ocr_km === null && o.ocr_fuel_level === null ? null : { km: o.ocr_km, fuel_level: o.ocr_fuel_level },
+      ai: aiState(checkOf(o.ai_check_id), { km: o.ai_km, fuel_level: o.ai_fuel_level, confidence: num(o.ai_confidence) }),
+      corrected,
       correction_reason: o.correction_reason,
+      needs_review: o.needs_review,
+      review_reasons: o.review_reasons,
     }
   }
 
@@ -136,7 +170,19 @@ const serializeDetail = async (db, row) => {
       label: expenseLabel(e),
       amount: num(e.amount),
       has_proof: Boolean(e.proof_media_id),
+      proof_photo: e.proof_media_id ? photoOf(e.proof_media_id) : null,
       corrected: Boolean(e.corrected_fields),
+      // Struk BBM: tiga nilai terpisah (OCR FE, AI pembanding, koreksi driver) untuk dicek admin terhadap foto
+      ...(e.category_input === 'receipt_ocr' ? {
+        receipt: {
+          ocr: e.ocr_fields,
+          ai: aiState(checkOf(e.ai_check_id), { fields: e.ai_fields, confidence: num(e.ai_confidence) }),
+          corrected: e.corrected_fields,
+          correction_reason: e.correction_reason,
+        },
+      } : {}),
+      needs_review: e.needs_review,
+      review_reasons: e.review_reasons,
       checks: e.checks,
       voided: Boolean(e.voided_at),
       void_reason: e.void_reason,
@@ -236,6 +282,7 @@ const list = async (db, query) => {
       driverId: query.driver_id,
       unitId: query.unit_id,
       customerId: query.customer_id,
+      needsReview: query.needs_review,
       // Tanggal kalender WIB: from = awal hari, to = akhir hari
       from: query.from ? new Date(`${query.from}T00:00:00+07:00`) : null,
       to: query.to ? new Date(`${query.to}T23:59:59.999+07:00`) : null,

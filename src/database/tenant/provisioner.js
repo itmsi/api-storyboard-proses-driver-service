@@ -21,7 +21,7 @@ const { ensureDefaultRoles } = require('./default-roles')
 const CORE_TABLES = [
   'users', 'drivers', 'devices', 'refresh_tokens', 'app_settings', 'units', 'customers', 'locations',
   'delivery_orders', 'delivery_order_events', 'media', 'p2h_check_items', 'p2h_inspections', 'expense_categories', 'expenses', 'loadings',
-  'odometer_readings', 'handovers', 'settlements', 'sync_items',
+  'odometer_readings', 'handovers', 'settlements', 'sync_items', 'ai_checks',
 ]
 
 const running = new Set() // client yang sedang dimigrasi di proses ini

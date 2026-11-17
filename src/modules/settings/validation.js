@@ -15,6 +15,13 @@ const range = Joi.object({
 
 // Hanya pengaturan yang memang dipakai aplikasi/server yang boleh diubah; kunci lain ditolak (bukan diabaikan)
 // supaya salah ketik tidak terlihat seperti berhasil. Setiap kelompok boleh dikirim sebagian (digabung dengan nilai sekarang).
+// API key OpenAI (sk-..., termasuk sk-proj-...). null = hapus key. Wajib dikirim agar PUT kosong tidak terlihat berhasil.
+const aiUpdate = Joi.object({
+  api_key: Joi.string().trim().pattern(/^sk-[A-Za-z0-9_-]{16,300}$/).allow(null)
+    .required()
+    .messages({ 'string.pattern.base': 'API key OpenAI harus berformat sk-... (tanpa spasi).' }),
+}).options({ allowUnknown: false, stripUnknown: false })
+
 const update = Joi.object({
   modules: Joi.object({
     route_tracking: Joi.boolean(),
@@ -61,4 +68,6 @@ const update = Joi.object({
   }).min(1),
 }).min(1).options({ allowUnknown: false, stripUnknown: false })
 
-module.exports = { update, SIDES, LANGUAGES }
+module.exports = {
+  update, aiUpdate, SIDES, LANGUAGES,
+}

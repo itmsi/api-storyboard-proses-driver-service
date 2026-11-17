@@ -31,6 +31,7 @@ const list = async (db, {
     if (filters.driverId) q.where('delivery_orders.driver_id', filters.driverId)
     if (filters.unitId) q.where('delivery_orders.unit_id', filters.unitId)
     if (filters.customerId) q.where('delivery_orders.customer_id', filters.customerId)
+    if (filters.needsReview !== undefined && filters.needsReview !== null) q.where('delivery_orders.needs_review', filters.needsReview)
     // Rentang tanggal memakai jadwal muat; DO tanpa jadwal memakai waktu penugasan
     if (filters.from) q.whereRaw('coalesce(delivery_orders.planned_load_at, delivery_orders.assigned_at) >= ?', [filters.from])
     if (filters.to) q.whereRaw('coalesce(delivery_orders.planned_load_at, delivery_orders.assigned_at) <= ?', [filters.to])
@@ -169,6 +170,12 @@ const handover = async (db, doId) => {
 
 const settlement = (db, doId) => db('settlements').where({ delivery_order_id: doId }).first()
 
+/** Foto bacaan/struk (untuk tampilan admin). */
+const mediaByIds = (db, ids) => (ids.length ? db('media').whereIn('id', ids) : Promise.resolve([]))
+
+/** Status pengecekan AI yang tertaut ke bacaan/struk. */
+const aiChecksByIds = (db, ids) => (ids.length ? db('ai_checks').whereIn('id', ids).select('id', 'status', 'error_code', 'error_message', db.raw("result->>'note' as note"), db.raw("result->>'display_mode' as display_mode")) : Promise.resolve([]))
+
 const media = (db, doId) => db('delivery_order_media')
   .join('media', 'media.id', 'delivery_order_media.media_id')
   .where({ 'delivery_order_media.delivery_order_id': doId })
@@ -193,4 +200,6 @@ module.exports = {
   handover,
   settlement,
   media,
+  mediaByIds,
+  aiChecksByIds,
 }

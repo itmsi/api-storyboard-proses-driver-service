@@ -48,6 +48,7 @@ const list = listQuery.keys({
   driver_id: Joi.string().guid(),
   unit_id: Joi.string().guid(),
   customer_id: Joi.string().guid(),
+  needs_review: Joi.boolean(), // hanya DO yang punya bacaan odometer/struk bertanda perlu dilihat (true) atau yang tidak (false)
   from: date,
   to: date,
 })

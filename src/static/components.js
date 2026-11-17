@@ -77,6 +77,25 @@ const schemas = {
     id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'), code: str('DRV-0021'), name: str('Andi'), phone: str('[NO_HP]'),
   }, ['id', 'code', 'name']),
   UnitRef: obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ'), type: str('CDD Bak') }, ['id', 'plate']),
+  AiCheckRequest: obj({
+    regenerate: bool(true, { description: 'true = baca ulang foto yang hasilnya sudah ada (selesai). Yang gagal selalu diantrekan ulang tanpa perlu diisi; yang sedang antre/berjalan tidak digandakan. Kosong atau false = tidak membaca ulang' }),
+  }, undefined, { description: 'Badan opsional; boleh dikosongkan' }),
+  AiCheck: obj({
+    id: str('0c9d1e52-7a34-4b86-9d10-2f5e8a3b6c71', { description: 'Id pengecekan, dipakai untuk memantau lewat GET /ai-checks/{id}' }),
+    media_id: str('fc06e493-e9c6-429b-9529-bc07084818ee'),
+    kind: enumOf(['dashboard', 'receipt'], 'dashboard', { description: 'dashboard = foto odometer/bahan bakar; receipt = struk BBM. Diturunkan dari jenis foto' }),
+    status: enumOf(['queued', 'processing', 'done', 'failed'], 'queued'),
+    attempts: int(0),
+    result: nullable(obj({}, undefined, {
+      description: 'Hanya ada bila status done. dashboard: { km, fuel_level, confidence }. receipt: { total, liters, price_per_liter, fuel_type, merchant, date, time, confidence }. Nilai yang tidak terbaca = null',
+      additionalProperties: true,
+    })),
+    confidence: nullable(num(0.93)),
+    model: nullable(str('gpt-4o-mini')),
+    error: nullable(obj({ code: str('ai_unavailable'), message: str('OpenAI sedang bermasalah (HTTP 503).') }, undefined, { description: 'Hanya ada bila status failed. Driver tetap bisa mengisi nilai sendiri' })),
+    requested_at: dt(),
+    finished_at: nullable(dt()),
+  }),
   Media: obj({
     id: str('c6c62ddb-ea60-4bb7-9d99-deeb455f5e75'),
     kind: enumOf(MEDIA_KINDS, 'odometer_start'),
@@ -265,7 +284,8 @@ const schemas = {
     client_ref: clientRef,
     captured_at: dt('2026-11-05T13:50:00+07:00'),
     gps: str('{"lat":-6.18,"lng":106.94,"accuracy_m":8}', { description: 'JSON string berisi Gps' }),
-    side: { ...enumOf(['depan', 'kanan', 'kiri', 'belakang']), description: 'Wajib jika kind = p2h_body' },
+    // Tanpa contoh/nilai bawaan: Swagger mengisi contoh ke formulir dan ikut mengirimnya, padahal side HANYA boleh untuk kind = p2h_body (selain itu 422 "side is not allowed")
+    side: { type: 'string', enum: ['depan', 'kanan', 'kiri', 'belakang'], description: 'Isi HANYA jika kind = p2h_body (wajib untuk jenis itu); untuk jenis lain biarkan kosong (teks kosong dari formulir dianggap tidak dikirim). Mengisinya untuk jenis lain ditolak 422' },
   }, ['file', 'kind', 'client_ref', 'captured_at']),
 
   // ---------- P2H ----------
@@ -980,8 +1000,18 @@ const schemas = {
     on_hold_reason: nullable(str('Driver dialihkan ke unit lain hari ini')),
     cancelled_at: nullable(dt()),
     cancel_reason: nullable(str('Pelanggan membatalkan pesanan')),
+    needs_review: bool(false, { description: 'Ada bacaan odometer atau struk BBM yang perlu dilihat admin (alasan per bacaan ada di detail). Bisa difilter lewat `needs_review` di daftar' }),
     ...auditProps,
   }),
+  AdminAiValue: obj({
+    status: enumOf(['queued', 'processing', 'done', 'failed'], 'done', { description: 'Status pengecekan AI yang diminta FE untuk foto ini' }),
+    km: nullable(int(45278)),
+    fuel_level: nullable(ref('FuelLevel')),
+    confidence: nullable(num(0.93)),
+    display_mode: enumOf(['odo', 'trip', 'unknown'], 'odo', { description: 'Layar yang dibaca AI untuk km: odometer total, trip meter, atau tidak jelas. km tetap diambil dari mana pun layarnya (hanya bila km terbaca)' }),
+    note: str('digits are blurred by glare', { description: 'Alasan dari AI bila km atau bahan bakar tidak terbaca (hanya bila ada)' }),
+    error: obj({ code: str('ai_unavailable'), message: str('OpenAI sedang bermasalah') }, undefined, { description: 'Hanya bila status failed' }),
+  }, ['status'], { description: 'Hasil AI hanya pembanding (tidak pernah menjadi nilai efektif). Odometer: km, fuel_level, confidence. null = FE tidak meminta pengecekan AI' }),
   AdminDeliveryOrderDetail: {
     allOf: [ref('AdminDeliveryOrder'), obj({
       origin: obj({
@@ -1022,16 +1052,26 @@ const schemas = {
           source: enumOf(['ocr', 'corrected']),
           fuel_level: nullable(ref('FuelLevel')),
           captured_at: dt(),
-          ocr: nullable(obj({ km: nullable(int(45210)), fuel_level: nullable(ref('FuelLevel')) })),
+          photo: nullable(ref('Media')),
+          ocr: nullable(obj({ km: nullable(int(45210)), fuel_level: nullable(ref('FuelLevel')) }, undefined, { description: 'Hasil OCR dari FE (HP)' })),
+          ai: nullable(ref('AdminAiValue')),
+          corrected: nullable(obj({ km: int(45210), fuel_level: ref('FuelLevel') }, undefined, { description: 'Koreksi driver (hanya yang dikoreksi)' })),
           correction_reason: nullable(str('Angka buram')),
+          needs_review: bool(false),
+          review_reasons: arr(str('fe_ai_berbeda'), { description: 'dikoreksi_driver, fe_ai_berbeda, koreksi_beda_ai, keyakinan_ai_rendah, ai_tidak_terbaca, km_mundur (odometer), total_tidak_cocok dan jam_struk_di_luar_do (struk)' }),
         })),
         end: nullable(obj({
           km: int(45278),
           source: enumOf(['ocr', 'corrected']),
           fuel_level: nullable(ref('FuelLevel')),
           captured_at: dt(),
-          ocr: nullable(obj({ km: nullable(int(45278)), fuel_level: nullable(ref('FuelLevel')) })),
+          photo: nullable(ref('Media')),
+          ocr: nullable(obj({ km: nullable(int(45278)), fuel_level: nullable(ref('FuelLevel')) }, undefined, { description: 'Hasil OCR dari FE (HP)' })),
+          ai: nullable(ref('AdminAiValue')),
+          corrected: nullable(obj({ km: int(45278), fuel_level: ref('FuelLevel') }, undefined, { description: 'Koreksi driver (hanya yang dikoreksi)' })),
           correction_reason: nullable(str('Angka buram')),
+          needs_review: bool(false),
+          review_reasons: arr(str('fe_ai_berbeda'), { description: 'dikoreksi_driver, fe_ai_berbeda, koreksi_beda_ai, keyakinan_ai_rendah, ai_tidak_terbaca, km_mundur (odometer), total_tidak_cocok dan jam_struk_di_luar_do (struk)' }),
         })),
       }),
       expenses: arr(obj({
@@ -1040,7 +1080,21 @@ const schemas = {
         label: str('Tol Cikampek'),
         amount: money(54500),
         has_proof: bool(false),
+        proof_photo: nullable(ref('Media')),
         corrected: bool(false),
+        receipt: obj({
+          ocr: nullable(obj({}, undefined, { additionalProperties: true, description: 'Hasil OCR dari FE: time, fuel_type, liters, price_per_liter, total' })),
+          ai: nullable(obj({
+            status: enumOf(['queued', 'processing', 'done', 'failed'], 'done'),
+            fields: nullable(obj({}, undefined, { additionalProperties: true, description: 'Hasil AI (pembanding): total, liters, price_per_liter, fuel_type, merchant, date, time' })),
+            confidence: nullable(num(0.88)),
+            error: obj({ code: str('ai_unavailable'), message: str('OpenAI sedang bermasalah') }, undefined, { description: 'Hanya bila status failed' }),
+          }, ['status'])),
+          corrected: nullable(obj({}, undefined, { additionalProperties: true, description: 'Koreksi driver (hanya field yang dikoreksi)' })),
+          correction_reason: nullable(str('Salah baca angka')),
+        }, undefined, { description: 'Hanya untuk struk BBM: tiga nilai terpisah untuk dicek admin terhadap foto' }),
+        needs_review: bool(false),
+        review_reasons: arr(str('total_tidak_cocok'), { description: 'dikoreksi_driver, fe_ai_berbeda, koreksi_beda_ai, keyakinan_ai_rendah, ai_tidak_terbaca, km_mundur (odometer), total_tidak_cocok dan jam_struk_di_luar_do (struk)' }),
         checks: { type: 'object', nullable: true, additionalProperties: true },
         voided: bool(false, { description: 'Biaya yang dibatalkan tetap tampil sebagai jejak, tidak dihitung di total' }),
         recorded_at: dt(),
@@ -1263,6 +1317,23 @@ const schemas = {
       support: obj({ label: str('Hubungi admin'), phone: nullable(str('0812-3456-7890')) }),
     }, undefined, { description: 'Tampilan merek perusahaan ini; aplikasi membacanya saat berjalan (warna dan logo), jadi tidak perlu rilis aplikasi baru.' }),
   }),
+  AdminAiSettings: obj({
+    enabled: bool(true, { description: 'AI_ENABLED di server. Bila false, pengecekan AI tidak dijalankan walau API key sudah terisi' }),
+    configured: bool(true, { description: 'API key OpenAI client ini sudah terisi' }),
+    key_hint: nullable(str('…WXYZ', { description: '4 karakter terakhir API key. API key sendiri tidak pernah dikembalikan' })),
+    model: str('gpt-4o-mini', { description: 'Model pembaca gambar yang dipakai server' }),
+    updated_at: nullable(dt()),
+    updated_by: nullable(obj({ id: str('9b4e2c71-3d58-4a06-8f12-6c0e7d5a1b94'), name: nullable(str('Admin OGO')) })),
+  }),
+  AdminAiSettingsUpdate: obj({
+    api_key: nullable(str('sk-proj-AbCdEf0123456789xyz', { description: 'API key OpenAI milik client ini (sk-..., tanpa spasi). null = hapus key' })),
+  }, ['api_key']),
+  AdminAiCheck: obj({
+    configured: bool(true),
+    valid: nullable(bool(true, { description: 'true = diterima OpenAI; false = belum diisi atau ditolak; null = belum bisa dipastikan (OpenAI tidak terjangkau atau batas pemakaian)' })),
+    reason: nullable(enumOf(['belum_diisi', 'ditolak', 'ai_rate_limited', 'ai_unavailable', 'ai_timeout'], 'ditolak', { description: 'Alasan bila valid bukan true' })),
+    message: str('API key OpenAI ditolak. Periksa API key client.', { description: 'Hanya ada bila valid bukan true dan ada penjelasan' }),
+  }, ['configured', 'valid']),
   AdminSettingsUpdate: obj({
     languages: arr(enumOf(['id', 'en', 'zh'])),
     default_language: enumOf(['id', 'en', 'zh']),
@@ -1381,6 +1452,12 @@ const responses = {
 const parameters = {
   DeliveryOrderId: {
     name: 'id', in: 'path', required: true, description: 'ID delivery order', schema: { type: 'string', example: '2fb9f57e-a6e7-4890-b957-30261a15b471' },
+  },
+  MediaId: {
+    name: 'id', in: 'path', required: true, description: 'ID foto (hasil POST /media)', schema: { type: 'string', example: 'fc06e493-e9c6-429b-9529-bc07084818ee' },
+  },
+  AiCheckId: {
+    name: 'id', in: 'path', required: true, description: 'ID pengecekan AI', schema: { type: 'string', example: '0c9d1e52-7a34-4b86-9d10-2f5e8a3b6c71' },
   },
   UnitId: {
     name: 'unitId', in: 'path', required: true, description: 'ID unit (kendaraan)', schema: { type: 'string', example: 'fc06e493-e9c6-429b-9529-bc07084818ee' },

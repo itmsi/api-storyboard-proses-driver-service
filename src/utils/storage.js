@@ -104,6 +104,27 @@ const getNextcloud = async (key) => {
 }
 
 /**
+ * Baca seluruh file sebagai Buffer (untuk diproses server, mis. dikirim ke AI). null = tidak ada.
+ * @returns {Promise<Buffer|null>}
+ */
+const getObjectBuffer = async (key) => {
+  if (config.storage.driver === 's3') {
+    const stream = await getS3().getObject(config.storage.s3.bucket, key).catch((err) => {
+      if (err && (err.code === 'NoSuchKey' || err.code === 'NotFound')) return null
+      throw err
+    })
+    if (!stream) return null
+    const chunks = []
+    // eslint-disable-next-line no-restricted-syntax
+    for await (const chunk of stream) chunks.push(chunk)
+    return Buffer.concat(chunks)
+  }
+  const file = await getNextcloud(key)
+  if (!file) return null
+  return Buffer.from(await new Response(file.body).arrayBuffer())
+}
+
+/**
  * @param {string} key          contoh: "media/2026/11/05/<uuid>.jpg"
  * @param {Buffer} buffer
  * @param {string} contentType
@@ -132,5 +153,5 @@ const presignedUrl = async (key, expirySeconds = 3600) => {
 }
 
 module.exports = {
-  putObject, publicUrl, presignedUrl, getNextcloud,
+  putObject, publicUrl, presignedUrl, getNextcloud, getObjectBuffer,
 }

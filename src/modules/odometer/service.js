@@ -6,6 +6,8 @@ const { serializeMedia } = require('../media/serializer')
 const doService = require('../delivery-orders/service')
 const doRepo = require('../delivery-orders/repository')
 const repo = require('./repository')
+const aiReview = require('../ai-checks/review')
+const aiAttach = require('../ai-checks/attach')
 
 const invalid = (field, message) => new AppError('VALIDATION_ERROR', { details: [{ field, message }] })
 
@@ -77,10 +79,18 @@ const create = async (db, auth, id, body) => {
       : { odometer_end_km: km, updated_by: auth.sub })
     if (!moved) throw new AppError('INVALID_STATE', { details: { reason: 'status DO sudah berubah' } })
 
+    // Penanda perlu-dilihat dari yang sudah diketahui saat dicatat (koreksi driver, angka mundur); hasil AI menyusul lewat aiAttach
+    const flags = aiReview.odometer(
+      { corrected_km: corrected && corrected.km !== undefined ? corrected.km : null, corrected_fuel_level: corrected && corrected.fuel_level ? corrected.fuel_level : null, effective_km: km },
+      null,
+      { previousUnitKm: await repo.unitOdometer(trx, row.unit_id) }
+    )
     const created = await repo.insert(trx, {
       delivery_order_id: id,
       type,
       media_id: photo.id,
+      needs_review: flags.needs_review,
+      review_reasons: flags.review_reasons,
       ocr_km: ocr.km === undefined ? null : ocr.km,
       ocr_fuel_level: ocr.fuel_level || null,
       corrected_km: corrected && corrected.km !== undefined ? corrected.km : null,
@@ -113,6 +123,8 @@ const create = async (db, auth, id, body) => {
     return created
   })
 
+  // Hasil pengecekan AI untuk foto ini (bila FE pernah memintanya) ditempelkan setelah commit; gagal tidak menggagalkan pencatatan
+  await aiAttach.attachAfterCreate(db, 'odometer', saved.id)
   return { result: result(saved, photo), created: true }
 }
 

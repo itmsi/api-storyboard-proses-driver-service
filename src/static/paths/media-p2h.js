@@ -27,6 +27,48 @@ module.exports = {
     },
   },
 
+  '/media/{id}/ai-check': {
+    post: {
+      tags: ['Media'],
+      summary: 'Minta AI ikut mengecek foto, atau membacanya ulang (opsional)',
+      description: [
+        'FE atau admin yang meminta; tidak otomatis saat upload. **Driver**: hanya foto miliknya (hak `driver_ai_check:create`). **Admin**: foto driver mana pun (hak `media:update`).',
+        '**Membaca ulang (regenerate):** kirim `{ "regenerate": true }`. Pengecekan yang sudah selesai diantrekan ulang (`202`, baris yang sama); hasil lama tetap tampil di bacaan sampai hasil baru berhasil, lalu diganti dan penanda `needs_review` dihitung ulang. Yang gagal selalu bisa diminta ulang tanpa badan ini. Dihitung ke batas permintaan per jam peminta.',
+        'Jenis bacaan diturunkan dari jenis foto. Foto dashboard (`odometer_start`, `odometer_end`) dibaca sebagai km dan level bahan bakar, foto `receipt` sebagai struk BBM; jenis foto lain ditolak 422.',
+        '**Hasil AI hanya pembanding**: tidak mengubah nilai bacaan. FE tetap mengirim hasil OCR-nya atau koreksi seperti biasa, dan tidak perlu menunggu hasil ini. Hasil AI tersimpan terpisah dari OCR FE dan koreksi driver, dan dilihat admin di detail DO.',
+        'Pekerjaan masuk antrean: respons `202` berisi `id`; pantau lewat `GET /ai-checks/{id}`. Idempoten per foto: yang sudah antre/diproses dikembalikan `202`, yang sudah selesai `200`, dan yang gagal diantrekan ulang (`202`).',
+        'Ditolak: `409 INVALID_STATE` dengan `details.reason` = `ai_nonaktif` (AI dimatikan di server) atau `api_key_belum_diisi` (admin client belum mengisi API key, lihat `PUT /settings/ai`); `429` bila melewati batas permintaan per jam; `404` bila foto bukan milik driver ini. Hak: `driver_ai_check:create`.',
+      ].join('\n'),
+      security: secured,
+      parameters: [{ $ref: '#/components/parameters/MediaId' }],
+      requestBody: { required: false, content: { 'application/json': { schema: ref('AiCheckRequest') } } },
+      responses: {
+        200: jsonResponse('Hasil sudah ada (status done) dan tidak diminta dibaca ulang', envelope(ref('AiCheck'))),
+        202: jsonResponse('Masuk antrean atau masih diproses', envelope(ref('AiCheck'))),
+        404: errorRef('NotFound'),
+        409: errorRef('InvalidState'),
+        422: errorRef('ValidationError'),
+        429: errorRef('RateLimited'),
+        ...authErrors,
+      },
+    },
+  },
+  '/ai-checks/{id}': {
+    get: {
+      tags: ['Media'],
+      summary: 'Status dan hasil pengecekan AI',
+      description: 'Driver (hak `driver_ai_check:read`): pengecekan atas foto miliknya sendiri (juga bila admin yang meminta ulang). Admin (hak `media:read`): semua. `result` hanya terisi bila `status` = `done`.',
+      security: secured,
+      parameters: [{ $ref: '#/components/parameters/AiCheckId' }],
+      responses: {
+        200: jsonResponse('OK', envelope(ref('AiCheck'))),
+        404: errorRef('NotFound'),
+        422: errorRef('ValidationError'),
+        ...authErrors,
+      },
+    },
+  },
+
   // ===================== P2H =====================
   '/p2h/template': {
     get: {

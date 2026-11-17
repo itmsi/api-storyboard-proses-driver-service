@@ -5,6 +5,12 @@ const insert = async (trx, row) => {
   return created
 }
 
+/** Odometer terakhir yang tercatat untuk unit (sebelum bacaan baru), untuk mendeteksi angka yang mundur. */
+const unitOdometer = async (db, unitId) => {
+  const unit = await db('units').where({ id: unitId }).first('last_odometer_km')
+  return unit ? unit.last_odometer_km : null
+}
+
 const findMedia = (db, id) => db('media').where({ id }).first()
 
 /** Odometer unit hanya naik: simpan angka akhir terbesar yang pernah dicatat. */
@@ -14,5 +20,5 @@ const raiseUnitOdometer = (trx, unitId, km) => trx('units')
   .update({ last_odometer_km: km })
 
 module.exports = {
-  findByClientRef, insert, findMedia, raiseUnitOdometer,
+  findByClientRef, insert, findMedia, raiseUnitOdometer, unitOdometer,
 }

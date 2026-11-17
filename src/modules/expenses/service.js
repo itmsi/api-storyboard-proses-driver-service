@@ -7,6 +7,8 @@ const { serializeMedia } = require('../media/serializer')
 const doService = require('../delivery-orders/service')
 const doRepo = require('../delivery-orders/repository')
 const repo = require('./repository')
+const aiReview = require('../ai-checks/review')
+const aiAttach = require('../ai-checks/attach')
 
 const RECEIPT_FIELDS = ['time', 'fuel_type', 'liters', 'price_per_liter', 'total']
 // Selisih liter x harga dengan total yang masih dianggap wajar (pembulatan SPBU)
@@ -114,9 +116,14 @@ const buildReceipt = async (db, auth, body, settings, doRow) => {
   const duplicate = await repo.findDuplicateReceipt(db, { fingerprint, sha256: photo.sha256 })
   if (duplicate) throw duplicateError(duplicate)
 
+  const checks = buildChecks(effective, body.captured_at, doRow.started_at)
+  // Penanda perlu-dilihat dari yang sudah diketahui saat dicatat; hasil AI menyusul lewat aiAttach
+  const flags = aiReview.expense({ ocr_fields: Object.keys(ocr).length ? ocr : null, corrected_fields: hasCorrection ? corrected : null, checks }, null)
   return {
     photo,
     row: {
+      needs_review: flags.needs_review,
+      review_reasons: flags.review_reasons,
       amount: effective.total,
       proof_media_id: photo.id,
       fuel_type: effective.fuel_type ?? null,
@@ -126,7 +133,7 @@ const buildReceipt = async (db, auth, body, settings, doRow) => {
       ocr_fields: Object.keys(ocr).length ? ocr : null,
       corrected_fields: hasCorrection ? corrected : null,
       correction_reason: hasCorrection ? body.correction_reason : null,
-      checks: buildChecks(effective, body.captured_at, doRow.started_at),
+      checks,
       receipt_fingerprint: fingerprint,
       recorded_at: body.captured_at,
     },
@@ -212,6 +219,7 @@ const create = async (db, auth, id, body) => {
     throw err
   }
 
+  if (category.input === 'receipt_ocr') await aiAttach.attachAfterCreate(db, 'expense', saved.id) // gagal tidak menggagalkan pencatatan
   return { result: serialize({ ...saved, category_input: category.input, category_label: category.label }, built.photo), created: true }
 }
 
