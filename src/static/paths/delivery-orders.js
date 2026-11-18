@@ -13,7 +13,7 @@ module.exports = {
       summary: 'Daftar DO (isi mengikuti peran)',
       description: [
         '**Driver:** DO miliknya, dipakai layar "DO ditugaskan" dengan `status=assigned`. Tanpa `status`: semua DO yang belum selesai. `meta = { count }`.',
-        '**Admin:** semua DO perusahaan, dengan pagination (`page`, `limit`, `sort`, `sort_by`), `search` (nomor DO, barang, driver, plat, customer), dan filter `status`, `driver_id`, `unit_id`, `customer_id`, `needs_review` (true = hanya DO yang punya bacaan odometer/struk perlu dilihat; false = yang tidak), `from`/`to` (tanggal jadwal muat, WIB). `meta` = pagination standar.',
+        '**Admin:** semua DO perusahaan, dengan pagination (`page`, `limit`, `sort`, `sort_by`), `search` (nomor DO, barang, driver, plat, customer, serta nama dan kota lokasi asal/tujuan), dan filter `status`, `driver_id`, `unit_id`, `customer_id`, `needs_review` (true = hanya DO yang punya bacaan odometer/struk perlu dilihat; false = yang tidak), `from`/`to` (tanggal jadwal muat, WIB). `meta` = pagination standar.',
       ].join('\n'),
       security: secured,
       parameters: [
@@ -21,8 +21,8 @@ module.exports = {
           name: 'status',
           in: 'query',
           required: false,
-          description: 'Driver: assigned, accepted, loading, in_transit, handover. Admin: semua status termasuk onhold, completed, dan cancelled.',
-          schema: { type: 'string', enum: ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled'], example: 'assigned' },
+          description: 'Driver: satu status (assigned, accepted, loading, in_transit, handover). Admin: semua status termasuk onhold, completed, dan cancelled; boleh satu nilai, beberapa nilai (array), atau kelompok: `running` (accepted, loading, in_transit, handover) dan `open` (semua yang belum final, termasuk onhold).',
+          schema: { type: 'string', enum: ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled', 'running', 'open'], example: 'assigned' },
         },
         {
           name: 'page', in: 'query', description: 'Hanya admin', schema: { type: 'integer', minimum: 1, default: 1 }
@@ -39,7 +39,7 @@ module.exports = {
           name: 'search', in: 'query', description: 'Hanya admin', schema: { type: 'string', maxLength: 100 }
         },
         {
-          name: 'sort', in: 'query', description: 'Hanya admin. Kolom urut: no, planned_load_at, assigned_at, status, created_at (default `created_at`). Arah urut lewat `sort_by` (DESC default / ASC).', schema: { type: 'string', example: 'created_at' }
+          name: 'sort', in: 'query', description: 'Hanya admin. Kolom urut: no, planned_load_at, assigned_at, status, created_at, completed_at, started_at, driver, unit, customer (default `created_at`). Arah urut lewat `sort_by` (DESC default / ASC).', schema: { type: 'string', example: 'created_at' }
         },
         {
           name: 'driver_id', in: 'query', description: 'Hanya admin. Filter DO milik driver ini; isi dengan `data[].id` dari `POST /drivers/get`.', schema: { type: 'string', format: 'uuid', example: '6f1c2a4e-8b3d-4c5e-9a7f-1b2c3d4e5f60' }
@@ -49,6 +49,24 @@ module.exports = {
         },
         {
           name: 'customer_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }
+        },
+        {
+          name: 'origin_location_id', in: 'query', description: 'Hanya admin. DO dari lokasi asal ini (dari `POST /locations/get`)', schema: { type: 'string', format: 'uuid' }
+        },
+        {
+          name: 'destination_location_id', in: 'query', description: 'Hanya admin. DO ke lokasi tujuan ini', schema: { type: 'string', format: 'uuid' }
+        },
+        {
+          name: 'delivery_status', in: 'query', description: 'Hanya admin. Hasil serah terima: terkirim_lengkap, terkirim_catatan, atau gagal_kirim (hanya DO yang sudah diserahterimakan)', schema: { type: 'string', enum: ['terkirim_lengkap', 'terkirim_catatan', 'gagal_kirim'] }
+        },
+        {
+          name: 'settlement_status', in: 'query', description: 'Hanya admin. none = belum ada rekap uang jalan, pending = rekap belum disetor/dibayar, settled = sudah', schema: { type: 'string', enum: ['none', 'pending', 'settled'] }
+        },
+        {
+          name: 'completed_from', in: 'query', description: 'Hanya admin. Tanggal selesai (WIB) mulai dari', schema: { type: 'string', format: 'date', example: '2026-11-01' }
+        },
+        {
+          name: 'completed_to', in: 'query', description: 'Hanya admin. Tanggal selesai (WIB) sampai dengan', schema: { type: 'string', format: 'date', example: '2026-11-30' }
         },
         {
           name: 'needs_review', in: 'query', description: 'Hanya admin. true = hanya DO yang punya bacaan odometer/struk perlu dilihat; false = yang tidak', schema: { type: 'boolean' }

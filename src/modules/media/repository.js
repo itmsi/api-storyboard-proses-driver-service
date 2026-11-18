@@ -40,6 +40,19 @@ const listAdmin = async (db, { filters, search, paging }) => {
       .where('media.is_delete', false)
     if (filters.kind) q.where('media.kind', filters.kind)
     if (filters.captured_by) q.where('media.captured_by', filters.captured_by)
+    if (filters.delivery_order_id) {
+      const doId = filters.delivery_order_id
+      q.where((w) => w
+        .whereIn('media.id', db('delivery_order_media').where({ delivery_order_id: doId }).select('media_id'))
+        .orWhereIn('media.id', db('odometer_readings').where({ delivery_order_id: doId }).select('media_id'))
+        .orWhereIn('media.id', db('expenses').where({ delivery_order_id: doId }).whereNotNull('proof_media_id').select('proof_media_id'))
+        .orWhereIn('media.id', db('handover_issue_photos')
+          .join('handover_issues', 'handover_issues.id', 'handover_issue_photos.issue_id')
+          .join('handovers', 'handovers.id', 'handover_issues.handover_id')
+          .where('handovers.delivery_order_id', doId)
+          .select('handover_issue_photos.media_id'))
+        .orWhereIn('media.id', db('handovers').where({ delivery_order_id: doId }).whereNotNull('signature_media_id').select('signature_media_id')))
+    }
     if (filters.from) q.where('media.captured_at', '>=', `${filters.from}T00:00:00+07:00`)
     if (filters.to) q.where('media.captured_at', '<', db.raw("(?::date + 1)::timestamptz - interval '7 hours'", [filters.to]))
     return searchColumns(q, search, ['capturer.name', 'media.kind'])

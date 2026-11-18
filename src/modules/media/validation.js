@@ -51,6 +51,7 @@ const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).messages({ 'string.patt
 const list = listQuery.keys({
   kind: Joi.string().valid(...KINDS),
   captured_by: Joi.string().guid(),
+  delivery_order_id: Joi.string().guid(), // foto yang dipakai DO itu (muatan, surat jalan, odometer, struk, serah terima)
   from: date,
   to: date,
 })

@@ -4,11 +4,16 @@ const { toWib, wibDate } = require('../../utils/date')
 const pagination = require('../../utils/pagination')
 const password = require('../../utils/password')
 const accounts = require('../../utils/accounts')
+const { addDays } = require('../../utils/expiry')
 const adminAuthRepo = require('../auth/repository')
 const repo = require('./repository')
 
 const SORTABLE = {
-  name: 'users.name', code: 'drivers.code', created_at: 'drivers.created_at', last_login_at: 'users.last_login_at',
+  name: 'users.name',
+  code: 'drivers.code',
+  created_at: 'drivers.created_at',
+  last_login_at: 'users.last_login_at',
+  license_expires_on: 'drivers.license_expires_on',
 }
 
 const serialize = (row, extra = {}) => ({
@@ -41,7 +46,14 @@ const load = async (db, id) => {
 const list = async (db, query) => {
   const paging = pagination.parse(query, SORTABLE, 'name')
   const { rows, total } = await repo.list(db, {
-    today: wibDate(), search: query.search, status: query.status, roleId: query.role_id, paging,
+    today: wibDate(),
+    search: query.search,
+    status: query.status,
+    roleId: query.role_id,
+    licenseStatus: query.license_status,
+    hasUnit: query.has_unit,
+    dates: { today: wibDate(), soon: addDays(wibDate(), query.expiring_days) },
+    paging,
   })
   return { data: rows.map((r) => serialize(r)), meta: pagination.meta(paging, total) }
 }

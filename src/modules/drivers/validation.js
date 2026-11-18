@@ -1,5 +1,6 @@
 const Joi = require('joi')
 const { listQuery } = require('../../utils/pagination')
+const { expiryStatus, expiringDays } = require('../../utils/expiry')
 const { passwordRule } = require('../../utils/password')
 
 const idParams = Joi.object({
@@ -9,6 +10,9 @@ const idParams = Joi.object({
 const list = listQuery.keys({
   status: Joi.string().valid('active', 'suspended'),
   role_id: Joi.string().guid(),
+  license_status: expiryStatus, // masa berlaku SIM: expired | expiring | valid | unknown
+  expiring_days: expiringDays, // batas 'expiring': hari ke depan (bawaan 30)
+  has_unit: Joi.boolean(), // true = punya unit bawaan, false = belum
 })
 
 const license = {

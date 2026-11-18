@@ -5,7 +5,10 @@ const idParams = Joi.object({
   id: Joi.string().guid().required(),
 })
 
-const list = listQuery
+const list = listQuery.keys({
+  has_locations: Joi.boolean(), // true = punya lokasi aktif, false = belum punya
+  has_open_orders: Joi.boolean(), // true = punya DO yang belum final, false = tidak
+})
 
 const fields = {
   name: Joi.string().trim().min(2).max(120),

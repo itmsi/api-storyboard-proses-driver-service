@@ -19,8 +19,24 @@ const select = (db, query) => query.select(
   'customers.updated_by'
 )
 
-const list = async (db, { search, paging }) => {
-  const filtered = () => searchColumns(base(db), search, ['customers.code', 'customers.name', 'customers.phone', 'customers.email'])
+const hasLocations = (q, db) => q.whereExists(function activeLocations() {
+  this.select(db.raw('1')).from('locations').whereRaw('locations.customer_id = customers.id').where({ 'locations.is_delete': false })
+})
+const hasOpenOrders = (q, db) => q.whereExists(function openOrders() {
+  this.select(db.raw('1')).from('delivery_orders').whereRaw('delivery_orders.customer_id = customers.id').whereIn('delivery_orders.status', OPEN_DO_STATUSES)
+})
+
+const list = async (db, {
+  search, hasLocations: withLocations, hasOpenOrders: withOpenOrders, paging,
+}) => {
+  const filtered = () => {
+    const q = searchColumns(base(db), search, ['customers.code', 'customers.name', 'customers.phone', 'customers.email'])
+    if (withLocations === true) hasLocations(q, db)
+    if (withLocations === false) q.whereNot((n) => hasLocations(n, db))
+    if (withOpenOrders === true) hasOpenOrders(q, db)
+    if (withOpenOrders === false) q.whereNot((n) => hasOpenOrders(n, db))
+    return q
+  }
   const [{ count }] = await filtered().count('customers.id as count')
   const rows = await withAuditNames(select(db, filtered()), 'customers')
     .orderBy(paging.column, paging.direction)

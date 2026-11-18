@@ -10,6 +10,9 @@ const idParams = Joi.object({
 const list = listQuery.keys({
   type: Joi.string().valid(...TYPES),
   customer_id: Joi.string().guid(),
+  city: Joi.string().trim().max(80), // kota persis (huruf besar/kecil diabaikan)
+  has_coordinates: Joi.boolean(), // true = sudah punya koordinat (lat dan lng)
+  has_maps_url: Joi.boolean(), // true = sudah punya tautan Google Maps
 })
 
 const fields = {

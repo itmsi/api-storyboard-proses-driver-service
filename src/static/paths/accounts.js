@@ -49,7 +49,23 @@ module.exports = {
       tags: ['Pengguna'],
       summary: 'Daftar driver',
       security: secured,
-      parameters: listParams(['name', 'code', 'created_at', 'last_login_at'], 'Cari nama, kode, atau No. HP (sebagian)'),
+      parameters: [
+        ...listParams(['name', 'code', 'created_at', 'last_login_at', 'license_expires_on'], 'Cari nama, kode, atau No. HP (sebagian)'),
+        {
+          name: 'license_status', in: 'query', description: 'Masa berlaku SIM: expired (sudah lewat), expiring (akan habis dalam expiring_days), valid, unknown (belum diisi)', schema: { type: 'string', enum: ['expired', 'expiring', 'valid', 'unknown'] }
+        },
+        {
+          name: 'expiring_days',
+          in: 'query',
+          description: 'Batas "akan habis" dalam hari (1-365)',
+          schema: {
+            type: 'integer', minimum: 1, maximum: 365, default: 30
+          }
+        },
+        {
+          name: 'has_unit', in: 'query', description: 'true = punya unit bawaan, false = belum', schema: { type: 'boolean' }
+        },
+      ],
       responses: {
         200: jsonResponse('OK', paged('AdminDriver'), '15-accounts/GET.drivers.response.json'),
         ...withValidation,

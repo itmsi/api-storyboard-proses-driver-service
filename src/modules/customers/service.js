@@ -26,7 +26,9 @@ const load = async (db, id) => {
 
 const list = async (db, query) => {
   const paging = pagination.parse(query, SORTABLE, 'name')
-  const { rows, total } = await repo.list(db, { search: query.search, paging })
+  const { rows, total } = await repo.list(db, {
+    search: query.search, hasLocations: query.has_locations, hasOpenOrders: query.has_open_orders, paging,
+  })
   return { data: rows.map(serialize), meta: pagination.meta(paging, total) }
 }
 

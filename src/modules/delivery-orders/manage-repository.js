@@ -26,8 +26,19 @@ const list = async (db, {
   const filtered = () => {
     const q = searchColumns(base(db), search, [
       'delivery_orders.no', 'delivery_orders.cargo_description', 'driver_user.name', 'drivers.code', 'units.plate', 'customers.name',
+      // rute: nama dan kota lokasi asal dan tujuan (salinan di DO)
+      "delivery_orders.origin_snapshot->>'name'", "delivery_orders.origin_snapshot->>'city'",
+      "delivery_orders.destination_snapshot->>'name'", "delivery_orders.destination_snapshot->>'city'",
     ])
-    if (filters.status) q.where('delivery_orders.status', filters.status)
+    if (filters.statuses && filters.statuses.length) q.whereIn('delivery_orders.status', filters.statuses)
+    if (filters.deliveryStatus) q.where('delivery_orders.delivery_status', filters.deliveryStatus)
+    if (filters.originLocationId) q.where('delivery_orders.origin_location_id', filters.originLocationId)
+    if (filters.destinationLocationId) q.where('delivery_orders.destination_location_id', filters.destinationLocationId)
+    if (filters.settlementStatus === 'none') q.whereNotExists(function none() { this.select(db.raw('1')).from('settlements').whereRaw('settlements.delivery_order_id = delivery_orders.id') })
+    if (filters.settlementStatus === 'pending') q.whereExists(function pending() { this.select(db.raw('1')).from('settlements').whereRaw('settlements.delivery_order_id = delivery_orders.id').whereNull('settlements.settled_at') })
+    if (filters.settlementStatus === 'settled') q.whereExists(function settled() { this.select(db.raw('1')).from('settlements').whereRaw('settlements.delivery_order_id = delivery_orders.id').whereNotNull('settlements.settled_at') })
+    if (filters.completedFrom) q.where('delivery_orders.completed_at', '>=', filters.completedFrom)
+    if (filters.completedTo) q.where('delivery_orders.completed_at', '<=', filters.completedTo)
     if (filters.driverId) q.where('delivery_orders.driver_id', filters.driverId)
     if (filters.unitId) q.where('delivery_orders.unit_id', filters.unitId)
     if (filters.customerId) q.where('delivery_orders.customer_id', filters.customerId)

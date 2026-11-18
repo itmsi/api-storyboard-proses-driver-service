@@ -96,7 +96,7 @@ module.exports = {
     label: 'unit',
     base: '/units',
     schemaName: 'AdminUnit',
-    sortValues: ['plate', 'status', 'type', 'year', 'created_at'],
+    sortValues: ['plate', 'status', 'type', 'year', 'created_at', 'stnk_expires_on', 'kir_expires_on'],
     searchHint: 'Cari plat, merek, tipe, atau nomor rangka (VIN)',
     listExtra: [
       { name: 'status', in: 'query', schema: { type: 'string', enum: ['active', 'maintenance', 'inactive'] } },
@@ -105,6 +105,23 @@ module.exports = {
       },
       {
         name: 'driver_id', in: 'query', description: 'Unit yang driver bawaannya driver ini', schema: { type: 'string', format: 'uuid' }
+      },
+      {
+        name: 'has_driver', in: 'query', description: 'true = punya driver bawaan, false = belum', schema: { type: 'boolean' }
+      },
+      {
+        name: 'stnk_status', in: 'query', description: 'Masa berlaku STNK: expired (sudah lewat), expiring (akan habis dalam expiring_days), valid, unknown (belum diisi)', schema: { type: 'string', enum: ['expired', 'expiring', 'valid', 'unknown'] }
+      },
+      {
+        name: 'kir_status', in: 'query', description: 'Masa berlaku KIR, nilai sama dengan stnk_status', schema: { type: 'string', enum: ['expired', 'expiring', 'valid', 'unknown'] }
+      },
+      {
+        name: 'expiring_days',
+        in: 'query',
+        description: 'Batas "akan habis" dalam hari (1-365)',
+        schema: {
+          type: 'integer', minimum: 1, maximum: 365, default: 30
+        }
       },
     ],
     createDesc: 'Plat dinormalisasi ke bentuk baku (`b-9123-kz` menjadi `B 9123 KZ`) dan unik di antara unit aktif walau spasi/huruf besar-kecil berbeda. '
@@ -120,6 +137,14 @@ module.exports = {
     schemaName: 'AdminCustomer',
     sortValues: ['name', 'code', 'created_at'],
     searchHint: 'Cari kode, nama, telepon, atau email',
+    listExtra: [
+      {
+        name: 'has_locations', in: 'query', description: 'true = punya lokasi aktif, false = belum punya', schema: { type: 'boolean' }
+      },
+      {
+        name: 'has_open_orders', in: 'query', description: 'true = punya DO yang belum final, false = tidak', schema: { type: 'boolean' }
+      },
+    ],
     createDesc: '`code` unik di antara data aktif dan tidak bisa diubah setelah dibuat. Email disimpan huruf kecil.',
     deleteDesc: 'Ditolak jika masih punya DO yang belum final, atau masih punya lokasi aktif (hapus lokasinya dulu).',
     deleteGuard: 'Customer masih dipakai DO atau punya lokasi',
@@ -134,6 +159,15 @@ module.exports = {
     listExtra: [
       { name: 'type', in: 'query', schema: { type: 'string', enum: ['warehouse', 'depot', 'customer_site'] } },
       { name: 'customer_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+      {
+        name: 'city', in: 'query', description: 'Kota persis (huruf besar/kecil diabaikan)', schema: { type: 'string', maxLength: 80 }
+      },
+      {
+        name: 'has_coordinates', in: 'query', description: 'true = sudah punya koordinat (lat dan lng)', schema: { type: 'boolean' }
+      },
+      {
+        name: 'has_maps_url', in: 'query', description: 'true = sudah punya tautan Google Maps', schema: { type: 'boolean' }
+      },
     ],
     createDesc: 'Jenis `customer_site` wajib memilih `customer_id`; `warehouse`/`depot` tidak boleh terkait customer. '
       + 'Koordinat (`lat` dan `lng`) boleh kosong, tapi jika diisi harus berpasangan. `geofence_radius_m` default 200.',

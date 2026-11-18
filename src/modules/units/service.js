@@ -1,5 +1,6 @@
 const { auditFields } = require('../../utils/audit')
 const { wibDate } = require('../../utils/date')
+const { addDays } = require('../../utils/expiry')
 const pagination = require('../../utils/pagination')
 const { normalizePlate } = require('../../utils/plate')
 const { fail } = require('../../utils/accounts')
@@ -7,7 +8,13 @@ const master = require('../../utils/master')
 const repo = require('./repository')
 
 const SORTABLE = {
-  plate: 'units.plate', status: 'units.status', created_at: 'units.created_at', year: 'units.year', type: 'units.unit_type',
+  plate: 'units.plate',
+  status: 'units.status',
+  created_at: 'units.created_at',
+  year: 'units.year',
+  type: 'units.unit_type',
+  stnk_expires_on: 'units.stnk_expires_on',
+  kir_expires_on: 'units.kir_expires_on',
 }
 
 const serialize = (row) => {
@@ -83,7 +90,15 @@ const assertNotInUse = async (db, id, action) => {
 const list = async (db, query) => {
   const paging = pagination.parse(query, SORTABLE, 'plate')
   const { rows, total } = await repo.list(db, {
-    search: query.search, status: query.status, unitType: query.unit_type, defaultDriverId: query.driver_id, paging,
+    search: query.search,
+    status: query.status,
+    unitType: query.unit_type,
+    defaultDriverId: query.driver_id,
+    hasDriver: query.has_driver,
+    stnkStatus: query.stnk_status,
+    kirStatus: query.kir_status,
+    dates: { today: wibDate(), soon: addDays(wibDate(), query.expiring_days) },
+    paging,
   })
   return { data: rows.map(serialize), meta: pagination.meta(paging, total) }
 }

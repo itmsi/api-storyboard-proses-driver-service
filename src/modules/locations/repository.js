@@ -28,12 +28,17 @@ const select = (db, query) => query.select(
 )
 
 const list = async (db, {
-  search, type, customerId, paging,
+  search, type, customerId, city, hasCoordinates, hasMapsUrl, paging,
 }) => {
   const filtered = () => {
     const q = searchColumns(base(db), search, ['locations.name', 'locations.address', 'locations.city'])
     if (type) q.where('locations.type', type)
     if (customerId) q.where('locations.customer_id', customerId)
+    if (city) q.whereRaw('lower(locations.city) = ?', [city.toLowerCase()])
+    if (hasCoordinates === true) q.whereNotNull('locations.lat').whereNotNull('locations.lng')
+    if (hasCoordinates === false) q.where((n) => n.whereNull('locations.lat').orWhereNull('locations.lng'))
+    if (hasMapsUrl === true) q.whereRaw("coalesce(locations.maps_url, '') <> ''")
+    if (hasMapsUrl === false) q.whereRaw("coalesce(locations.maps_url, '') = ''")
     return q
   }
   const [{ count }] = await filtered().count('locations.id as count')

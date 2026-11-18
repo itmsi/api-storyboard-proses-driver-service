@@ -43,14 +43,27 @@ const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).custom((value, helpers)
   Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()) ? helpers.error('any.invalid') : value
 )).messages({ 'string.pattern.base': 'Format tanggal harus YYYY-MM-DD.' })
 
+// Kelompok status untuk filter: running = sudah diterima driver dan belum selesai; open = semua yang belum final (termasuk onhold)
+const STATUS_GROUPS = { running: ['accepted', 'loading', 'in_transit', 'handover'], open: ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover'] }
+const statusValue = Joi.string().valid(...STATUSES, ...Object.keys(STATUS_GROUPS))
+const DELIVERY_STATUSES = ['terkirim_lengkap', 'terkirim_catatan', 'gagal_kirim']
+const SETTLEMENT_STATUSES = ['none', 'pending', 'settled']
+
 const list = listQuery.keys({
-  status: Joi.string().valid(...STATUSES),
+  // Satu status, beberapa status (array), atau kelompok (running, open)
+  status: Joi.alternatives().try(statusValue, Joi.array().items(statusValue).min(1).unique()),
   driver_id: Joi.string().guid(),
   unit_id: Joi.string().guid(),
   customer_id: Joi.string().guid(),
+  origin_location_id: Joi.string().guid(),
+  destination_location_id: Joi.string().guid(),
+  delivery_status: Joi.string().valid(...DELIVERY_STATUSES), // hasil serah terima (hanya DO yang sudah diserahterimakan)
+  settlement_status: Joi.string().valid(...SETTLEMENT_STATUSES), // none = belum ada rekap, pending = rekap belum disetor/dibayar, settled = sudah
   needs_review: Joi.boolean(), // hanya DO yang punya bacaan odometer/struk bertanda perlu dilihat (true) atau yang tidak (false)
-  from: date,
+  from: date, // tanggal jadwal muat (WIB)
   to: date,
+  completed_from: date, // tanggal selesai (WIB)
+  completed_to: date,
 })
 
 const cargo = {
@@ -100,5 +113,5 @@ const hold = Joi.object({
 })
 
 module.exports = {
-  list, create, update, hold, cancel, STATUSES,
+  list, create, update, hold, cancel, STATUSES, STATUS_GROUPS, DELIVERY_STATUSES, SETTLEMENT_STATUSES,
 }

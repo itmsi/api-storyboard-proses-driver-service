@@ -77,7 +77,13 @@ const columns = (body) => {
 const list = async (db, query) => {
   const paging = pagination.parse(query, SORTABLE, 'name')
   const { rows, total } = await repo.list(db, {
-    search: query.search, type: query.type, customerId: query.customer_id, paging,
+    search: query.search,
+    type: query.type,
+    customerId: query.customer_id,
+    city: query.city,
+    hasCoordinates: query.has_coordinates,
+    hasMapsUrl: query.has_maps_url,
+    paging,
   })
   return { data: rows.map(serialize), meta: pagination.meta(paging, total) }
 }

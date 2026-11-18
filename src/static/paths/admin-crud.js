@@ -84,6 +84,7 @@ module.exports = {
       requestBody: listBody({
         kind: { type: 'string', example: 'receipt' },
         captured_by: { type: 'string', format: 'uuid' },
+        delivery_order_id: { type: 'string', format: 'uuid', description: 'Foto yang dipakai DO itu: muatan, surat jalan, odometer, struk, tanda tangan, dan foto masalah serah terima' },
         from: dateProp('2026-11-01'),
         to: dateProp('2026-11-30'),
       }),

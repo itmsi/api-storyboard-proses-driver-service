@@ -9,6 +9,7 @@ const { serializeMedia } = require('../media/serializer')
 const unitDay = require('./unit-day')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
+const validation = require('./manage-validation')
 
 // Pengelolaan DO oleh admin: buat, daftar, detail, ubah (hanya saat belum diterima driver), tahan (onhold)/lanjutkan, batalkan.
 
@@ -18,6 +19,11 @@ const SORTABLE = {
   assigned_at: 'delivery_orders.assigned_at',
   status: 'delivery_orders.status',
   created_at: 'delivery_orders.created_at',
+  completed_at: 'delivery_orders.completed_at',
+  started_at: 'delivery_orders.started_at',
+  driver: 'driver_user.name',
+  unit: 'units.plate',
+  customer: 'customers.name',
 }
 
 const DELIVERY_STATUS = { lengkap: 'terkirim_lengkap', masalah: 'terkirim_catatan', gagal_kirim: 'gagal_kirim' }
@@ -272,13 +278,26 @@ const resolveRefs = async (db, data) => {
   }
 }
 
+/** Filter status: satu nilai, array, atau kelompok (running, open) -> daftar status unik. */
+const expandStatuses = (input) => {
+  if (!input) return []
+  const values = Array.isArray(input) ? input : [input]
+  return [...new Set(values.flatMap((v) => validation.STATUS_GROUPS[v] || [v]))]
+}
+
 const list = async (db, query) => {
   const paging = pagination.parse(query, SORTABLE, '-created_at')
   const { rows, total } = await repo.list(db, {
     search: query.search,
     paging,
     filters: {
-      status: query.status,
+      statuses: expandStatuses(query.status),
+      deliveryStatus: query.delivery_status,
+      settlementStatus: query.settlement_status,
+      originLocationId: query.origin_location_id,
+      destinationLocationId: query.destination_location_id,
+      completedFrom: query.completed_from ? new Date(`${query.completed_from}T00:00:00+07:00`) : null,
+      completedTo: query.completed_to ? new Date(`${query.completed_to}T23:59:59.999+07:00`) : null,
       driverId: query.driver_id,
       unitId: query.unit_id,
       customerId: query.customer_id,

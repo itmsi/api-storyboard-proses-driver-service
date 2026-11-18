@@ -1,5 +1,6 @@
 const Joi = require('joi')
 const { listQuery } = require('../../utils/pagination')
+const { expiryStatus, expiringDays } = require('../../utils/expiry')
 
 const STATUSES = ['active', 'maintenance', 'inactive']
 
@@ -11,6 +12,10 @@ const list = listQuery.keys({
   status: Joi.string().valid(...STATUSES),
   unit_type: Joi.string().trim().max(40),
   driver_id: Joi.string().guid(),
+  has_driver: Joi.boolean(), // true = punya driver bawaan, false = belum
+  stnk_status: expiryStatus, // masa berlaku STNK: expired | expiring | valid | unknown
+  kir_status: expiryStatus, // masa berlaku KIR
+  expiring_days: expiringDays, // batas 'expiring': hari ke depan (bawaan 30)
 })
 
 const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).allow(null)

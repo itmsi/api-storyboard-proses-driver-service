@@ -1,5 +1,6 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
+const { applyExpiry } = require('../../utils/expiry')
 const { holdsOnDateSql, doWorkDateSql } = require('../../utils/master')
 
 // Satu driver = baris users (login) + baris drivers (profil kerja). id yang dipakai di API = drivers.id.
@@ -45,13 +46,16 @@ const select = (db, query) => query.select(
 )
 
 const list = async (db, {
-  today, search, status, roleId, paging,
+  today, search, status, roleId, licenseStatus, hasUnit, dates, paging,
 }) => {
   const filtered = () => {
     const q = base(db, today)
     searchColumns(q, search, ['users.name', 'drivers.code', 'users.phone'])
     if (status) q.where('users.status', status)
     if (roleId) q.where('users.role_id', roleId)
+    if (hasUnit === true) q.whereNotNull('default_unit.id')
+    if (hasUnit === false) q.whereNull('default_unit.id')
+    applyExpiry(q, 'drivers.license_expires_on', licenseStatus, dates)
     return q
   }
   const [{ count }] = await filtered().count('drivers.id as count')

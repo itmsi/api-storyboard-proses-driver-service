@@ -1,6 +1,7 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
 const { OPEN_DO_STATUSES } = require('../../utils/master')
+const { applyExpiry } = require('../../utils/expiry')
 
 const base = (db) => db('units')
   .leftJoin('drivers as default_driver', 'default_driver.id', 'units.driver_id')
@@ -29,13 +30,17 @@ const select = (db, query) => query.select(
 )
 
 const list = async (db, {
-  search, status, unitType, defaultDriverId, paging,
+  search, status, unitType, defaultDriverId, hasDriver, stnkStatus, kirStatus, dates, paging,
 }) => {
   const filtered = () => {
     const q = searchColumns(base(db), search, ['units.plate', 'units.brand', 'units.vin_number', 'units.unit_type'])
     if (status) q.where('units.status', status)
     if (unitType) q.whereRaw('lower(units.unit_type) = ?', [unitType.toLowerCase()])
     if (defaultDriverId) q.where('units.driver_id', defaultDriverId)
+    if (hasDriver === true) q.whereNotNull('units.driver_id')
+    if (hasDriver === false) q.whereNull('units.driver_id')
+    applyExpiry(q, 'units.stnk_expires_on', stnkStatus, dates)
+    applyExpiry(q, 'units.kir_expires_on', kirStatus, dates)
     return q
   }
   const [{ count }] = await filtered().count('units.id as count')
