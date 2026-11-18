@@ -25,6 +25,7 @@ module.exports = {
       description: [
         'Nomor DO otomatis: `document_prefix` dari pengaturan (`PUT /settings`, default `DO-`) + `document_number` auto increment (min. 4 digit), mis. `DO-0145`; hasilnya di `no`. Alamat asal dan tujuan **disalin** ke DO, jadi mengubah lokasi master tidak mengubah DO.',
         '`customer_id` boleh dikosongkan (diturunkan dari lokasi tujuan). Driver harus aktif dan unit harus berstatus `active`.',
+        '`customer_reference_no` opsional: nomor referensi dari customer (mis. no PO), teks bebas maks. 100 karakter; ikut dicari lewat `search` di daftar DO.',
         'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
         'Muatan opsional: `cargo_type` (jenis, mis. `Container`) dan `cargo_details` berisi rincian bebas `[{ label, value }]` (maks. 50), mis. no container, no seal, keterangan.',
         '**Unit driver pada tanggal itu mengikuti DO ini** (tanpa penugasan terpisah): driver langsung bisa P2H di unit DO untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini). Hasilnya ada di `unit_assignment` (`work_date`, `source`: `default` = driver bawaan unit, `override` = driver/unit pengganti); detail DO juga selalu memuatnya. Bila tanggal muat sudah lewat, bentrok tidak diperiksa. DO yang sudah diterima dan masih berjalan dari tanggal sebelumnya tetap menahan unitnya.',

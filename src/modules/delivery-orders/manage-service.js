@@ -59,6 +59,7 @@ const serializeListItem = (row) => ({
     source: row.unit_default_driver_id === row.driver_id ? 'default' : 'override',
   },
   customer: row.customer_id ? { id: row.customer_id, name: row.customer_name } : null,
+  customer_reference_no: row.customer_reference_no ?? null,
   route: routeLabel(row),
   origin: { name: row.origin_snapshot.name, city: row.origin_snapshot.city || null, maps_url: mapsUrlFor(row.origin_snapshot) },
   destination: { name: row.destination_snapshot.name, city: row.destination_snapshot.city || null, maps_url: mapsUrlFor(row.destination_snapshot) },
@@ -391,6 +392,7 @@ const create = async (db, admin, body) => {
     const created = await repo.insert(trx, {
       document_prefix: settings.document_prefix,
       customer_id: refs.customerId,
+      customer_reference_no: body.customer_reference_no || null,
       driver_id: body.driver_id,
       unit_id: body.unit_id,
       origin_location_id: body.origin_location_id,
@@ -466,6 +468,7 @@ const update = async (db, admin, id, body) => {
   })
   if (body.origin_location_id !== undefined) fields.origin_snapshot = snapshotOrigin(refs.origin)
   if (destinationChanged) fields.destination_snapshot = snapshotDestination(refs.destination)
+  if (body.customer_reference_no !== undefined) fields.customer_reference_no = body.customer_reference_no || null
   Object.assign(fields, cargo.toColumns(body))
 
   await db.transaction(async (trx) => {

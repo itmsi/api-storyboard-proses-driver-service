@@ -301,6 +301,7 @@ CREATE TABLE delivery_orders (
   destination_snapshot     jsonb NOT NULL,         -- {name,city,address,lat,lng,operating_hours,pic:{name,phone}}
   planned_load_at          timestamptz,
 
+  customer_reference_no    text,                   -- no PO / referensi dari customer (opsional)
   cargo_type               text,                   -- Container, Palet (opsional)
   cargo_details            jsonb,                  -- [{label,value}], mis. [{"label":"No container","value":"234242"}]
   estimated_distance_km    numeric(8, 1),

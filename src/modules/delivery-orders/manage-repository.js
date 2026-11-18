@@ -26,7 +26,7 @@ const list = async (db, {
 }) => {
   const filtered = () => {
     const q = searchColumns(base(db), search, [
-      'delivery_orders.no', cargo.SEARCH_SQL, 'driver_user.name', 'drivers.code', 'units.plate', 'customers.name',
+      'delivery_orders.no', 'delivery_orders.customer_reference_no', cargo.SEARCH_SQL, 'driver_user.name', 'drivers.code', 'units.plate', 'customers.name',
       // rute: nama dan kota lokasi asal dan tujuan (salinan di DO)
       "delivery_orders.origin_snapshot->>'name'", "delivery_orders.origin_snapshot->>'city'",
       "delivery_orders.destination_snapshot->>'name'", "delivery_orders.destination_snapshot->>'city'",

@@ -69,6 +69,8 @@ const list = listQuery.keys({
 
 const fields = {
   customer_id: Joi.string().guid().allow(null),
+  // Nomor referensi dari customer, mis. no PO (opsional)
+  customer_reference_no: Joi.string().trim().max(100).allow(null, ''),
   driver_id: Joi.string().guid(),
   unit_id: Joi.string().guid(),
   origin_location_id: Joi.string().guid(),

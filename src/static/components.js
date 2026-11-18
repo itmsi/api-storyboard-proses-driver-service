@@ -1154,6 +1154,7 @@ const schemas = {
       source: enumOf(['default', 'override'], 'override', { description: 'default = driver adalah driver bawaan unit; override = driver atau unit pengganti' }),
     }, undefined, { description: 'Unit driver pada tanggal kerja DO ini. Ada di daftar, detail, dan respons buat/ubah/lanjutkan. Tidak ada tabel penugasan terpisah: unit driver per hari dibaca dari DO dan driver bawaan unit.' }),
     customer: nullable(obj({ id: str('6a1d4e72-8b35-4c09-9f27-0e5b3d8a1c64'), name: str('PT Contoh Jaya') })),
+    customer_reference_no: nullable(str('PO-2026-00123', { description: 'Nomor referensi dari customer (mis. no PO); null bila tidak diisi' })),
     route: str('Cakung → PT Contoh Jaya, Karawang'),
     origin: obj({ name: str('Gudang Cakung'), city: nullable(str('Cakung')), maps_url: nullable(str('https://maps.app.goo.gl/AbCdEf123', { description: 'Tautan Google Maps: maps_url lokasi bila diisi admin, kalau kosong dibuat dari koordinat, null bila koordinat juga kosong' })) }),
     destination: obj({ name: str('PT Contoh Jaya'), city: nullable(str('Karawang')), maps_url: nullable(str('https://maps.google.com/?q=-6.30,107.29', { description: 'Tautan Google Maps: maps_url lokasi bila diisi admin, kalau kosong dibuat dari koordinat, null bila koordinat juga kosong' })) }),
@@ -1331,6 +1332,7 @@ const schemas = {
     customer_id: nullable(str('6a1d4e72-8b35-4c09-9f27-0e5b3d8a1c64', {
       description: 'Boleh dikosongkan: diturunkan dari lokasi tujuan. Jika diisi harus sesuai customer lokasi tujuan',
     })),
+    customer_reference_no: nullable(str('PO-2026-00123', { maxLength: 100, description: 'Opsional. Nomor referensi dari customer (mis. no PO). "" atau null = dikosongkan' })),
     planned_load_at: nullable(dt('2026-11-05T13:00:00+07:00')),
     cargo_type: ref('CargoTypeInput'),
     cargo_details: ref('CargoDetailsInput'),
@@ -1343,6 +1345,7 @@ const schemas = {
     origin_location_id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a22'),
     destination_location_id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a23', { description: 'Mengganti tujuan memperbarui salinan alamat dan menurunkan ulang customer' }),
     customer_id: nullable(str('6a1d4e72-8b35-4c09-9f27-0e5b3d8a1c64')),
+    customer_reference_no: nullable(str('PO-2026-00123', { maxLength: 100, description: 'Opsional. "" atau null = dikosongkan' })),
     planned_load_at: nullable(dt('2026-11-05T13:00:00+07:00')),
     cargo_type: ref('CargoTypeInput'),
     cargo_details: { ...ref('CargoDetailsInput'), description: 'Dikirim = mengganti SELURUH rincian (bukan digabung); null atau [] = dikosongkan' },
