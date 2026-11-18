@@ -350,6 +350,30 @@ const schemas = {
   }),
 
   // ---------- Delivery Order ----------
+  // ---------- Muatan DO ----------
+  CargoDetail: obj({
+    label: str('No container', { maxLength: 100 }),
+    value: str('234242', { maxLength: 500, description: 'Teks; angka yang dikirim disimpan sebagai teks' }),
+  }, ['label', 'value']),
+  CargoType: nullable(str('Container', { description: 'Jenis muatan (teks bebas); null bila tidak diisi' })),
+  CargoDetails: arr(ref('CargoDetail'), {
+    description: 'Rincian muatan, urut sesuai input. Selalu array (kosong bila tidak diisi).',
+    example: [
+      { label: 'No container', value: '234242' },
+      { label: 'No seal', value: '234234' },
+      { label: 'Keterangan', value: 'Barang mudah pecah' },
+    ],
+  }),
+  CargoTypeInput: nullable(str('Container', { maxLength: 100, description: 'Opsional. "" atau null = dikosongkan' })),
+  CargoDetailsInput: nullable(arr(ref('CargoDetail'), {
+    maxItems: 50,
+    description: 'Opsional. Rincian bebas berupa pasangan label dan value (maks. 50). null atau [] = tanpa rincian.',
+    example: [
+      { label: 'No container', value: '234242' },
+      { label: 'No seal', value: '234234' },
+      { label: 'Keterangan', value: 'Barang mudah pecah' },
+    ],
+  })),
   DeliveryOrder: obj({
     id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
     no: str('DO-0144'),
@@ -370,7 +394,8 @@ const schemas = {
       pic: obj({ name: str('[NAMA PIC]'), phone: str('[NO_HP_PIC]') }),
       maps_url: nullable(str('https://maps.google.com/?q=-6.30,107.29', { description: 'Tautan Google Maps: maps_url lokasi bila diisi admin, kalau kosong dibuat dari koordinat, null bila koordinat juga kosong' })),
     }),
-    cargo: obj({ description: str('4 palet'), quantity: num(4), unit: str('palet') }),
+    cargo_type: ref('CargoType'),
+    cargo_details: ref('CargoDetails'),
     estimated_distance_km: num(70),
     travel_allowance: obj({
       amount: money(600000), currency: str('IDR'), received_confirmed: bool(false),
@@ -1039,6 +1064,7 @@ const schemas = {
     id: str('6a1d4e72-8b35-4c09-9f27-0e5b3d8a1c64'),
     code: str('CUST-001'),
     name: str('PT Contoh Jaya'),
+    nomor_customer: nullable(str('NC-001')),
     phone: nullable(str('021-5550100')),
     email: nullable(str('info@contohjaya.co.id')),
     location_count: int(2, { description: 'Jumlah lokasi aktif milik customer ini' }),
@@ -1047,10 +1073,16 @@ const schemas = {
   AdminCustomerCreate: obj({
     code: str('CUST-001', { description: 'Huruf besar/angka/`_`/`-` (2-30), unik, tidak bisa diubah' }),
     name: str('PT Contoh Jaya'),
+    nomor_customer: nullable(str('NC-001', { description: 'Nomor customer opsional' })),
     phone: nullable(str('021-5550100')),
     email: nullable(str('info@contohjaya.co.id')),
   }, ['code', 'name']),
-  AdminCustomerUpdate: obj({ name: str('PT Contoh Jaya'), phone: nullable(str('021-5550100')), email: nullable(str('info@contohjaya.co.id')) }),
+  AdminCustomerUpdate: obj({
+    name: str('PT Contoh Jaya'),
+    nomor_customer: nullable(str('NC-001', { description: 'Kirim null untuk mengosongkan' })),
+    phone: nullable(str('021-5550100')),
+    email: nullable(str('info@contohjaya.co.id')),
+  }),
   AdminLocation: obj({
     id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a22'),
     type: enumOf(['warehouse', 'depot', 'customer_site']),
@@ -1112,7 +1144,8 @@ const schemas = {
     destination: obj({ name: str('PT Contoh Jaya'), city: nullable(str('Karawang')), maps_url: nullable(str('https://maps.google.com/?q=-6.30,107.29', { description: 'Tautan Google Maps: maps_url lokasi bila diisi admin, kalau kosong dibuat dari koordinat, null bila koordinat juga kosong' })) }),
     planned_load_at: nullable(dt('2026-11-05T13:00:00+07:00')),
     assigned_at: dt('2026-11-05T06:55:00+07:00'),
-    cargo: obj({ description: str('4 palet'), quantity: num(4), unit: str('palet') }),
+    cargo_type: ref('CargoType'),
+    cargo_details: ref('CargoDetails'),
     estimated_distance_km: nullable(num(70)),
     travel_allowance_amount: money(600000),
     expense_total: money(263500),
@@ -1284,10 +1317,11 @@ const schemas = {
       description: 'Boleh dikosongkan: diturunkan dari lokasi tujuan. Jika diisi harus sesuai customer lokasi tujuan',
     })),
     planned_load_at: nullable(dt('2026-11-05T13:00:00+07:00')),
-    cargo: obj({ description: str('4 palet'), quantity: num(4), unit: str('palet') }, ['description', 'quantity', 'unit']),
+    cargo_type: ref('CargoTypeInput'),
+    cargo_details: ref('CargoDetailsInput'),
     estimated_distance_km: nullable(num(70)),
     travel_allowance_amount: money(600000),
-  }, ['driver_id', 'unit_id', 'origin_location_id', 'destination_location_id', 'cargo']),
+  }, ['driver_id', 'unit_id', 'origin_location_id', 'destination_location_id']),
   AdminDeliveryOrderUpdate: obj({
     driver_id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'),
     unit_id: str('fc06e493-e9c6-429b-9529-bc07084818ee'),
@@ -1295,7 +1329,8 @@ const schemas = {
     destination_location_id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a23', { description: 'Mengganti tujuan memperbarui salinan alamat dan menurunkan ulang customer' }),
     customer_id: nullable(str('6a1d4e72-8b35-4c09-9f27-0e5b3d8a1c64')),
     planned_load_at: nullable(dt('2026-11-05T13:00:00+07:00')),
-    cargo: obj({ description: str('4 palet'), quantity: num(4), unit: str('palet') }, undefined, { description: 'Boleh sebagian (mis. hanya quantity)' }),
+    cargo_type: ref('CargoTypeInput'),
+    cargo_details: { ...ref('CargoDetailsInput'), description: 'Dikirim = mengganti SELURUH rincian (bukan digabung); null atau [] = dikosongkan' },
     estimated_distance_km: nullable(num(70)),
     travel_allowance_amount: money(600000),
   }),

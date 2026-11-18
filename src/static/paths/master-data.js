@@ -135,8 +135,8 @@ module.exports = {
     label: 'customer',
     base: '/customers',
     schemaName: 'AdminCustomer',
-    sortValues: ['name', 'code', 'created_at'],
-    searchHint: 'Cari kode, nama, telepon, atau email',
+    sortValues: ['name', 'code', 'nomor_customer', 'created_at'],
+    searchHint: 'Cari kode, nama, nomor customer, telepon, atau email',
     listExtra: [
       {
         name: 'has_locations', in: 'query', description: 'true = punya lokasi aktif, false = belum punya', schema: { type: 'boolean' }

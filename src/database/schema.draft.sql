@@ -299,9 +299,8 @@ CREATE TABLE delivery_orders (
   destination_snapshot     jsonb NOT NULL,         -- {name,city,address,lat,lng,operating_hours,pic:{name,phone}}
   planned_load_at          timestamptz,
 
-  cargo_description        text NOT NULL,          -- 4 palet
-  cargo_quantity           numeric(12, 2) NOT NULL,
-  cargo_unit               text NOT NULL,          -- palet
+  cargo_type               text,                   -- Container, Palet (opsional)
+  cargo_details            jsonb,                  -- [{label,value}], mis. [{"label":"No container","value":"234242"}]
   estimated_distance_km    numeric(8, 1),
 
   travel_allowance_amount  bigint NOT NULL DEFAULT 0 CHECK (travel_allowance_amount >= 0),

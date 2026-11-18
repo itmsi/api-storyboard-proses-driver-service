@@ -5,13 +5,14 @@ const master = require('../../utils/master')
 const repo = require('./repository')
 
 const SORTABLE = {
-  name: 'customers.name', code: 'customers.code', created_at: 'customers.created_at',
+  name: 'customers.name', code: 'customers.code', nomor_customer: 'customers.nomor_customer', created_at: 'customers.created_at',
 }
 
 const serialize = (row) => ({
   id: row.id,
   code: row.code,
   name: row.name,
+  nomor_customer: row.nomor_customer ?? null,
   phone: row.phone,
   email: row.email,
   location_count: Number(row.location_count),
@@ -39,6 +40,7 @@ const create = async (db, admin, body) => {
   const id = await repo.insert(db, {
     code: body.code,
     name: body.name,
+    nomor_customer: body.nomor_customer || null,
     phone: body.phone || null,
     email: body.email ? body.email.toLowerCase() : null,
     created_by: admin.id,
@@ -51,6 +53,7 @@ const update = async (db, admin, id, body) => {
   await load(db, id)
   const fields = { updated_by: admin.id }
   if (body.name !== undefined) fields.name = body.name
+  if (body.nomor_customer !== undefined) fields.nomor_customer = body.nomor_customer || null
   if (body.phone !== undefined) fields.phone = body.phone || null
   if (body.email !== undefined) fields.email = body.email ? body.email.toLowerCase() : null
   await repo.update(db, id, fields)

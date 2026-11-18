@@ -58,9 +58,6 @@ const create = async (db, auth, id, body) => {
     links.push({ media_id: body.receiver.signature_media_id, purpose: 'signature' })
 
     if (condition === 'masalah') {
-      if (body.received_quantity > Number(row.cargo_quantity)) {
-        throw invalid('received_quantity', `Jumlah diterima tidak boleh melebihi jumlah DO (${Number(row.cargo_quantity)}).`)
-      }
       if (body.receiver.acknowledges_issues === undefined) {
         throw invalid('receiver.acknowledges_issues', 'Penerima harus menyatakan mengakui/tidak mengakui masalah.')
       }

@@ -1,5 +1,6 @@
 const Joi = require('joi')
 const { listQuery } = require('../../utils/pagination')
+const cargo = require('./cargo')
 
 // Validasi pengelolaan DO oleh admin (buat, daftar, ubah, batalkan). Validasi untuk driver ada di validation.js.
 
@@ -66,12 +67,6 @@ const list = listQuery.keys({
   completed_to: date,
 })
 
-const cargo = {
-  description: Joi.string().trim().min(1).max(200),
-  quantity: Joi.number().positive().max(1000000),
-  unit: Joi.string().trim().min(1).max(30),
-}
-
 const fields = {
   customer_id: Joi.string().guid().allow(null),
   driver_id: Joi.string().guid(),
@@ -81,6 +76,8 @@ const fields = {
   planned_load_at: Joi.date().iso().allow(null),
   estimated_distance_km: Joi.number().min(0).max(100000).allow(null),
   travel_allowance_amount: Joi.number().integer().min(0).max(1000000000),
+  // Muatan (opsional): jenis + rincian bebas [{ label, value }]
+  ...cargo.schema,
 }
 
 const create = Joi.object({
@@ -89,17 +86,11 @@ const create = Joi.object({
   unit_id: fields.unit_id.required(),
   origin_location_id: fields.origin_location_id.required(),
   destination_location_id: fields.destination_location_id.required(),
-  cargo: Joi.object({
-    description: cargo.description.required(),
-    quantity: cargo.quantity.required(),
-    unit: cargo.unit.required(),
-  }).required(),
 })
 
-// Parsial: hanya field yang dikirim yang berubah (cargo juga boleh sebagian)
+// Parsial: hanya field yang dikirim yang berubah. cargo_details dikirim = diganti seluruhnya; null / [] = dikosongkan.
 const update = Joi.object({
   ...fields,
-  cargo: Joi.object(cargo).min(1),
 }).min(1)
 
 const cancel = Joi.object({

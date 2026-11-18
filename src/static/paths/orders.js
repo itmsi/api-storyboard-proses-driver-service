@@ -26,6 +26,7 @@ module.exports = {
         'Nomor DO otomatis (`DO-0001`, …). Alamat asal dan tujuan **disalin** ke DO, jadi mengubah lokasi master tidak mengubah DO.',
         '`customer_id` boleh dikosongkan (diturunkan dari lokasi tujuan). Driver harus aktif dan unit harus berstatus `active`.',
         'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
+        'Muatan opsional: `cargo_type` (jenis, mis. `Container`) dan `cargo_details` berisi rincian bebas `[{ label, value }]` (maks. 50), mis. no container, no seal, keterangan.',
         '**Unit driver pada tanggal itu mengikuti DO ini** (tanpa penugasan terpisah): driver langsung bisa P2H di unit DO untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini). Hasilnya ada di `unit_assignment` (`work_date`, `source`: `default` = driver bawaan unit, `override` = driver/unit pengganti); detail DO juga selalu memuatnya. Bila tanggal muat sudah lewat, bentrok tidak diperiksa. DO yang sudah diterima dan masih berjalan dari tanggal sebelumnya tetap menahan unitnya.',
         '**Satu driver satu unit per tanggal** (tanggal `planned_load_at` WIB; tanpa rencana muat = tanggal penugasan): driver yang sudah punya DO `assigned`/berjalan/selesai dengan unit **berbeda** pada tanggal itu ditolak 409 `CONFLICT` reason `driver_beda_unit_tanggal_sama` (`details.conflicting_orders`, `can_hold`). Unit sama = boleh. Bila DO lama masih `assigned`, ubah dulu ke `onhold` (`POST /delivery-orders/{id}/hold`), lalu DO baru bisa di-assign. DO `onhold`/`cancelled` tidak dihitung.',
         'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `driver_beda_unit_tanggal_sama` (lihat di atas) atau `unit_sudah_ditugaskan` (unit itu sudah dipegang DO driver lain pada tanggal itu; `details.order` dan `details.driver` = pemegangnya).',
@@ -46,7 +47,7 @@ module.exports = {
       tags: ['Delivery Order'],
       summary: 'Ubah DO (admin)',
       description: [
-        'Hanya saat DO masih `assigned` (belum diterima driver). DO `onhold` harus dilanjutkan dulu (resume). Kirim hanya field yang ingin diubah; `cargo` juga boleh sebagian.',
+        'Hanya saat DO masih `assigned` (belum diterima driver). DO `onhold` harus dilanjutkan dulu (resume). Kirim hanya field yang ingin diubah. `cargo_details` yang dikirim mengganti seluruh rincian lama; `null` atau `[]` mengosongkannya.',
         'Sesudah diterima, data DO adalah bukti kerja driver: koreksinya lewat pembatalan lalu pembuatan DO baru (409 `INVALID_STATE`).',
         'DO selesai: 409 `DO_LOCKED`. DO dibatalkan: 409 `DO_CANCELLED`.',
         'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, kombinasi barunya diperiksa (respons memuat `unit_assignment`). Bentrok = 409 seperti pada pembuatan DO (termasuk `driver_beda_unit_tanggal_sama`) dan DO tidak berubah.',

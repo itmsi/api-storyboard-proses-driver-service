@@ -12,6 +12,7 @@ const list = listQuery.keys({
 
 const fields = {
   name: Joi.string().trim().min(2).max(120),
+  nomor_customer: Joi.string().trim().max(50).allow(null, ''), // opsional; "" / null = dikosongkan
   phone: Joi.string().trim().max(30).allow(null, ''),
   email: Joi.string().trim().email().max(150)
     .allow(null, ''),

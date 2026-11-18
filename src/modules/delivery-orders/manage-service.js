@@ -9,6 +9,7 @@ const { serializeMedia } = require('../media/serializer')
 const unitDay = require('./unit-day')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
+const cargo = require('./cargo')
 const validation = require('./manage-validation')
 
 // Pengelolaan DO oleh admin: buat, daftar, detail, ubah (hanya saat belum diterima driver), tahan (onhold)/lanjutkan, batalkan.
@@ -60,7 +61,7 @@ const serializeListItem = (row) => ({
   destination: { name: row.destination_snapshot.name, city: row.destination_snapshot.city || null, maps_url: mapsUrlFor(row.destination_snapshot) },
   planned_load_at: toWib(row.planned_load_at),
   assigned_at: toWib(row.assigned_at),
-  cargo: { description: row.cargo_description, quantity: num(row.cargo_quantity), unit: row.cargo_unit },
+  ...cargo.serialize(row),
   estimated_distance_km: num(row.estimated_distance_km),
   travel_allowance_amount: num(row.travel_allowance_amount),
   expense_total: num(row.expense_total),
@@ -394,9 +395,9 @@ const create = async (db, admin, body) => {
       destination_location_id: body.destination_location_id,
       destination_snapshot: snapshotDestination(refs.destination),
       planned_load_at: body.planned_load_at || null,
-      cargo_description: body.cargo.description,
-      cargo_quantity: body.cargo.quantity,
-      cargo_unit: body.cargo.unit,
+      cargo_type: null,
+      cargo_details: null,
+      ...cargo.toColumns(body),
       estimated_distance_km: body.estimated_distance_km ?? null,
       travel_allowance_amount: body.travel_allowance_amount ?? 0,
       assigned_by: admin.id,
@@ -444,7 +445,6 @@ const update = async (db, admin, id, body) => {
   }
 
   const destinationChanged = body.destination_location_id !== undefined
-  const cargo = body.cargo || {}
   const merged = {
     driver_id: body.driver_id ?? row.driver_id,
     unit_id: body.unit_id ?? row.unit_id,
@@ -463,9 +463,7 @@ const update = async (db, admin, id, body) => {
   })
   if (body.origin_location_id !== undefined) fields.origin_snapshot = snapshotOrigin(refs.origin)
   if (destinationChanged) fields.destination_snapshot = snapshotDestination(refs.destination)
-  if (cargo.description !== undefined) fields.cargo_description = cargo.description
-  if (cargo.quantity !== undefined) fields.cargo_quantity = cargo.quantity
-  if (cargo.unit !== undefined) fields.cargo_unit = cargo.unit
+  Object.assign(fields, cargo.toColumns(body))
 
   await db.transaction(async (trx) => {
     // Driver, unit, atau tanggal muat berubah: periksa kombinasi barunya
