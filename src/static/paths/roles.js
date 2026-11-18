@@ -31,7 +31,7 @@ module.exports = {
     post: {
       tags: [TAG],
       summary: 'Daftar role',
-      description: 'Urut: `name` (default), `code`, `created_at`. Filter: `is_active`, `user_type` (`admin` atau `driver`), `search` (nama atau kode).',
+      description: 'Kolom urut (`sort`): `name` (default), `code`, `created_at`; arah urut lewat `sort_by` (DESC default / ASC). Filter: `is_active`, `user_type` (`admin` atau `driver`), `search` (nama atau kode).',
       security: secured,
       requestBody: jsonBody({
         type: 'object',

@@ -55,7 +55,7 @@ const isListBody = (schema) => Boolean(schema && schema.properties && schema.pro
 /** Contoh bernama untuk body daftar. */
 const listExamples = (schema, exampleOf) => {
   const props = schema.properties
-  const filters = Object.entries(props).filter(([key]) => !['page', 'limit', 'search', 'sort'].includes(key))
+  const filters = Object.entries(props).filter(([key]) => !['page', 'limit', 'search', 'sort', 'sort_by'].includes(key))
   const withFilters = {
     page: 1, limit: 20, ...(props.search ? { search: props.search.example || 'cari' } : {}),
   }
@@ -63,7 +63,12 @@ const listExamples = (schema, exampleOf) => {
     const value = exampleOf(prop)
     if (value !== undefined) withFilters[key] = value
   })
-  const paged = { page: 1, limit: 20, ...(props.sort && props.sort.example ? { sort: props.sort.example } : {}) }
+  const paged = {
+    page: 1,
+    limit: 20,
+    ...(props.sort && props.sort.example ? { sort: String(props.sort.example).replace(/^-/, '') } : {}),
+    ...(props.sort_by ? { sort_by: 'ASC' } : {}),
+  }
   return {
     'Semua data': { summary: 'Tanpa filter (body boleh kosong)', value: {} },
     'Halaman dan urutan': { summary: 'Paginasi dan urutan', value: paged },

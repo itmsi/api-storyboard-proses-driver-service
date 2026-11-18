@@ -102,9 +102,9 @@ Assign unit (admin) ──> P2H unit (driver) ──> Terima DO (driver) ──>
 - **`client_ref`**: UUID v4 yang dibuat HP untuk satu aksi driver. Mengirim ulang aksi yang sama (misal jaringan putus) aman: server mengenali `client_ref` yang sama dan tidak membuat data ganda.
 - **Daftar data** memakai `POST /<modul>/get` dengan filter di body (semua field opsional, body boleh `{}`):
   ```json
-  { "page": 1, "limit": 20, "search": "budi", "sort": "-created_at" }
+  { "page": 1, "limit": 20, "search": "budi", "sort": "created_at", "sort_by": "DESC" }
   ```
-  `limit` maksimal 100. Awalan `-` pada `sort` = urutan menurun. Respons:
+  `limit` maksimal 100. `sort` = kolom urut, `sort_by` = arah urut: `DESC` (descending, default) atau `ASC` (ascending). Respons:
   ```json
   { "success": true, "data": [ ... ], "meta": { "page": 1, "limit": 20, "total": 57, "total_pages": 3 } }
   ```

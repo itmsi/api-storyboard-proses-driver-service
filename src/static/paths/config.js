@@ -45,7 +45,7 @@ module.exports = {
       tags: ['Konfigurasi'],
       summary: 'Daftar item checklist P2H',
       security: secured,
-      parameters: listParams('sort_order (default), label, code, created_at; awalan `-` = menurun'),
+      parameters: listParams('Kolom urut: sort_order (default), label, code, created_at. Arah urut lewat `sort_by` (DESC default / ASC).'),
       responses: { 200: jsonResponse('OK', paged('AdminP2HItem')), ...withValidation },
     },
     post: {
@@ -102,7 +102,7 @@ module.exports = {
       tags: ['Konfigurasi'],
       summary: 'Daftar kategori biaya',
       security: secured,
-      parameters: listParams('sort_order (default), label, code, created_at; awalan `-` = menurun'),
+      parameters: listParams('Kolom urut: sort_order (default), label, code, created_at. Arah urut lewat `sort_by` (DESC default / ASC).'),
       responses: { 200: jsonResponse('OK', paged('AdminExpenseCategory')), ...withValidation },
     },
     post: {

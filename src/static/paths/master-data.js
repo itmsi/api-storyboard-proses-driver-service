@@ -6,7 +6,7 @@ const idPath = [{
   name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }
 }]
 
-// Parameter daftar standar: ?page=&limit=&search=&sort=
+// Parameter daftar standar: page, limit, search, sort, sort_by (sort_by disisipkan di src/static/index.js)
 const listParams = (sortValues, searchHint, extra = []) => [
   { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
   {
@@ -22,7 +22,7 @@ const listParams = (sortValues, searchHint, extra = []) => [
   {
     name: 'sort',
     in: 'query',
-    description: `Kolom urut: ${sortValues.join(', ')}. Awalan \`-\` = menurun (mis. \`-name\`). Nilai lain diabaikan.`,
+    description: `Kolom urut: ${sortValues.join(', ')} (default ${sortValues[0]}). Arah urut lewat \`sort_by\` (DESC default / ASC). Nilai lain diabaikan.`,
     schema: { type: 'string', example: sortValues[0] },
   },
   ...extra,

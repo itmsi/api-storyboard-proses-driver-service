@@ -80,7 +80,7 @@ module.exports = {
           name: 'search', in: 'query', description: 'Cari nomor DO, keterangan, jenis BBM, atau driver', schema: { type: 'string' }
         },
         {
-          name: 'sort', in: 'query', description: 'recorded_at (default, menurun), amount, category, created_at; awalan `-` = menurun', schema: { type: 'string', example: '-recorded_at' }
+          name: 'sort', in: 'query', description: 'Kolom urut: recorded_at (default), amount, category, created_at. Arah urut lewat `sort_by` (DESC default / ASC).', schema: { type: 'string', example: 'recorded_at' }
         },
       ],
       responses: { 200: jsonResponse('OK', envelope({ type: 'array', items: ref('AdminExpense') }, ref('PageMeta'))), ...withValidation },
@@ -136,7 +136,7 @@ module.exports = {
           name: 'search', in: 'query', description: 'Cari nomor DO, driver, atau plat', schema: { type: 'string' }
         },
         {
-          name: 'sort', in: 'query', description: 'completed_at (default, menurun), amount, type, do; awalan `-` = menurun', schema: { type: 'string', example: '-completed_at' }
+          name: 'sort', in: 'query', description: 'Kolom urut: completed_at (default), amount, type, do. Arah urut lewat `sort_by` (DESC default / ASC).', schema: { type: 'string', example: 'completed_at' }
         },
       ],
       responses: { 200: jsonResponse('OK', envelope({ type: 'array', items: ref('AdminSettlement') }, ref('SettlementListMeta'))), ...withValidation },

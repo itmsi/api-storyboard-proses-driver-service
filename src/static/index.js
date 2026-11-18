@@ -58,6 +58,33 @@ const convertListEndpoints = (all) => {
 }
 
 /**
+ * Semua body daftar berpaginasi (punya page, limit, sort) mendapat `sort_by` = arah urut, tepat setelah `sort`.
+ * Sumber aturannya src/utils/pagination.js (listQuery).
+ */
+const SORT_BY = {
+  type: 'string',
+  enum: ['DESC', 'ASC'],
+  default: 'DESC',
+  example: 'DESC',
+  description: 'Arah urutan untuk kolom `sort`: `DESC` = descending/menurun (default), `ASC` = ascending/menaik. Huruf kecil juga diterima.',
+}
+
+const addSortBy = (all) => {
+  Object.values(all).forEach((item) => {
+    Object.values(item).forEach((operation) => {
+      const json = operation && operation.requestBody && operation.requestBody.content
+        && operation.requestBody.content['application/json']
+      const props = json && json.schema && json.schema.properties
+      if (!props || !props.page || !props.limit || !props.sort || props.sort_by) return
+      json.schema.properties = Object.fromEntries(Object.entries(props).flatMap(
+        (entry) => (entry[0] === 'sort' ? [entry, ['sort_by', { ...SORT_BY }]] : [entry])
+      ))
+    })
+  })
+  return all
+}
+
+/**
  * Urutan endpoint di Swagger: kelompokkan per resource (urutan kemunculan pertama), lalu di dalamnya
  * daftar (/x/get), buat (/x), detail (/x/{id}), tindakan lain (/x/{id}/...). Tanpa ini, endpoint daftar hasil konversi POST
  * jatuh di akhir dokumen dan terlihat "loncat".
@@ -85,7 +112,7 @@ const orderPaths = (all) => {
   return Object.fromEntries(keys.map(({ p }) => [p, all[p]]))
 }
 
-const paths = orderPaths(convertListEndpoints(mergePaths(
+const paths = orderPaths(addSortBy(convertListEndpoints(mergePaths(
   require('./paths/app-auth'),
   require('./paths/media-p2h'),
   require('./paths/delivery-orders'),
@@ -98,7 +125,7 @@ const paths = orderPaths(convertListEndpoints(mergePaths(
   require('./paths/admin-crud'),
   require('./paths/roles'),
   require('./paths/internal')
-)))
+))))
 
 const description = [
   'API backend aplikasi OGO Driver (Android): P2H unit, delivery order, foto muat/bongkar, odometer, biaya perjalanan, serah terima, dan sync offline.',
@@ -116,10 +143,11 @@ if (doList) {
     'Driver: DO yang ditugaskan': { summary: 'Aplikasi driver: hanya field status yang diterima, hasil otomatis hanya DO milik driver itu', value: { status: 'assigned' } },
     'Driver: semua DO yang masih berjalan': { summary: 'Aplikasi driver: tanpa filter', value: {} },
     'Admin: semua DO': { summary: 'Admin: tanpa filter', value: {} },
+    'Admin: urut menaik': { summary: 'Admin: jadwal muat terdekat dulu', value: { sort: 'planned_load_at', sort_by: 'ASC' } },
     'Admin: dengan filter': {
       summary: 'Admin: semua filter bersifat opsional, pilih yang perlu (id diambil dari /drivers/get, /units/get, /customers/get)',
       value: {
-        status: 'assigned', page: 1, limit: 20, search: '0144', sort: '-created_at', from: '2026-11-01', to: '2026-11-30',
+        status: 'assigned', page: 1, limit: 20, search: '0144', sort: 'created_at', sort_by: 'DESC', from: '2026-11-01', to: '2026-11-30',
       },
     },
   }

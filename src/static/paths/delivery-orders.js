@@ -13,7 +13,7 @@ module.exports = {
       summary: 'Daftar DO (isi mengikuti peran)',
       description: [
         '**Driver:** DO miliknya, dipakai layar "DO ditugaskan" dengan `status=assigned`. Tanpa `status`: semua DO yang belum selesai. `meta = { count }`.',
-        '**Admin:** semua DO perusahaan, dengan pagination (`page`, `limit`, `sort`), `search` (nomor DO, barang, driver, plat, customer), dan filter `status`, `driver_id`, `unit_id`, `customer_id`, `needs_review` (true = hanya DO yang punya bacaan odometer/struk perlu dilihat; false = yang tidak), `from`/`to` (tanggal jadwal muat, WIB). `meta` = pagination standar.',
+        '**Admin:** semua DO perusahaan, dengan pagination (`page`, `limit`, `sort`, `sort_by`), `search` (nomor DO, barang, driver, plat, customer), dan filter `status`, `driver_id`, `unit_id`, `customer_id`, `needs_review` (true = hanya DO yang punya bacaan odometer/struk perlu dilihat; false = yang tidak), `from`/`to` (tanggal jadwal muat, WIB). `meta` = pagination standar.',
       ].join('\n'),
       security: secured,
       parameters: [
@@ -39,7 +39,7 @@ module.exports = {
           name: 'search', in: 'query', description: 'Hanya admin', schema: { type: 'string', maxLength: 100 }
         },
         {
-          name: 'sort', in: 'query', description: 'Hanya admin: no, planned_load_at, assigned_at, status, created_at; awalan `-` = menurun (default `-created_at`)', schema: { type: 'string', example: '-created_at' }
+          name: 'sort', in: 'query', description: 'Hanya admin. Kolom urut: no, planned_load_at, assigned_at, status, created_at (default `created_at`). Arah urut lewat `sort_by` (DESC default / ASC).', schema: { type: 'string', example: 'created_at' }
         },
         {
           name: 'driver_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }

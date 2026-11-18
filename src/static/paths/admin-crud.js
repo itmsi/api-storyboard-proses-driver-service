@@ -24,7 +24,7 @@ const listBody = (extra) => jsonBody({
       type: 'integer', minimum: 1, maximum: 100, default: 20,
     },
     search: { type: 'string', maxLength: 100 },
-    sort: { type: 'string', example: '-created_at' },
+    sort: { type: 'string', example: 'created_at' },
     ...extra,
   },
 }, undefined, false)
@@ -36,7 +36,7 @@ module.exports = {
     post: {
       tags: ['P2H'],
       summary: 'Daftar P2H',
-      description: 'Semua P2H (tanpa yang sudah dihapus). Urut: `inspection_date` (default, menurun), `checked_at`, `status`, `created_at`; awalan `-` = menurun. `search` mencari plat, nama atau kode driver.',
+      description: 'Semua P2H (tanpa yang sudah dihapus). Kolom urut (`sort`): `inspection_date` (default), `checked_at`, `status`, `created_at`; arah urut lewat `sort_by` (DESC default / ASC). `search` mencari plat, nama atau kode driver.',
       security: secured,
       requestBody: listBody({
         unit_id: { type: 'string', format: 'uuid' },
@@ -79,7 +79,7 @@ module.exports = {
     post: {
       tags: ['Media'],
       summary: 'Daftar media',
-      description: 'Semua foto (tanpa yang sudah dihapus). Urut: `captured_at` (default, menurun), `created_at`, `kind`. `search` mencari nama pengambil atau jenis.',
+      description: 'Semua foto (tanpa yang sudah dihapus). Kolom urut (`sort`): `captured_at` (default), `created_at`, `kind`; arah urut lewat `sort_by` (DESC default / ASC). `search` mencari nama pengambil atau jenis.',
       security: secured,
       requestBody: listBody({
         kind: { type: 'string', example: 'receipt' },

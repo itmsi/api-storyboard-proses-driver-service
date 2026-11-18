@@ -2,10 +2,12 @@ const Joi = require('joi')
 
 /**
  * Pagination standar untuk semua daftar di API admin:
- *   ?page=1&limit=20&search=andi&sort=-created_at
+ *   { page: 1, limit: 20, search: 'andi', sort: 'created_at', sort_by: 'DESC' }
+ * `sort` = kolom urut, `sort_by` = arah urut (DESC default, atau ASC).
  * Response: data = array, meta = { page, limit, total, total_pages }.
  */
 const MAX_LIMIT = 100
+const SORT_DIRECTIONS = ['DESC', 'ASC']
 
 /** Skema query dasar; endpoint menambahkan filter miliknya dengan `.keys({...})`. */
 const listQuery = Joi.object({
@@ -14,18 +16,21 @@ const listQuery = Joi.object({
     .default(20),
   search: Joi.string().trim().max(100).allow(''),
   sort: Joi.string().trim().max(60),
+  sort_by: Joi.string().trim().uppercase().valid(...SORT_DIRECTIONS)
+    .default('DESC'),
 })
 
 /**
  * @param {object} query  hasil validasi listQuery
  * @param {object} sortable  { namaSort: 'kolom.sql' } kolom yang boleh dipakai (whitelist, cegah SQL injection)
- * @param {string} defaultSort  mis. '-created_at'
+ * @param {string} defaultSort  kolom default, mis. 'created_at' (awalan `-` lama tetap diterima dan diabaikan)
+ *
+ * Arah urut selalu dari `sort_by` (default DESC). Awalan `-` di `sort` hanya untuk kompatibilitas klien lama.
  */
 const parse = (query, sortable, defaultSort) => {
-  const raw = query.sort || defaultSort
-  const desc = raw.startsWith('-')
-  const key = raw.replace(/^-/, '')
+  const key = (query.sort || defaultSort).replace(/^-/, '')
   const column = sortable[key] || sortable[defaultSort.replace(/^-/, '')]
+  const desc = (query.sort_by || 'DESC').toUpperCase() !== 'ASC'
   return {
     page: query.page,
     limit: query.limit,
@@ -50,5 +55,5 @@ const searchColumns = (query, term, columns) => {
 }
 
 module.exports = {
-  listQuery, parse, meta, searchColumns, MAX_LIMIT,
+  listQuery, parse, meta, searchColumns, MAX_LIMIT, SORT_DIRECTIONS,
 }
