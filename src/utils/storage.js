@@ -90,6 +90,32 @@ const putNextcloud = async (key, buffer, contentType) => {
 }
 
 /**
+ * Buat link share publik (hanya baca) untuk satu file lewat OCS API. Mengembalikan alamat unduh langsung
+ * (<alamat Nextcloud>/s/<token>/download), atau null bila gagal (upload tidak perlu gagal karenanya; url foto jatuh ke /storage).
+ */
+const createShare = async (key) => {
+  if (config.storage.driver !== 'nextcloud') return null
+  const nc = config.storage.nextcloud
+  try {
+    const res = await ncRequest('POST', `${nc.url}${nc.shareApiPath}?format=json`, {
+      body: new URLSearchParams({ path: `${nc.uploadDir}/${key}`, shareType: '3', permissions: '1' }).toString(),
+      headers: { 'OCS-APIRequest': 'true', 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    })
+    const json = res.ok ? await res.json().catch(() => null) : null
+    const code = json && json.ocs && json.ocs.meta ? json.ocs.meta.statuscode : null
+    const token = json && json.ocs && json.ocs.data ? json.ocs.data.token : null
+    if ((code !== 100 && code !== 200) || !token) {
+      logger.warn(`Nextcloud share ${key} gagal (HTTP ${res.status}, kode OCS ${code})`)
+      return null
+    }
+    return `${nc.publicUrl || nc.url}/s/${token}/download`
+  } catch (err) {
+    logger.warn(`Nextcloud share ${key} gagal: ${err.message}`)
+    return null
+  }
+}
+
+/**
  * Ambil file dari Nextcloud untuk disajikan API (driver nextcloud). null = tidak ada.
  * @returns {Promise<{ body: ReadableStream, contentType: string, contentLength: string|null }|null>}
  */
@@ -147,11 +173,14 @@ const publicUrl = (key) => {
   return base ? `${base}/${key}` : `/storage/${key}`
 }
 
+/** URL foto untuk klien: link share Nextcloud bila fotonya punya, selain itu alamat /storage di API (foto lama atau share gagal dibuat). */
+const mediaUrl = (key, shareUrl) => shareUrl || publicUrl(key)
+
 const presignedUrl = async (key, expirySeconds = 3600) => {
   if (config.storage.driver !== 's3') return publicUrl(key)
   return getS3().presignedGetObject(config.storage.s3.bucket, key, expirySeconds)
 }
 
 module.exports = {
-  putObject, publicUrl, presignedUrl, getNextcloud, getObjectBuffer,
+  putObject, publicUrl, mediaUrl, createShare, presignedUrl, getNextcloud, getObjectBuffer,
 }

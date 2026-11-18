@@ -41,6 +41,8 @@ const upload = async (db, auth, file, body) => {
     .toBuffer()
   await storage.putObject(storageKey, file.buffer, MIME[meta.format])
   await storage.putObject(thumbKey, thumb, 'image/jpeg')
+  // Link share publik Nextcloud (null bila gagal atau bukan Nextcloud: url foto jatuh ke /storage)
+  const [shareUrl, thumbUrl] = await Promise.all([storage.createShare(storageKey), storage.createShare(thumbKey)])
 
   const media = await repo.insert(db, {
     id,
@@ -48,6 +50,8 @@ const upload = async (db, auth, file, body) => {
     side: body.side || null,
     storage_key: storageKey,
     thumb_key: thumbKey,
+    url: shareUrl,
+    thumb_url: thumbUrl,
     mime_type: MIME[meta.format],
     size_bytes: file.size,
     sha256: crypto.createHash('sha256').update(file.buffer).digest('hex'),

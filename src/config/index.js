@@ -112,7 +112,9 @@ const config = {
       url: str('NEXTCLOUD_URL').replace(/\/+$/, ''),
       username: str('NEXTCLOUD_USERNAME'),
       password: str('NEXTCLOUD_PASSWORD'),
-      // Endpoint OCS share link (belum dipakai: media disajikan API di /storage, bukan lewat link share)
+      // Alamat Nextcloud yang bisa dibuka pengguna untuk link share (kosong = sama dengan NEXTCLOUD_URL; isi bila API memakai alamat internal)
+      publicUrl: str('NEXTCLOUD_PUBLIC_URL', '').replace(/\/+$/, ''),
+      // Endpoint OCS untuk membuat link share publik
       shareApiPath: `/${str('NEXTCLOUD_SHARE_API_PATH', '/ocs/v1.php/apps/files_sharing/api/v1/shares').replace(/^\/+|\/+$/g, '')}`,
       webdavPath: `/${str('NEXTCLOUD_WEBDAV_PATH', '/remote.php/webdav').replace(/^\/+|\/+$/g, '')}`,
       uploadDir: `/${str('NEXTCLOUD_UPLOAD_DIR', '/OGO-Driver').replace(/^\/+|\/+$/g, '')}`,

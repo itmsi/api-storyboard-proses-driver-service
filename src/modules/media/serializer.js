@@ -6,8 +6,8 @@ const { auditFields } = require('../../utils/audit')
 const serializeMedia = (row) => ({
   id: row.id,
   kind: row.kind,
-  url: storage.publicUrl(row.storage_key),
-  thumb_url: row.thumb_key ? storage.publicUrl(row.thumb_key) : null,
+  url: storage.mediaUrl(row.storage_key, row.url),
+  thumb_url: row.thumb_key ? storage.mediaUrl(row.thumb_key, row.thumb_url) : null,
   source: row.source,
   captured_at: toWib(row.captured_at),
   server_received_at: toWib(row.server_received_at),

@@ -21,6 +21,8 @@ const select = (query) => query.select(
   'expense_categories.input as category_input',
   'proof.storage_key as proof_key',
   'proof.thumb_key as proof_thumb_key',
+  'proof.url as proof_url',
+  'proof.thumb_url as proof_thumb_url',
   'void_user.name as voided_by_name'
 )
 

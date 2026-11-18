@@ -34,7 +34,7 @@ const serialize = (e) => ({
   label: label(e),
   amount: num(e.amount),
   description: e.description,
-  proof: e.proof_key ? { url: storage.publicUrl(e.proof_key), thumb_url: e.proof_thumb_key ? storage.publicUrl(e.proof_thumb_key) : null } : null,
+  proof: e.proof_key ? { url: storage.mediaUrl(e.proof_key, e.proof_url), thumb_url: e.proof_thumb_key ? storage.mediaUrl(e.proof_thumb_key, e.proof_thumb_url) : null } : null,
   receipt: e.category_input === 'receipt_ocr' ? {
     fuel_type: e.fuel_type,
     liters: num(e.liters),
