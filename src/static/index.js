@@ -144,10 +144,35 @@ if (doList) {
     'Driver: semua DO yang masih berjalan': { summary: 'Aplikasi driver: tanpa filter', value: {} },
     'Admin: semua DO': { summary: 'Admin: tanpa filter', value: {} },
     'Admin: urut menaik': { summary: 'Admin: jadwal muat terdekat dulu', value: { sort: 'planned_load_at', sort_by: 'ASC' } },
+    'Admin: per driver': {
+      summary: 'Admin: hanya DO milik satu driver (driver_id = data[].id dari POST /drivers/get)',
+      value: { driver_id: '6f1c2a4e-8b3d-4c5e-9a7f-1b2c3d4e5f60', page: 1, limit: 20 },
+    },
+    'Admin: per unit': {
+      summary: 'Admin: hanya DO untuk satu unit (unit_id = data[].id dari POST /units/get)',
+      value: { unit_id: '0a9b8c7d-6e5f-4a3b-8c1d-2e3f4a5b6c7d', page: 1, limit: 20 },
+    },
+    'Admin: per driver dan unit': {
+      summary: 'Admin: DO satu driver dengan satu unit (kedua filter digabung dengan AND)',
+      value: {
+        driver_id: '6f1c2a4e-8b3d-4c5e-9a7f-1b2c3d4e5f60', unit_id: '0a9b8c7d-6e5f-4a3b-8c1d-2e3f4a5b6c7d', page: 1, limit: 20,
+      },
+    },
     'Admin: dengan filter': {
       summary: 'Admin: semua filter bersifat opsional, pilih yang perlu (id diambil dari /drivers/get, /units/get, /customers/get)',
       value: {
-        status: 'assigned', page: 1, limit: 20, search: '0144', sort: 'created_at', sort_by: 'DESC', from: '2026-11-01', to: '2026-11-30',
+        status: 'assigned',
+        page: 1,
+        limit: 20,
+        search: '0144',
+        sort: 'created_at',
+        sort_by: 'DESC',
+        driver_id: '6f1c2a4e-8b3d-4c5e-9a7f-1b2c3d4e5f60',
+        unit_id: '0a9b8c7d-6e5f-4a3b-8c1d-2e3f4a5b6c7d',
+        customer_id: '3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f',
+        needs_review: false,
+        from: '2026-11-01',
+        to: '2026-11-30',
       },
     },
   }

@@ -42,10 +42,10 @@ module.exports = {
           name: 'sort', in: 'query', description: 'Hanya admin. Kolom urut: no, planned_load_at, assigned_at, status, created_at (default `created_at`). Arah urut lewat `sort_by` (DESC default / ASC).', schema: { type: 'string', example: 'created_at' }
         },
         {
-          name: 'driver_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }
+          name: 'driver_id', in: 'query', description: 'Hanya admin. Filter DO milik driver ini; isi dengan `data[].id` dari `POST /drivers/get`.', schema: { type: 'string', format: 'uuid', example: '6f1c2a4e-8b3d-4c5e-9a7f-1b2c3d4e5f60' }
         },
         {
-          name: 'unit_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }
+          name: 'unit_id', in: 'query', description: 'Hanya admin. Filter DO untuk unit ini; isi dengan `data[].id` dari `POST /units/get`.', schema: { type: 'string', format: 'uuid', example: '0a9b8c7d-6e5f-4a3b-8c1d-2e3f4a5b6c7d' }
         },
         {
           name: 'customer_id', in: 'query', description: 'Hanya admin', schema: { type: 'string', format: 'uuid' }
