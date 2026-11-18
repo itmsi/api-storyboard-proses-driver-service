@@ -91,7 +91,7 @@ const putNextcloud = async (key, buffer, contentType) => {
 
 /**
  * Buat link share publik (hanya baca) untuk satu file lewat OCS API. Mengembalikan alamat unduh langsung
- * (<alamat Nextcloud>/s/<token>/download), atau null bila gagal (upload tidak perlu gagal karenanya; url foto jatuh ke /storage).
+ * (<alamat Nextcloud>/s/<token>), atau null bila gagal (upload tidak perlu gagal karenanya; url foto jatuh ke /storage).
  */
 const createShare = async (key) => {
   if (config.storage.driver !== 'nextcloud') return null
@@ -108,7 +108,7 @@ const createShare = async (key) => {
       logger.warn(`Nextcloud share ${key} gagal (HTTP ${res.status}, kode OCS ${code})`)
       return null
     }
-    return `${nc.publicUrl || nc.url}/s/${token}/download`
+    return `${nc.publicUrl || nc.url}/s/${token}`
   } catch (err) {
     logger.warn(`Nextcloud share ${key} gagal: ${err.message}`)
     return null
