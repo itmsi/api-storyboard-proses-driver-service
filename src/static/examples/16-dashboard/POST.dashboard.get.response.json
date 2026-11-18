@@ -316,11 +316,17 @@
         },
         "planned_load_at": "2026-11-05T08:00:00+07:00",
         "assigned_at": "2026-11-05T11:41:38+07:00",
-        "cargo": {
-          "description": "palet",
-          "quantity": 1,
-          "unit": "palet"
-        },
+        "cargo_type": "Palet",
+        "cargo_details": [
+          {
+            "label": "Barang",
+            "value": "Minuman kemasan"
+          },
+          {
+            "label": "Jumlah",
+            "value": "4 palet"
+          }
+        ],
         "estimated_distance_km": null,
         "travel_allowance_amount": 500000,
         "expense_total": 0,

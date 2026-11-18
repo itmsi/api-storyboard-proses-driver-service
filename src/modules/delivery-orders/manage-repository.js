@@ -1,5 +1,6 @@
 const { withAuditNames } = require('../../utils/audit')
 const { searchColumns } = require('../../utils/pagination')
+const cargo = require('./cargo')
 const { holdsOnDateSql } = require('../../utils/master')
 
 // Query sisi admin: semua DO di perusahaan ini (tidak dibatasi ke satu driver seperti repository.js)
@@ -25,7 +26,7 @@ const list = async (db, {
 }) => {
   const filtered = () => {
     const q = searchColumns(base(db), search, [
-      'delivery_orders.no', 'delivery_orders.cargo_description', 'driver_user.name', 'drivers.code', 'units.plate', 'customers.name',
+      'delivery_orders.no', cargo.SEARCH_SQL, 'driver_user.name', 'drivers.code', 'units.plate', 'customers.name',
       // rute: nama dan kota lokasi asal dan tujuan (salinan di DO)
       "delivery_orders.origin_snapshot->>'name'", "delivery_orders.origin_snapshot->>'city'",
       "delivery_orders.destination_snapshot->>'name'", "delivery_orders.destination_snapshot->>'city'",

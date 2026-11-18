@@ -551,10 +551,16 @@ Mengubah DO (`PUT /delivery-orders/{id}`) dengan `driver_id`, `unit_id`, atau `p
   "planned_load_at": "2026-11-12T08:00:00+07:00",
   "estimated_distance_km": 68,
   "travel_allowance_amount": 500000,
-  "cargo": { "description": "Palet minuman", "quantity": 120, "unit": "karton" }
+  "cargo_type": "Container",
+  "cargo_details": [
+    { "label": "No container", "value": "234242" },
+    { "label": "No seal", "value": "234234" },
+    { "label": "Keterangan", "value": "Barang mudah pecah" }
+  ]
 }
 ```
 Aturan:
+- Muatan opsional: `cargo_type` (jenis, teks bebas) dan `cargo_details` (rincian bebas `[{ label, value }]`, maks. 50). Saat ubah DO, `cargo_details` yang dikirim mengganti seluruh rincian; `null` atau `[]` mengosongkannya.
 - Driver aktif, unit `active`, lokasi asal dan tujuan ada dan tidak sama.
 - `customer_id` boleh kosong (diambil dari customer lokasi tujuan). Bila diisi, harus sama dengan customer lokasi tujuan.
 - DO baru berstatus `assigned` dan langsung muncul di aplikasi HP driver.

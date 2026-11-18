@@ -4,6 +4,7 @@ const { toWib, wibDate } = require('../../utils/date')
 const p2h = require('../p2h/service')
 const { getPending } = require('../sync/pending')
 const repo = require('./repository')
+const cargo = require('./cargo')
 
 const MAX_RANGE_DAYS = 366
 const DEFAULT_RANGE_DAYS = 30
@@ -49,7 +50,7 @@ const serialize = (row, extra = {}) => ({
     pic: row.destination_snapshot.pic || null,
     maps_url: mapsUrl(row.destination_snapshot),
   },
-  cargo: { description: row.cargo_description, quantity: num(row.cargo_quantity), unit: row.cargo_unit },
+  ...cargo.serialize(row),
   estimated_distance_km: num(row.estimated_distance_km),
   travel_allowance: {
     amount: num(row.travel_allowance_amount),

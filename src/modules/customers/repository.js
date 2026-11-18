@@ -9,6 +9,7 @@ const select = (db, query) => query.select(
   'customers.id',
   'customers.code',
   'customers.name',
+  'customers.nomor_customer',
   'customers.phone',
   'customers.email',
   db('locations').where('locations.customer_id', db.ref('customers.id')).where({ 'locations.is_delete': false }).count('*')
@@ -30,7 +31,7 @@ const list = async (db, {
   search, hasLocations: withLocations, hasOpenOrders: withOpenOrders, paging,
 }) => {
   const filtered = () => {
-    const q = searchColumns(base(db), search, ['customers.code', 'customers.name', 'customers.phone', 'customers.email'])
+    const q = searchColumns(base(db), search, ['customers.code', 'customers.name', 'customers.nomor_customer', 'customers.phone', 'customers.email'])
     if (withLocations === true) hasLocations(q, db)
     if (withLocations === false) q.whereNot((n) => hasLocations(n, db))
     if (withOpenOrders === true) hasOpenOrders(q, db)

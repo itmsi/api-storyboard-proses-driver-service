@@ -44,11 +44,17 @@
         },
         "maps_url": "https://maps.google.com/?q=-6.30,107.29"
       },
-      "cargo": {
-        "description": "4 palet",
-        "quantity": 4,
-        "unit": "palet"
-      },
+      "cargo_type": "Palet",
+      "cargo_details": [
+        {
+          "label": "Barang",
+          "value": "Minuman kemasan"
+        },
+        {
+          "label": "Jumlah",
+          "value": "4 palet"
+        }
+      ],
       "estimated_distance_km": 70,
       "travel_allowance": {
         "amount": 600000,
