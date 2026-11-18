@@ -1064,6 +1064,7 @@ const schemas = {
     id: str('6a1d4e72-8b35-4c09-9f27-0e5b3d8a1c64'),
     code: str('CUST-001'),
     name: str('PT Contoh Jaya'),
+    nomor_customer: nullable(str('NC-001')),
     phone: nullable(str('021-5550100')),
     email: nullable(str('info@contohjaya.co.id')),
     location_count: int(2, { description: 'Jumlah lokasi aktif milik customer ini' }),
@@ -1072,10 +1073,16 @@ const schemas = {
   AdminCustomerCreate: obj({
     code: str('CUST-001', { description: 'Huruf besar/angka/`_`/`-` (2-30), unik, tidak bisa diubah' }),
     name: str('PT Contoh Jaya'),
+    nomor_customer: nullable(str('NC-001', { description: 'Nomor customer opsional' })),
     phone: nullable(str('021-5550100')),
     email: nullable(str('info@contohjaya.co.id')),
   }, ['code', 'name']),
-  AdminCustomerUpdate: obj({ name: str('PT Contoh Jaya'), phone: nullable(str('021-5550100')), email: nullable(str('info@contohjaya.co.id')) }),
+  AdminCustomerUpdate: obj({
+    name: str('PT Contoh Jaya'),
+    nomor_customer: nullable(str('NC-001', { description: 'Kirim null untuk mengosongkan' })),
+    phone: nullable(str('021-5550100')),
+    email: nullable(str('info@contohjaya.co.id')),
+  }),
   AdminLocation: obj({
     id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a22'),
     type: enumOf(['warehouse', 'depot', 'customer_site']),
