@@ -15,9 +15,14 @@ const calendarDate = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).custom((value, 
   Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()) ? helpers.error('any.invalid') : value
 )).messages({ 'string.pattern.base': 'Format tanggal harus YYYY-MM-DD.' })
 
+// Filter status riwayat: satu nilai, beberapa nilai (array), atau kelompok running/open. Kosong = semua status.
+const HISTORY_GROUPS = ['running', 'open']
+const historyStatus = Joi.string().valid('assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled', ...HISTORY_GROUPS)
+
 const historyQuery = Joi.object({
   from: calendarDate,
   to: calendarDate,
+  status: Joi.alternatives().try(historyStatus, Joi.array().items(historyStatus).min(1).unique()),
   limit: Joi.number().integer().min(1).max(50)
     .default(20),
   cursor: Joi.string().max(300),

@@ -150,16 +150,23 @@ const listActive = async (db, auth) => {
   return { data, meta: { pending_sync: pending.map(({ type, label, client_created_at: at }) => ({ type, label, client_created_at: at })) } }
 }
 
-const encodeCursor = (row) => Buffer.from(JSON.stringify({ t: new Date(row.completed_at).toISOString(), id: row.id })).toString('base64url')
+const encodeCursor = (row) => Buffer.from(JSON.stringify({ t: new Date(row.sort_at).toISOString(), id: row.id })).toString('base64url')
 
 const decodeCursor = (value) => {
   try {
     const { t, id } = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
     if (Number.isNaN(new Date(t).getTime()) || typeof id !== 'string') throw new Error('bad cursor')
-    return { completedAt: t, id }
+    return { sortAt: t, id }
   } catch (err) {
     throw new AppError('VALIDATION_ERROR', { details: [{ field: 'cursor', message: 'Cursor tidak valid.' }] })
   }
+}
+
+// Kelompok status untuk filter riwayat
+const ALL_STATUSES = ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled']
+const HISTORY_GROUPS = {
+  running: ['accepted', 'loading', 'in_transit', 'handover'],
+  open: ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover'],
 }
 
 const history = async (db, auth, query) => {
@@ -177,10 +184,15 @@ const history = async (db, auth, query) => {
   const bounds = { from: new Date(`${from}T00:00:00+07:00`), to: new Date(`${to}T23:59:59.999+07:00`) }
   const limit = query.limit || 20
   const cursor = query.cursor ? decodeCursor(query.cursor) : null
+  // Semua status, tidak menunggu selesai. DO onhold ditahan admin dan memang tidak tampil di aplikasi driver.
+  const requested = query.status ? [...new Set((Array.isArray(query.status) ? query.status : [query.status]).flatMap((v) => HISTORY_GROUPS[v] || [v]))] : []
+  const statuses = isAdmin ? requested : (requested.length ? requested : ALL_STATUSES).filter((st) => st !== 'onhold')
 
-  const [rows, summary] = await Promise.all([
-    repo.history(db, driverId, { ...bounds, limit, cursor }),
-    repo.historySummary(db, driverId, bounds),
+  const [rows, summaryRows] = await Promise.all([
+    repo.history(db, driverId, {
+      ...bounds, limit, cursor, statuses,
+    }),
+    repo.historySummary(db, driverId, { ...bounds, statuses }),
   ])
   const hasMore = rows.length > limit
   const page = hasMore ? rows.slice(0, limit) : rows
@@ -189,12 +201,21 @@ const history = async (db, auth, query) => {
     data: page.map((row) => ({
       id: row.id,
       no: row.no,
-      date: wibDate(row.completed_at),
+      status: row.status,
+      date: wibDate(row.sort_at), // tanggal kerja (jadwal muat, atau waktu penugasan bila tanpa jadwal)
       route: routeLabel(row),
       distance_km: row.odometer_end_km === null || row.odometer_start_km === null ? null : row.odometer_end_km - row.odometer_start_km,
       unit_plate: row.unit_plate,
       expense_total: num(row.expense_total),
       delivery_status: row.delivery_status,
+      // Waktu tiap tahap (null bila belum terjadi)
+      planned_load_at: toWib(row.planned_load_at),
+      assigned_at: toWib(row.assigned_at),
+      accepted_at: toWib(row.accepted_at),
+      started_at: toWib(row.started_at),
+      completed_at: toWib(row.completed_at),
+      ...(isAdmin ? { on_hold_at: toWib(row.on_hold_at) } : {}),
+      cancelled_at: toWib(row.cancelled_at),
       ...(isAdmin ? { driver: { id: row.driver_id, code: row.driver_code, name: row.driver_name } } : {}),
     })),
     meta: {
@@ -204,9 +225,10 @@ const history = async (db, auth, query) => {
       next_cursor: hasMore ? encodeCursor(page[page.length - 1]) : null,
       has_more: hasMore,
       summary: {
-        do_count: Number(summary.do_count),
-        distance_km: Number(summary.distance_km),
-        expense_total: Number(summary.expense_total),
+        do_count: summaryRows.reduce((sum, r) => sum + Number(r.do_count), 0),
+        distance_km: summaryRows.reduce((sum, r) => sum + Number(r.distance_km), 0),
+        expense_total: summaryRows.reduce((sum, r) => sum + Number(r.expense_total), 0),
+        by_status: Object.fromEntries(summaryRows.map((r) => [r.status, Number(r.do_count)])),
       },
     },
   }

@@ -116,7 +116,7 @@ module.exports = {
     post: {
       tags: ['Delivery Order'],
       summary: 'Riwayat DO (menu Riwayat)',
-      description: 'Pagination berbasis cursor. Kirim `cursor` dari `meta.next_cursor` untuk halaman berikutnya. Driver: DO miliknya (hak `driver_delivery_orders:read`). Admin: DO semua driver, atau satu driver lewat `driver_id` (hak `delivery_orders:read`); tiap item memuat `driver`.',
+      description: 'Memuat SEMUA DO (status apa pun, tidak menunggu selesai) yang tanggal kerjanya (jadwal muat, atau waktu penugasan bila tanpa jadwal) ada di rentang `from`..`to`, terbaru dulu; filter `status` opsional. Tiap item memuat waktu tiap tahap (`assigned_at`, `accepted_at`, `started_at`, `completed_at`, `cancelled_at`). Driver tidak melihat DO `onhold`. Pagination berbasis cursor. Kirim `cursor` dari `meta.next_cursor` untuk halaman berikutnya. Driver: DO miliknya (hak `driver_delivery_orders:read`). Admin: DO semua driver, atau satu driver lewat `driver_id` (hak `delivery_orders:read`); tiap item memuat `driver`.',
       security: secured,
       requestBody: {
         required: false,
@@ -132,6 +132,7 @@ module.exports = {
                 },
                 cursor: { type: 'string', example: 'eyJpZCI6ImRvXzAxMzEifQ==' },
                 driver_id: { type: 'string', format: 'uuid', description: 'Hanya admin. Kosong = semua driver' },
+                status: { type: 'string', enum: ['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled', 'running', 'open'], description: 'Satu status, beberapa status (array), atau kelompok: running (accepted, loading, in_transit, handover) dan open (semua yang belum final). Kosong = semua status' },
               },
             },
           },

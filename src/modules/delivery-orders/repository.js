@@ -50,28 +50,39 @@ const findUnitInUse = (db, unitId, exceptDoId) => db('delivery_orders')
 /** Kunci per unit sampai transaksi selesai, agar dua driver tidak menerima DO dengan unit yang sama pada saat bersamaan. */
 const lockUnit = (trx, unitId) => trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`unit:${unitId}`])
 
-/** Riwayat: DO selesai dalam rentang waktu, terbaru dulu; cursor = (completed_at, id) terakhir halaman sebelumnya. */
+/**
+ * Riwayat: SEMUA DO (status apa pun, tidak menunggu selesai) yang tanggal kerjanya (jadwal muat, atau waktu penugasan bila tanpa
+ * jadwal; sama dengan filter from/to di daftar admin dan dashboard) ada di rentang, terbaru dulu. cursor = (tanggal kerja, id) terakhir halaman sebelumnya.
+ * driverId kosong = semua driver (admin). statuses kosong = semua status.
+ */
+const HISTORY_AT = 'coalesce(delivery_orders.planned_load_at, delivery_orders.assigned_at)'
+
 const history = (db, driverId, {
-  from, to, limit, cursor,
+  from, to, limit, cursor, statuses,
 }) => base(db, driverId)
-  .where('delivery_orders.status', 'completed')
-  .whereBetween('delivery_orders.completed_at', [from, to])
+  .select(db.raw(`${HISTORY_AT} as sort_at`))
+  .whereRaw(`${HISTORY_AT} BETWEEN ? AND ?`, [from, to])
   .modify((q) => {
-    if (cursor) q.whereRaw('(delivery_orders.completed_at, delivery_orders.id) < (?, ?)', [cursor.completedAt, cursor.id])
+    if (statuses && statuses.length) q.whereIn('delivery_orders.status', statuses)
+    if (cursor) q.whereRaw(`(${HISTORY_AT}, delivery_orders.id) < (?, ?)`, [cursor.sortAt, cursor.id])
   })
-  .orderBy([{ column: 'delivery_orders.completed_at', order: 'desc' }, { column: 'delivery_orders.id', order: 'desc' }])
+  .orderByRaw(`${HISTORY_AT} DESC, delivery_orders.id DESC`)
   .limit(limit + 1) // satu baris ekstra untuk has_more
 
-const historySummary = (db, driverId, { from, to }) => db('delivery_orders')
-  .where({ status: 'completed' })
-  .modify((q) => { if (driverId) q.where({ driver_id: driverId }) })
-  .whereBetween('completed_at', [from, to])
+/** Ringkasan rentang yang sama, per status (jumlah DO, jarak odometer yang lengkap, total biaya). */
+const historySummary = (db, driverId, { from, to, statuses }) => db('delivery_orders')
+  .whereRaw(`${HISTORY_AT} BETWEEN ? AND ?`, [from, to])
+  .modify((q) => {
+    if (driverId) q.where({ driver_id: driverId })
+    if (statuses && statuses.length) q.whereIn('status', statuses)
+  })
+  .groupBy('status')
   .select(
-    db.raw('count(*) as do_count'),
-    db.raw('coalesce(sum(odometer_end_km - odometer_start_km), 0) as distance_km'),
+    'status',
+    db.raw('count(*)::int as do_count'),
+    db.raw('coalesce(sum(odometer_end_km - odometer_start_km) filter (where odometer_end_km is not null and odometer_start_km is not null), 0) as distance_km'),
     db.raw('coalesce(sum(expense_total), 0) as expense_total')
   )
-  .first()
 
 const findEventByClientRef = (db, actorId, clientRef) => db('delivery_order_events')
   .where({ actor_id: actorId, client_ref: clientRef })
