@@ -144,7 +144,8 @@ const config = {
       reasoningEffort: str('OPENAI_REASONING_EFFORT'),
     },
     image: {
-      maxSide: num('AI_IMAGE_MAX_SIDE', 1280), // sisi terpanjang gambar yang dikirim ke AI (px)
+      maxBytes: num('AI_IMAGE_MAX_BYTES', 15 * 1024 * 1024), // di atas ini foto dikecilkan; di bawahnya dikirim apa adanya (batas OpenAI 20 MB)
+      maxSide: num('AI_IMAGE_MAX_SIDE', 2048), // sisi terpanjang bila foto terpaksa dikecilkan (px)
       jpegQuality: num('AI_IMAGE_QUALITY', 80),
     },
     maxChecksPerHour: num('AI_MAX_CHECKS_PER_HOUR', 60), // batas permintaan pengecekan per driver per jam (pelindung biaya)

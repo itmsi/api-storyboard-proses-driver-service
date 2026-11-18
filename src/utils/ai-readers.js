@@ -1,14 +1,13 @@
 const { readImage } = require('./vision')
 
 /**
- * Pembaca per jenis foto: perintah (prompt), skema jawaban ketat, dan normalisasi hasilnya. Bentuk hasil sengaja SAMA dengan hasil OCR
+ * Pembaca per jenis foto: perintah (prompt), skema ketat, dan normalisasi hasilnya. Bentuk hasil sengaja SAMA dengan hasil OCR
  * dari FE (ocr_km, ocr_fuel_level, dan field struk BBM di modul expenses) supaya ketiga nilai (OCR FE, AI, koreksi driver) bisa dibandingkan
  * langsung. Nilai yang tidak masuk akal dibuang menjadi null; hasil AI hanya pembanding dan tidak pernah menjadi nilai efektif.
  */
 
 const FUEL_LEVELS = ['empty', 'quarter', 'half', 'three_quarter', 'full']
 const MAX_KM = 9999999 // sama dengan batas validasi odometer
-const DISPLAY_MODES = ['odo', 'trip', 'unknown'] // layar yang dibaca: odometer total, trip meter, atau tidak jelas
 
 // ---------- helper normalisasi ----------
 
@@ -60,27 +59,29 @@ const fuelLevelOf = (fraction) => {
 
 const DASHBOARD_INSTRUCTION = [
   'You read a photo of a truck or vehicle dashboard taken by a driver in Indonesia. Work carefully and only report what you can actually see.',
-  'Step 1: find the odometer LCD (the distance display). It may show the total odometer (ODO) or a trip meter (TRIP / TRIP A / TRIP B); read it either way.',
-  'If both a total odometer and a trip meter are visible at the same time, read the total odometer.',
-  'Step 2: transcribe the digits exactly as shown into "digits_seen", character by character, separated by single spaces, e.g. "1 0 2 7 . 3".',
-  'Write "?" for any digit you cannot read with certainty, and never invent or complete digits. Keep a decimal point if the display shows one (trip meters usually have one decimal digit). Use null if no distance display is visible at all.',
-  'Step 3: "display_mode" is "odo" if the number is the total odometer, "trip" if a TRIP indicator is shown, "unknown" if you cannot tell, or null if digits_seen is null.',
-  'Step 4: find the fuel gauge. It can be a needle between E and F, OR a row of bars/segments on the LCD between E and F.',
-  'Report "fuel_fraction" between 0 (empty, needle on E or no bars lit) and 1 (full, needle on F or all bars lit): for a needle, its position along the E-F arc; for bars, lit bars divided by total bars.',
-  'Look closely at the needle tip or at each bar before answering. Use null only if no fuel gauge is visible at all.',
-  'Return "confidence": between 0 and 1, how sure you are that the values you returned are correct. Use null if both digits_seen and fuel_fraction are null.',
-  'Return "note": one short sentence (max 100 characters, English) only when something is null or uncertain, saying why (e.g. "digits are blurred by glare"); otherwise null.',
+  'The instrument cluster often has a multi-page LCD. Depending on the page it may show an odometer, a trip meter, fuel information, or only a menu or other data. Report only what the current page shows.',
+  'Step 1: find the distance readings on the LCD. The total odometer is labelled "ODO" and the trip meter "Trip" (also TRIP A / TRIP B). Both can be shown at the same time (e.g. "Trip: 10.4km  ODO: 10km").',
+  'Step 2: transcribe each one separately, character by character, separated by single spaces, ignoring the unit: "odo_digits" for the total odometer (e.g. "4 5 2 7 8") and "trip_digits" for the trip meter (e.g. "1 0 . 4").',
+  'Use null for the one that is not shown. Never put the trip value in odo_digits or the other way round. Values such as "total hours", "fuel cons", "L/100km", "bar", "V" or "km/h" are NOT distances.',
+  'Write "?" for any digit you cannot read with certainty, and never invent or complete digits. Keep the decimal point if the display shows one.',
+  'Step 3: fuel in the tank. Prefer the digital value on the LCD if present: a percentage next to a fuel-pump icon is the diesel/fuel tank level ("fuel_percent", 0-100).',
+  'Do NOT confuse it with AdBlue (urea, labelled "AdBlue", usually with a different drop icon). Do NOT use "total fuel", "fuel cons", "L/h" or "L/100km": they are consumption figures, not the tank level.',
+  'If there is no digital percentage, read the analog fuel gauge (needle between E/0 and F/1) or a row of bars: "fuel_fraction" between 0 (empty) and 1 (full): the needle position along the arc, or lit bars divided by total bars.',
+  'Fill only the one you used and set the other to null. Look closely at the needle tip or at each bar. Use null for both if no tank fuel indication is visible.',
+  'Return "confidence": between 0 and 1, how sure you are that the values you returned are correct. Use null if every reading is null.',
+  'Return "note": one short sentence (max 100 characters, English) when something is null or uncertain (e.g. "LCD shows a settings menu", "digits are blurred by glare"), or to say which fuel source you used; otherwise null.',
   'Reply only with JSON that matches the schema.',
 ].join('\n')
 
-// Bidang bukti (digits_seen, fuel_fraction) diisi lebih dulu supaya model menuliskan apa yang ia lihat sebelum menyimpulkan.
+// Bidang bukti (transkripsi digit, persen, pecahan) diisi lebih dulu supaya model menuliskan apa yang ia lihat sebelum menyimpulkan.
 const DASHBOARD_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['digits_seen', 'display_mode', 'fuel_fraction', 'confidence', 'note'],
+  required: ['odo_digits', 'trip_digits', 'fuel_percent', 'fuel_fraction', 'confidence', 'note'],
   properties: {
-    digits_seen: { type: ['string', 'null'] },
-    display_mode: { type: ['string', 'null'], enum: [...DISPLAY_MODES, null] },
+    odo_digits: { type: ['string', 'null'] },
+    trip_digits: { type: ['string', 'null'] },
+    fuel_percent: { type: ['number', 'null'] },
     fuel_fraction: { type: ['number', 'null'] },
     confidence: { type: ['number', 'null'] },
     note: { type: ['string', 'null'] },
@@ -88,31 +89,51 @@ const DASHBOARD_SCHEMA = {
 }
 
 /**
- * km dari transkripsi digit: hanya bila SEMUA digit terbaca (tanpa "?"); desimal dibuang (km bulat). Tanpa transkripsi (jawaban gaya lama)
- * dipakai km apa adanya.
+ * Jarak dari transkripsi digit: hanya bila SEMUA digit terbaca (tanpa "?"). Mengembalikan { km (bulat), exact (dengan desimal bila ada) }.
  */
-const kmFromDigits = (raw) => {
-  if (typeof raw.digits_seen !== 'string') return raw.digits_seen === null ? null : int(raw.km, { max: MAX_KM })
-  const compact = raw.digits_seen.replace(/\s+/g, '')
-  const m = compact.match(/^(\d{1,8})(?:[.,]\d{0,2})?$/)
-  return m ? int(Number(m[1]), { max: MAX_KM }) : null
+const distanceOf = (raw, { decimals }) => {
+  if (typeof raw !== 'string') return null
+  const m = raw.replace(/\s+/g, '').match(/^(\d{1,8})(?:[.,](\d{1,2}))?$/)
+  if (!m) return null
+  const whole = int(Number(m[1]), { max: MAX_KM })
+  if (whole === null) return null
+  return { km: whole, exact: decimals && m[2] ? Number(`${m[1]}.${m[2]}`) : whole }
 }
 
-// Keyakinan hanya bermakna untuk nilai yang terbaca: bila km dan bahan bakar sama-sama null, keyakinan dikosongkan (model kadang menjawab
+// Keyakinan hanya bermakna untuk nilai yang terbaca: bila tidak ada yang terbaca, keyakinan dikosongkan (model kadang menjawab
 // "yakin" bahwa tidak ada yang terbaca, yang menyesatkan bila dibaca sebagai keyakinan atas hasil). Catatan alasan hanya dibawa bila ada.
 const normalizeDashboard = (raw) => {
-  const km = kmFromDigits(raw)
-  // pecahan dari model (dibuat tingkat di sini); jawaban gaya lama membawa tingkatnya langsung
-  const fuel = typeof raw.fuel_fraction === 'number' ? fuelLevelOf(raw.fuel_fraction) : (FUEL_LEVELS.includes(raw.fuel_level) ? raw.fuel_level : null) // eslint-disable-line no-nested-ternary
+  // Jawaban gaya lama: satu transkripsi (digits_seen) dengan penanda layarnya
+  const legacy = typeof raw.digits_seen === 'string' && raw.odo_digits === undefined && raw.trip_digits === undefined
+  const legacyIsTrip = legacy && raw.display_mode === 'trip'
+  const odoText = legacy && !legacyIsTrip ? raw.digits_seen : raw.odo_digits
+  const tripText = legacyIsTrip ? raw.digits_seen : raw.trip_digits
+  const odo = distanceOf(odoText, { decimals: false })
+  const trip = distanceOf(tripText, { decimals: true })
+  // km yang dibandingkan dengan bacaan driver: odometer total bila terbaca, kalau tidak trip meter (driver boleh memotret layar mana pun)
+  const distance = odo || trip
+  const noDistanceField = raw.digits_seen === undefined && raw.odo_digits === undefined
+  let km = distance ? distance.km : null
+  if (!distance && noDistanceField) km = int(raw.km, { max: MAX_KM })
+
+  // Persen di LCD didahulukan; pecahan dari model (dibuat tingkat di sini); jawaban gaya lama membawa tingkatnya langsung
+  const percent = typeof raw.fuel_percent === 'number' && raw.fuel_percent >= 0 && raw.fuel_percent <= 100 ? Math.round(raw.fuel_percent) : null
+  const fraction = percent !== null ? percent / 100 : raw.fuel_fraction
+  let fuel = null
+  if (typeof fraction === 'number') fuel = fuelLevelOf(fraction)
+  else if (FUEL_LEVELS.includes(raw.fuel_level)) fuel = raw.fuel_level
+
   const note = text(raw.note, 120)
-  const digits = typeof raw.digits_seen === 'string' ? text(raw.digits_seen, 30) : null
+  const hasAny = km !== null || fuel !== null
   return {
     km,
     fuel_level: fuel,
-    confidence: km === null && fuel === null ? null : confidence(raw.confidence),
-    // Jenis layar hanya dibawa bila km terbaca (km boleh dari ODO maupun TRIP; admin melihat dari mana angkanya)
-    ...(km !== null && DISPLAY_MODES.includes(raw.display_mode) ? { display_mode: raw.display_mode } : {}),
-    ...(km !== null && digits ? { digits_seen: digits } : {}),
+    confidence: hasAny ? confidence(raw.confidence) : null,
+    // Layar asal km, dan kedua bacaan jarak bila ada (ODO bulat, Trip satu desimal) beserta transkripsinya untuk admin
+    ...(distance ? { display_mode: odo ? 'odo' : 'trip' } : {}),
+    ...(odo ? { odo_km: odo.km, odo_digits: text(odoText, 30) } : {}),
+    ...(trip ? { trip_km: trip.exact, trip_digits: text(tripText, 30) } : {}),
+    ...(percent !== null ? { fuel_percent: percent } : {}),
     ...(note ? { note } : {}),
   }
 }

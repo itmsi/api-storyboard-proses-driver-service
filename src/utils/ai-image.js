@@ -4,30 +4,34 @@ const storage = require('./storage')
 const { AiError } = require('./ai-error')
 
 /**
- * Siapkan foto untuk dikirim ke AI: foto kecil dan tegak dikirim apa adanya; selain itu putar sesuai EXIF, kecilkan (sisi terpanjang maksimal AI_IMAGE_MAX_SIDE, tanpa memperbesar),
- * simpan sebagai JPEG. Angka di dashboard tetap terbaca di sekitar 1280 px, dan ukuran kiriman (serta biaya token) jauh lebih kecil.
+ * Siapkan foto untuk dikirim ke AI: dikirim APA ADANYA (byte demi byte, tanpa diperkecil atau disandikan ulang) selama formatnya
+ * JPEG, PNG, atau WebP dan ukurannya di bawah batas OpenAI (AI_IMAGE_MAX_BYTES). Angka kecil di layar dashboard paling mudah rusak
+ * oleh pengecilan, jadi hanya dua keadaan yang diubah: format yang tidak didukung (mis. HEIC) menjadi JPEG kualitas tinggi tanpa
+ * pengecilan, dan file yang melebihi batas ukuran dikecilkan secukupnya (sisi terpanjang maksimal AI_IMAGE_MAX_SIDE).
  *
  * @param {Buffer} buffer
- * @returns {Promise<{ buffer: Buffer, mime: 'image/jpeg'|'image/png', width: number, height: number }>}
+ * @returns {Promise<{ buffer: Buffer, mime: string, width: number, height: number }>}
  */
-const prepareImage = async (buffer, { maxSide = config.ai.image.maxSide, quality = config.ai.image.jpegQuality } = {}) => {
+const MIME = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
+
+const prepareImage = async (buffer, {
+  maxBytes = config.ai.image.maxBytes, maxSide = config.ai.image.maxSide, quality = config.ai.image.jpegQuality,
+} = {}) => {
   try {
-    // Foto yang sudah cukup kecil dan tegak dikirim apa adanya (tanpa kompresi ulang): menyandikan ulang JPEG hanya menambah kerusakan
-    // pada angka yang kecil. Hanya foto besar yang dikecilkan, atau yang perlu diputar sesuai EXIF.
     const meta = await sharp(buffer).metadata()
-    const upright = !meta.orientation || meta.orientation === 1
-    if (upright && (meta.format === 'jpeg' || meta.format === 'png') && meta.width <= maxSide && meta.height <= maxSide) {
+    if (MIME[meta.format] && buffer.length <= maxBytes) {
       return {
-        buffer, mime: meta.format === 'png' ? 'image/png' : 'image/jpeg', width: meta.width, height: meta.height,
+        buffer, mime: MIME[meta.format], width: meta.width, height: meta.height,
       }
     }
-    const { data, info } = await sharp(buffer)
-      .rotate()
-      .resize({
+    // Perlu diubah: putar sesuai EXIF, kecilkan hanya bila file terlalu besar
+    let img = sharp(buffer).rotate()
+    if (buffer.length > maxBytes) {
+      img = img.resize({
         width: maxSide, height: maxSide, fit: 'inside', withoutEnlargement: true,
       })
-      .jpeg({ quality })
-      .toBuffer({ resolveWithObject: true })
+    }
+    const { data, info } = await img.jpeg({ quality }).toBuffer({ resolveWithObject: true })
     return {
       buffer: data, mime: 'image/jpeg', width: info.width, height: info.height,
     }

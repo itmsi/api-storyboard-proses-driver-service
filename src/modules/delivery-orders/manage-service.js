@@ -115,7 +115,10 @@ const serializeDetail = async (db, row) => {
     return {
       status: check.status,
       ...(check.status === 'done' || present ? values : {}),
-      ...(check.display_mode ? { display_mode: check.display_mode } : {}), // odo | trip | unknown: layar yang dibaca AI untuk km
+      ...(check.display_mode ? { display_mode: check.display_mode } : {}), // odo | trip: layar asal km (ODO didahulukan bila keduanya ada)
+      ...(check.odo_km !== null && check.odo_km !== undefined ? { odo_km: check.odo_km } : {}),
+      ...(check.trip_km !== null && check.trip_km !== undefined ? { trip_km: check.trip_km } : {}),
+      ...(check.fuel_percent !== null && check.fuel_percent !== undefined ? { fuel_percent: check.fuel_percent } : {}), // persen bahan bakar yang tertulis di LCD
       ...(check.note ? { note: check.note } : {}), // alasan AI bila ada yang tidak terbaca
       ...(check.status === 'failed' ? { error: { code: check.error_code, message: check.error_message } } : {}),
     }
