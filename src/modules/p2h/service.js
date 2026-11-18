@@ -257,7 +257,7 @@ const serializeListItem = (row) => ({
 })
 
 const list = async (db, query) => {
-  const paging = pagination.parse(query, SORTABLE, '-inspection_date')
+  const paging = pagination.parse(query, SORTABLE, 'inspection_date')
   const { rows, total } = await repo.listAdmin(db, {
     filters: query, search: query.search, paging,
   })

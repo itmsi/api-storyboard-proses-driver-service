@@ -100,7 +100,7 @@ const get = async (db, auth, id) => {
 }
 
 const list = async (db, query) => {
-  const paging = pagination.parse(query, SORTABLE, '-captured_at')
+  const paging = pagination.parse(query, SORTABLE, 'captured_at')
   const { rows, total } = await repo.listAdmin(db, { filters: query, search: query.search, paging })
   return { data: rows.map(serialize), meta: pagination.meta(paging, total) }
 }

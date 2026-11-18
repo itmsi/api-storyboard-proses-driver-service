@@ -286,7 +286,7 @@ const expandStatuses = (input) => {
 }
 
 const list = async (db, query) => {
-  const paging = pagination.parse(query, SORTABLE, '-created_at')
+  const paging = pagination.parse(query, SORTABLE, 'created_at')
   const { rows, total } = await repo.list(db, {
     search: query.search,
     paging,

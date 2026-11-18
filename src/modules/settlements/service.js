@@ -49,7 +49,7 @@ const load = async (db, deliveryOrderId) => {
 }
 
 const list = async (db, query) => {
-  const paging = pagination.parse(query, SORTABLE, '-completed_at')
+  const paging = pagination.parse(query, SORTABLE, 'completed_at')
   const { rows, totals } = await repo.list(db, {
     search: query.search,
     paging,
