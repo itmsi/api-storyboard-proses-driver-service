@@ -634,6 +634,132 @@ const schemas = {
     })),
   }),
 
+  // ---------- Dashboard ----------
+  DashboardCount: obj({
+    status: str('assigned'), label: str('Ditugaskan'), count: int(2), percent: int(29, { description: 'Persen dari total (dibulatkan)' }),
+  }),
+  Dashboard: obj({
+    period: obj({
+      start_date: date('2026-11-05'),
+      end_date: date('2026-11-05'),
+      days: int(1),
+      generated_at: dt('2026-11-05T15:40:00+07:00', { description: 'Waktu data dihitung ("data per 15.40")' }),
+    }),
+    cards: obj({
+      delivery_orders: obj({
+        total: int(7, { description: 'DO pada rentang, tanpa DO batal' }),
+        not_accepted: int(2, { description: 'Belum diterima driver (status assigned)' }),
+        on_hold: int(0, { description: 'Ditahan admin' }),
+      }),
+      running: obj({
+        total: int(2, { description: 'Diterima sampai serah terima (accepted, loading, in_transit, handover)' }),
+        pending_sync: int(1, { description: 'Data dari HP yang masih gagal tersinkron (antre), milik DO yang belum selesai' }),
+      }),
+      completed: obj({
+        total: int(2, { description: 'Selesai, selain gagal kirim' }),
+        settled: int(1, { description: 'Rekap uang jalan yang sudah disetor/dibayar (disetujui)' }),
+      }),
+      failed: obj({
+        total: int(1, { description: 'Selesai dengan hasil serah terima gagal_kirim' }),
+        needs_reschedule: bool(true, { description: 'true bila ada DO gagal kirim (perlu dijadwalkan ulang)' }),
+      }),
+    }),
+    do_status: obj({
+      total: int(7),
+      cancelled: int(0, { description: 'DO batal pada rentang (tidak masuk total)' }),
+      items: arr(ref('DashboardCount'), {
+        description: 'Urutan tetap: assigned (Ditugaskan), onhold (Ditahan), running (Berjalan), completed (Selesai), failed (Gagal kirim)',
+        example: [
+          {
+            status: 'assigned', label: 'Ditugaskan', count: 2, percent: 29,
+          },
+          {
+            status: 'onhold', label: 'Ditahan', count: 0, percent: 0,
+          },
+          {
+            status: 'running', label: 'Berjalan', count: 2, percent: 29,
+          },
+          {
+            status: 'completed', label: 'Selesai', count: 2, percent: 29,
+          },
+          {
+            status: 'failed', label: 'Gagal kirim', count: 1, percent: 14,
+          },
+        ],
+      }),
+      by_customer: arr(obj({
+        customer: nullable(obj({ id: str('85af8e6d-169d-4404-89d6-afca31e642e9'), name: str('PT Contoh Jaya') }, [], { description: 'null = DO tanpa customer' })),
+        total: int(4),
+        percent: int(57),
+        breakdown: arr(obj({ status: str('running'), label: str('Berjalan'), count: int(2) }), { description: 'Hanya status yang jumlahnya > 0' }),
+      }), { description: 'Urut jumlah DO terbanyak' }),
+    }),
+    p2h: obj({
+      date: { ...date('2026-11-05'), description: 'Tanggal P2H = end_date (paling lambat hari ini)' },
+      active_units: int(5, { description: 'Unit berstatus active' }),
+      counts: obj({
+        layak: int(2), catatan: int(2), tidak_layak: int(0), belum: int(1),
+      }),
+      items: arr(ref('DashboardCount'), {
+        description: 'Urutan tetap: layak (Boleh jalan), catatan (Boleh jalan · catatan), tidak_layak (Tidak layak jalan), belum (Belum P2H)',
+        example: [
+          {
+            status: 'layak', label: 'Boleh jalan', count: 2, percent: 40,
+          },
+          {
+            status: 'catatan', label: 'Boleh jalan · catatan', count: 2, percent: 40,
+          },
+          {
+            status: 'tidak_layak', label: 'Tidak layak jalan', count: 0, percent: 0,
+          },
+          {
+            status: 'belum', label: 'Belum P2H', count: 1, percent: 20,
+          },
+        ],
+      }),
+      attention: arr(obj({
+        unit: obj({ id: str('84ee6f8f-7caf-4079-88ef-a73e7d6ce457'), plate: str('B 9188 KZ'), type: str('CDD Box') }),
+        status: enumOf(['tidak_layak', 'belum', 'catatan'], 'belum'),
+        label: str('Belum P2H'),
+        note: nullable(str(null, { description: 'Keterangan item tidak sesuai, mis. "Lampu sein kiri mati"' })),
+        admin_confirmed_by_driver: nullable(bool(null, { description: 'Driver sudah melapor ke admin ("sudah dikonfirmasi")' })),
+        recheck_requested: bool(false, { description: 'Belum P2H karena admin meminta P2H ulang' }),
+        checked_at: nullable(dt(null)),
+        delivery_order: nullable(obj({
+          id: str('03e0c626-6109-4f25-8aa4-0b49e641719a'),
+          no: str('DO-0146'),
+          status: str('assigned'),
+          waiting: bool(true, { description: 'true = DO belum diterima ("menunggu")' }),
+        }, [], { description: 'DO yang memakai unit ini pada tanggal P2H' })),
+        driver: nullable(obj({ id: str('d4e47ef5-6d56-4d1e-972b-0b5c1b7876e8'), name: str('Sari') })),
+      }), { description: 'Unit yang tidak "Boleh jalan": tidak_layak, lalu belum, lalu catatan' }),
+    }),
+    finance: obj({
+      travel_allowance: obj({ total: money(3600000), do_count: int(7) }, [], { description: 'Uang jalan diberikan (DO pada rentang, tanpa DO batal)' }),
+      expenses: obj({
+        total: money(911000), receipt_total: money(600000), manual_total: money(311000), count: int(9),
+      }, [], { description: 'Biaya tercatat (tanpa yang dibatalkan admin): dari struk (receipt_ocr) dan input manual' }),
+      refund_to_company: obj({ total: money(2689000), unsettled_total: money(622000) }, [], { description: 'Sisa disetor driver' }),
+      payable_to_driver: obj({ total: money(0), unsettled_total: money(0) }, [], { description: 'Kurang bayar ke driver' }),
+      settled_count: int(1),
+      pending_settlements: obj({
+        count: int(2, { description: 'Semua rekap yang menunggu (bukan hanya yang ditampilkan)' }),
+        items: arr(obj({
+          delivery_order: obj({
+            id: str('22e84b8c-ba34-474a-866d-ef2c3f43018d'), no: str('DO-0140'), completed_at: dt('2026-11-05T13:00:00+07:00'), failed_delivery: bool(true),
+          }),
+          driver: obj({ id: str('8a1400f8-29e5-460e-b89e-d4f5e2bfafe7'), code: str('DRV-0012'), name: str('Rudi') }),
+          type: enumOf(['refund_to_company', 'payable_to_driver'], 'refund_to_company'),
+          label: str('Sisa disetor'),
+          amount: money(404000),
+        }), { description: 'Maksimal 10, paling lama selesai lebih dulu' }),
+      }, [], { description: 'Menunggu persetujuan settlement (belum disetor/dibayar, selain yang pas)' }),
+    }),
+    delivery_orders: arr(ref('AdminDeliveryOrder'), {
+      description: 'Daftar DO pada rentang (termasuk yang batal); dipengaruhi page, limit, search, sort, sort_by. Pagination di `meta`.',
+    }),
+  }),
+
   // ---------- Admin ----------
   PageMeta: obj({
     page: int(1), limit: int(20), total: int(42), total_pages: int(3),

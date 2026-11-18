@@ -113,6 +113,7 @@ const orderPaths = (all) => {
 }
 
 const paths = orderPaths(addSortBy(convertListEndpoints(mergePaths(
+  require('./paths/dashboard'),
   require('./paths/app-auth'),
   require('./paths/media-p2h'),
   require('./paths/delivery-orders'),
@@ -195,6 +196,7 @@ const index = {
     { url: 'http://localhost:9060/api/v1', description: 'Lokal' },
   ],
   tags: [
+    { name: 'Dashboard', description: 'Ringkasan operasional untuk web admin (DO, P2H, uang jalan, settlement)' },
     { name: 'App', description: 'Splash, konfigurasi, bootstrap' },
     { name: 'Auth', description: 'Login, refresh token, logout' },
     { name: 'Akun', description: 'Profil, pengaturan, perangkat' },

@@ -1,0 +1,351 @@
+{
+  "success": true,
+  "data": {
+    "period": {
+      "start_date": "2026-11-05",
+      "end_date": "2026-11-05",
+      "days": 1,
+      "generated_at": "2026-11-05T15:40:00+07:00"
+    },
+    "cards": {
+      "delivery_orders": {
+        "total": 7,
+        "not_accepted": 2,
+        "on_hold": 0
+      },
+      "running": {
+        "total": 2,
+        "pending_sync": 1
+      },
+      "completed": {
+        "total": 2,
+        "settled": 1
+      },
+      "failed": {
+        "total": 1,
+        "needs_reschedule": true
+      }
+    },
+    "do_status": {
+      "total": 7,
+      "cancelled": 1,
+      "items": [
+        {
+          "status": "assigned",
+          "label": "Ditugaskan",
+          "count": 2,
+          "percent": 29
+        },
+        {
+          "status": "onhold",
+          "label": "Ditahan",
+          "count": 0,
+          "percent": 0
+        },
+        {
+          "status": "running",
+          "label": "Berjalan",
+          "count": 2,
+          "percent": 29
+        },
+        {
+          "status": "completed",
+          "label": "Selesai",
+          "count": 2,
+          "percent": 29
+        },
+        {
+          "status": "failed",
+          "label": "Gagal kirim",
+          "count": 1,
+          "percent": 14
+        }
+      ],
+      "by_customer": [
+        {
+          "customer": {
+            "id": "097d973b-b691-4b43-8d42-3dc92f34700a",
+            "name": "PT Contoh Jaya"
+          },
+          "total": 4,
+          "percent": 57,
+          "breakdown": [
+            {
+              "status": "assigned",
+              "label": "Ditugaskan",
+              "count": 1
+            },
+            {
+              "status": "running",
+              "label": "Berjalan",
+              "count": 2
+            },
+            {
+              "status": "completed",
+              "label": "Selesai",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "customer": {
+            "id": "166eb838-90d6-449b-9483-44c3d55166cd",
+            "name": "PT Sinar Abadi"
+          },
+          "total": 3,
+          "percent": 43,
+          "breakdown": [
+            {
+              "status": "assigned",
+              "label": "Ditugaskan",
+              "count": 1
+            },
+            {
+              "status": "completed",
+              "label": "Selesai",
+              "count": 1
+            },
+            {
+              "status": "failed",
+              "label": "Gagal kirim",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "p2h": {
+      "date": "2026-11-05",
+      "active_units": 5,
+      "counts": {
+        "layak": 2,
+        "catatan": 2,
+        "tidak_layak": 0,
+        "belum": 1
+      },
+      "items": [
+        {
+          "status": "layak",
+          "label": "Boleh jalan",
+          "count": 2,
+          "percent": 40
+        },
+        {
+          "status": "catatan",
+          "label": "Boleh jalan · catatan",
+          "count": 2,
+          "percent": 40
+        },
+        {
+          "status": "tidak_layak",
+          "label": "Tidak layak jalan",
+          "count": 0,
+          "percent": 0
+        },
+        {
+          "status": "belum",
+          "label": "Belum P2H",
+          "count": 1,
+          "percent": 20
+        }
+      ],
+      "attention": [
+        {
+          "unit": {
+            "id": "a5d9d5dc-223e-4fa2-a658-09a54fbda6d4",
+            "plate": "B 9188 KZ",
+            "type": "CDD Box"
+          },
+          "status": "belum",
+          "label": "Belum P2H",
+          "note": null,
+          "admin_confirmed_by_driver": null,
+          "recheck_requested": false,
+          "checked_at": null,
+          "delivery_order": {
+            "id": "36273312-4564-4330-816b-38bf3005436a",
+            "no": "DO-0146",
+            "status": "assigned",
+            "waiting": true
+          },
+          "driver": {
+            "id": "2def5123-ead8-4272-9465-82a65adea6f1",
+            "name": "Sari"
+          }
+        },
+        {
+          "unit": {
+            "id": "53ec2e86-9caf-49e5-a35f-4c29e194cef7",
+            "plate": "B 9077 KZ",
+            "type": "CDD Box"
+          },
+          "status": "catatan",
+          "label": "Boleh jalan · catatan",
+          "note": "Wiper kanan lemah",
+          "admin_confirmed_by_driver": true,
+          "recheck_requested": false,
+          "checked_at": "2026-11-05T07:00:00+07:00",
+          "delivery_order": {
+            "id": "e4e3e47b-ff25-44ba-b803-8ccaa4d09d1f",
+            "no": "DO-0142",
+            "status": "loading",
+            "waiting": false
+          },
+          "driver": {
+            "id": "6effa664-3b46-463d-a03d-ec762687269c",
+            "name": "Dewi"
+          }
+        },
+        {
+          "unit": {
+            "id": "01301402-28c2-4fde-8169-6d53f8720977",
+            "plate": "B 9123 KZ",
+            "type": "CDD Box"
+          },
+          "status": "catatan",
+          "label": "Boleh jalan · catatan",
+          "note": "Lampu sein kiri mati",
+          "admin_confirmed_by_driver": true,
+          "recheck_requested": false,
+          "checked_at": "2026-11-05T07:00:00+07:00",
+          "delivery_order": {
+            "id": "f4670d85-b903-4da4-b3cd-561692eb2b3f",
+            "no": "DO-0141",
+            "status": "in_transit",
+            "waiting": false
+          },
+          "driver": {
+            "id": "23d9b0d2-9955-44c9-a41a-7cfc4d74a133",
+            "name": "Budi"
+          }
+        }
+      ]
+    },
+    "finance": {
+      "travel_allowance": {
+        "total": 3600000,
+        "do_count": 7
+      },
+      "expenses": {
+        "total": 911000,
+        "receipt_total": 600000,
+        "manual_total": 311000,
+        "count": 9
+      },
+      "refund_to_company": {
+        "total": 2689000,
+        "unsettled_total": 622000
+      },
+      "payable_to_driver": {
+        "total": 0,
+        "unsettled_total": 0
+      },
+      "settled_count": 1,
+      "pending_settlements": {
+        "count": 2,
+        "items": [
+          {
+            "delivery_order": {
+              "id": "846b224d-7b82-4a47-8c43-388bdf8d2c7d",
+              "no": "DO-0139",
+              "completed_at": "2026-11-05T12:00:00+07:00",
+              "failed_delivery": false
+            },
+            "driver": {
+              "id": "67bd402d-dba5-456f-9457-fb69fa0860c1",
+              "code": "DRV-0011",
+              "name": "Andi"
+            },
+            "type": "refund_to_company",
+            "label": "Sisa disetor",
+            "amount": 218000
+          },
+          {
+            "delivery_order": {
+              "id": "38b6669b-3321-4367-8261-4a1ab37167ef",
+              "no": "DO-0140",
+              "completed_at": "2026-11-05T13:00:00+07:00",
+              "failed_delivery": true
+            },
+            "driver": {
+              "id": "63642aca-1190-4fb3-a871-e50270e1a0f0",
+              "code": "DRV-0012",
+              "name": "Rudi"
+            },
+            "type": "refund_to_company",
+            "label": "Sisa disetor",
+            "amount": 404000
+          }
+        ]
+      }
+    },
+    "delivery_orders": [
+      {
+        "id": "36273312-4564-4330-816b-38bf3005436a",
+        "no": "DO-0146",
+        "status": "assigned",
+        "delivery_status": null,
+        "driver": {
+          "id": "2def5123-ead8-4272-9465-82a65adea6f1",
+          "code": "DRV-0013",
+          "name": "Sari"
+        },
+        "unit": {
+          "id": "a5d9d5dc-223e-4fa2-a658-09a54fbda6d4",
+          "plate": "B 9188 KZ",
+          "type": "CDD Box"
+        },
+        "unit_assignment": {
+          "work_date": "2026-11-05",
+          "source": "override"
+        },
+        "customer": {
+          "id": "166eb838-90d6-449b-9483-44c3d55166cd",
+          "name": "PT Sinar Abadi"
+        },
+        "route": "Cakung → PT Sinar Abadi, Karawang",
+        "origin": {
+          "name": "Gudang Cakung",
+          "city": "Jakarta Timur",
+          "maps_url": null
+        },
+        "destination": {
+          "name": "PT Sinar Abadi",
+          "city": "Karawang",
+          "maps_url": null
+        },
+        "planned_load_at": "2026-11-05T08:00:00+07:00",
+        "assigned_at": "2026-11-05T11:41:38+07:00",
+        "cargo": {
+          "description": "palet",
+          "quantity": 1,
+          "unit": "palet"
+        },
+        "estimated_distance_km": null,
+        "travel_allowance_amount": 500000,
+        "expense_total": 0,
+        "odometer_start_km": null,
+        "odometer_end_km": null,
+        "distance_km": null,
+        "accepted_at": null,
+        "started_at": null,
+        "completed_at": null,
+        "on_hold_at": null,
+        "on_hold_reason": null,
+        "cancelled_at": null,
+        "cancel_reason": null,
+        "needs_review": false,
+        "created_at": "2026-11-05T11:41:38+07:00",
+        "created_by": null,
+        "updated_at": "2026-11-05T11:41:38+07:00",
+        "updated_by": null
+      }
+    ]
+  },
+  "meta": {
+    "page": 1,
+    "limit": 1,
+    "total": 8,
+    "total_pages": 8
+  }
+}

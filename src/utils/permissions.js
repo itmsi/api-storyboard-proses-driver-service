@@ -13,6 +13,7 @@ const ACTIONS = ['read', 'create', 'update', 'delete']
 const USER_TYPES = ['admin', 'driver']
 
 const RESOURCES = {
+  dashboard: 'Dashboard',
   drivers: 'Driver',
   users: 'Pengguna admin',
   roles: 'Role dan hak akses',
