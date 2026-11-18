@@ -119,6 +119,7 @@ const serializeDetail = async (db, row) => {
       ...(check.odo_km !== null && check.odo_km !== undefined ? { odo_km: check.odo_km } : {}),
       ...(check.trip_km !== null && check.trip_km !== undefined ? { trip_km: check.trip_km } : {}),
       ...(check.fuel_percent !== null && check.fuel_percent !== undefined ? { fuel_percent: check.fuel_percent } : {}), // persen bahan bakar yang tertulis di LCD
+      ...(check.extras ? { extras: check.extras } : {}), // bacaan lain di dashboard (AdBlue, voltase, tekanan, lampu peringatan, teks LCD, dan lainnya)
       ...(check.note ? { note: check.note } : {}), // alasan AI bila ada yang tidak terbaca
       ...(check.status === 'failed' ? { error: { code: check.error_code, message: check.error_message } } : {}),
     }

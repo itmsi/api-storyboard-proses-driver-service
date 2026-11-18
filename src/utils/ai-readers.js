@@ -57,6 +57,37 @@ const fuelLevelOf = (fraction) => {
   return FUEL_LEVEL_BOUNDS.find((b) => fraction < b.below).level
 }
 
+// Bacaan lain di dashboard yang tidak dipakai pengecekan tetapi disimpan semuanya (dipakai FE atau tidak, tidak masalah)
+const WARNING_LIGHTS = ['parking_brake', 'stop', 'brake_system', 'oil_pressure', 'check_engine', 'battery', 'abs', 'coolant', 'other']
+const LCD_PAGES = ['odometer', 'fuel_info', 'consumption', 'menu', 'other', 'unknown']
+const EXTRA_NUMBERS = {
+  // kunci: [batas bawah, batas atas, jumlah desimal]
+  adblue_percent: [0, 100, 0],
+  battery_voltage: [0, 60, 1],
+  trip_fuel_consumption: [0, 500, 1],
+  odo_fuel_consumption: [0, 500, 1],
+  total_fuel_l: [0, 10000000, 1],
+  total_hours: [0, 1000000, 1],
+  fuel_rate_lph: [0, 1000, 1],
+  oil_pressure_bar: [0, 20, 1],
+  air_pressure_1_bar: [0, 20, 1],
+  air_pressure_2_bar: [0, 20, 1],
+  speed_kmh: [0, 300, 0],
+  rpm: [0, 10000, 0],
+  coolant_fraction: [0, 1, 2],
+}
+const EXTRAS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [...Object.keys(EXTRA_NUMBERS), 'warning_lights', 'lcd_page', 'lcd_text'],
+  properties: {
+    ...Object.fromEntries(Object.keys(EXTRA_NUMBERS).map((k) => [k, { type: ['number', 'null'] }])),
+    warning_lights: { type: 'array', items: { type: 'string', enum: WARNING_LIGHTS } },
+    lcd_page: { type: ['string', 'null'], enum: [...LCD_PAGES, null] },
+    lcd_text: { type: 'array', items: { type: 'string' } },
+  },
+}
+
 const DASHBOARD_INSTRUCTION = [
   'You read a photo of a truck or vehicle dashboard taken by a driver in Indonesia. Work carefully and only report what you can actually see.',
   'The instrument cluster often has a multi-page LCD. Depending on the page it may show an odometer, a trip meter, fuel information, or only a menu or other data. Report only what the current page shows.',
@@ -68,6 +99,12 @@ const DASHBOARD_INSTRUCTION = [
   'Do NOT confuse it with AdBlue (urea, labelled "AdBlue", usually with a different drop icon). Do NOT use "total fuel", "fuel cons", "L/h" or "L/100km": they are consumption figures, not the tank level.',
   'If there is no digital percentage, read the analog fuel gauge (needle between E/0 and F/1) or a row of bars: "fuel_fraction" between 0 (empty) and 1 (full): the needle position along the arc, or lit bars divided by total bars.',
   'Fill only the one you used and set the other to null. Look closely at the needle tip or at each bar. Use null for both if no tank fuel indication is visible.',
+  'Step 4: ALSO record everything else that is visible in the photo, even if it is not needed for the checks above, inside "extras". Use null (or an empty list) for what is not visible; never guess.',
+  'extras.adblue_percent: AdBlue/urea level in %. extras.battery_voltage: battery voltage (V). extras.trip_fuel_consumption and extras.odo_fuel_consumption: "Trip Fuel cons." and "ODO fuel Cons." in L/100km (null if the display shows dashes).',
+  'extras.total_fuel_l: "total fuel" in litres. extras.total_hours: "total hours" in hours. extras.fuel_rate_lph: instantaneous fuel rate in L/h. extras.oil_pressure_bar: oil pressure. extras.air_pressure_1_bar and extras.air_pressure_2_bar: the two air pressure bars (circuit 1 and 2, 0-12 bar), estimated from the bar length.',
+  'extras.speed_kmh and extras.rpm: read from the analog needles only if the needle position is clear (rpm is the tachometer value multiplied by 100). extras.coolant_fraction: coolant temperature needle, 0 (C, cold) to 1 (H, hot).',
+  'extras.warning_lights: every warning light that is ON (lit), chosen from: parking_brake, stop, brake_system, oil_pressure, check_engine, battery, abs, coolant, other. Do not list lights that are dark.',
+  'extras.lcd_page: what the LCD page shows: "odometer" (trip/ODO), "fuel_info" (AdBlue/fuel/battery), "consumption" (fuel consumption, total fuel/hours), "menu" (settings or menu), "other", or "unknown". extras.lcd_text: every text line readable on the LCD, in reading order, copied as displayed (max 12 lines).',
   'Return "confidence": between 0 and 1, how sure you are that the values you returned are correct. Use null if every reading is null.',
   'Return "note": one short sentence (max 100 characters, English) when something is null or uncertain (e.g. "LCD shows a settings menu", "digits are blurred by glare"), or to say which fuel source you used; otherwise null.',
   'Reply only with JSON that matches the schema.',
@@ -77,12 +114,13 @@ const DASHBOARD_INSTRUCTION = [
 const DASHBOARD_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['odo_digits', 'trip_digits', 'fuel_percent', 'fuel_fraction', 'confidence', 'note'],
+  required: ['odo_digits', 'trip_digits', 'fuel_percent', 'fuel_fraction', 'extras', 'confidence', 'note'],
   properties: {
     odo_digits: { type: ['string', 'null'] },
     trip_digits: { type: ['string', 'null'] },
     fuel_percent: { type: ['number', 'null'] },
     fuel_fraction: { type: ['number', 'null'] },
+    extras: EXTRAS_SCHEMA,
     confidence: { type: ['number', 'null'] },
     note: { type: ['string', 'null'] },
   },
@@ -101,6 +139,28 @@ const distanceOf = (raw, { decimals }) => {
   const whole = int(Number(m[1]), { max: MAX_KM })
   if (whole === null) return null
   return { km: whole, exact: decimals && m[2] ? Number(`${m[1]}.${m[2]}`) : whole }
+}
+
+/** Angka inklusif dalam batas (0 sah, mis. tekanan oli 0.0 bar); di luar batas atau bukan angka = null. */
+const ranged = (value, [min, max, places]) => {
+  const n = typeof value === 'number' ? value : NaN
+  return Number.isFinite(n) && n >= min && n <= max ? Number(n.toFixed(places)) : null
+}
+
+/** Bacaan tambahan: hanya yang terbaca yang dibawa. Tanpa satu pun, extras tidak ada. */
+const normalizeExtras = (raw) => {
+  if (!raw || typeof raw !== 'object') return null
+  const out = {}
+  Object.entries(EXTRA_NUMBERS).forEach(([key, bounds]) => {
+    const v = ranged(raw[key], bounds)
+    if (v !== null) out[key] = v
+  })
+  const lights = Array.isArray(raw.warning_lights) ? [...new Set(raw.warning_lights.filter((l) => WARNING_LIGHTS.includes(l)))] : []
+  if (lights.length) out.warning_lights = lights
+  if (LCD_PAGES.includes(raw.lcd_page) && raw.lcd_page !== 'unknown') out.lcd_page = raw.lcd_page
+  const lines = Array.isArray(raw.lcd_text) ? raw.lcd_text.map((l) => text(l, 80)).filter(Boolean).slice(0, 12) : []
+  if (lines.length) out.lcd_text = lines
+  return Object.keys(out).length ? out : null
 }
 
 // Keyakinan hanya bermakna untuk nilai yang terbaca: bila tidak ada yang terbaca, keyakinan dikosongkan (model kadang menjawab
@@ -127,6 +187,7 @@ const normalizeDashboard = (raw) => {
   else if (FUEL_LEVELS.includes(raw.fuel_level)) fuel = raw.fuel_level
 
   const note = text(raw.note, 120)
+  const extras = normalizeExtras(raw.extras)
   const hasAny = km !== null || fuel !== null
   return {
     km,
@@ -137,6 +198,7 @@ const normalizeDashboard = (raw) => {
     ...(odo ? { odo_km: odo.km, odo_digits: compactDigits(odoText) } : {}),
     ...(trip ? { trip_km: trip.exact, trip_digits: compactDigits(tripText) } : {}),
     ...(percent !== null ? { fuel_percent: percent } : {}),
+    ...(extras ? { extras } : {}),
     ...(note ? { note } : {}),
   }
 }

@@ -8,7 +8,7 @@ const base = (db, driverId) => withAuditNames(
     .join('units', 'units.id', 'delivery_orders.unit_id')
     .join('drivers', 'drivers.id', 'delivery_orders.driver_id')
     .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
-    .where('delivery_orders.driver_id', driverId)
+    .modify((q) => { if (driverId) q.where('delivery_orders.driver_id', driverId) }) // driverId kosong = semua driver (admin)
     .select(
       'delivery_orders.*',
       'units.plate as unit_plate',
@@ -63,7 +63,8 @@ const history = (db, driverId, {
   .limit(limit + 1) // satu baris ekstra untuk has_more
 
 const historySummary = (db, driverId, { from, to }) => db('delivery_orders')
-  .where({ driver_id: driverId, status: 'completed' })
+  .where({ status: 'completed' })
+  .modify((q) => { if (driverId) q.where({ driver_id: driverId }) })
   .whereBetween('completed_at', [from, to])
   .select(
     db.raw('count(*) as do_count'),

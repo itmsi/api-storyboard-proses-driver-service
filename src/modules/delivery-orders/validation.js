@@ -23,6 +23,9 @@ const historyQuery = Joi.object({
   cursor: Joi.string().max(300),
 })
 
+// Admin: sama dengan driver, ditambah filter driver_id (kosong = semua driver)
+const adminHistoryQuery = historyQuery.keys({ driver_id: Joi.string().guid() })
+
 // Toleransi selisih jam HP dengan server
 const MAX_FUTURE_MS = 5 * 60 * 1000
 
@@ -40,5 +43,5 @@ const accept = Joi.object({
 })
 
 module.exports = {
-  idParams, listQuery, historyQuery, accept, LIST_STATUSES,
+  idParams, listQuery, historyQuery, adminHistoryQuery, accept, LIST_STATUSES,
 }

@@ -27,7 +27,11 @@ router.post('/', adminGuard, can('delivery_orders', 'create'), validate({ body: 
 
 // Path tetap harus didaftarkan SEBELUM '/:id'
 router.get('/active', driverOnly, driverCan('driver_delivery_orders', 'read'), asyncHandler(controller.active))
-router.post('/history', driverOnly, driverCan('driver_delivery_orders', 'read'), validate({ body: schema.historyQuery }), asyncHandler(controller.history))
+// POST /api/v1/delivery-orders/history  (driver: riwayat DO miliknya   |   admin: riwayat semua driver, atau satu driver lewat driver_id)
+router.post('/history', anyRole, adminCan('delivery_orders', 'read'), driverCan('driver_delivery_orders', 'read'), byRole({
+  driver: [validate({ body: schema.historyQuery })],
+  admin: [validate({ body: schema.adminHistoryQuery })],
+}), asyncHandler(controller.history))
 
 // GET /api/v1/delivery-orders/:id   (driver: DO miliknya; admin: detail lengkap beserta linimasa)
 router.get('/:id', anyRole, adminCan('delivery_orders', 'read'), driverCan('driver_delivery_orders', 'read'), validate({ params: schema.idParams }), asyncHandler(controller.getById))

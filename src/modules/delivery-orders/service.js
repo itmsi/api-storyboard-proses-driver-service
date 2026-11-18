@@ -162,6 +162,9 @@ const decodeCursor = (value) => {
 }
 
 const history = async (db, auth, query) => {
+  // Admin: semua driver, atau satu driver lewat driver_id. Driver: selalu hanya miliknya sendiri.
+  const isAdmin = auth.role === 'admin'
+  const driverId = isAdmin ? query.driver_id || null : auth.driver_id
   const to = query.to || wibDate()
   const from = query.from || wibDate(new Date(new Date(`${to}T00:00:00+07:00`).getTime() - DEFAULT_RANGE_DAYS * DAY_MS))
   const range = (new Date(`${to}T00:00:00+07:00`) - new Date(`${from}T00:00:00+07:00`)) / DAY_MS
@@ -175,8 +178,8 @@ const history = async (db, auth, query) => {
   const cursor = query.cursor ? decodeCursor(query.cursor) : null
 
   const [rows, summary] = await Promise.all([
-    repo.history(db, auth.driver_id, { ...bounds, limit, cursor }),
-    repo.historySummary(db, auth.driver_id, bounds),
+    repo.history(db, driverId, { ...bounds, limit, cursor }),
+    repo.historySummary(db, driverId, bounds),
   ])
   const hasMore = rows.length > limit
   const page = hasMore ? rows.slice(0, limit) : rows
@@ -191,6 +194,7 @@ const history = async (db, auth, query) => {
       unit_plate: row.unit_plate,
       expense_total: num(row.expense_total),
       delivery_status: row.delivery_status,
+      ...(isAdmin ? { driver: { id: row.driver_id, code: row.driver_code, name: row.driver_name } } : {}),
     })),
     meta: {
       from,

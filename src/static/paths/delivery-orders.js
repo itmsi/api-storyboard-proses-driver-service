@@ -113,23 +113,30 @@ module.exports = {
     },
   },
   '/delivery-orders/history': {
-    get: {
+    post: {
       tags: ['Delivery Order'],
       summary: 'Riwayat DO (menu Riwayat)',
-      description: 'Pagination berbasis cursor. Kirim `cursor` dari `meta.next_cursor` untuk halaman berikutnya.',
+      description: 'Pagination berbasis cursor. Kirim `cursor` dari `meta.next_cursor` untuk halaman berikutnya. Driver: DO miliknya (hak `driver_delivery_orders:read`). Admin: DO semua driver, atau satu driver lewat `driver_id` (hak `delivery_orders:read`); tiap item memuat `driver`.',
       security: secured,
-      parameters: [
-        { name: 'from', in: 'query', schema: { type: 'string', format: 'date', example: '2026-11-01' } },
-        { name: 'to', in: 'query', schema: { type: 'string', format: 'date', example: '2026-11-05' } },
-        {
-          name: 'limit',
-          in: 'query',
-          schema: {
-            type: 'integer', minimum: 1, maximum: 50, default: 20
+      requestBody: {
+        required: false,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                from: { type: 'string', format: 'date', example: '2026-11-01' },
+                to: { type: 'string', format: 'date', example: '2026-11-05' },
+                limit: {
+                  type: 'integer', minimum: 1, maximum: 50, default: 20
+                },
+                cursor: { type: 'string', example: 'eyJpZCI6ImRvXzAxMzEifQ==' },
+                driver_id: { type: 'string', format: 'uuid', description: 'Hanya admin. Kosong = semua driver' },
+              },
+            },
           },
         },
-        { name: 'cursor', in: 'query', schema: { type: 'string', example: 'eyJpZCI6ImRvXzAxMzEifQ==' } },
-      ],
+      },
       responses: {
         200: jsonResponse('OK', envelope(arr(ref('HistoryItem')), ref('HistoryMeta')), {
           'Halaman 1': '12-history/GET.history.page1.response.json',

@@ -185,7 +185,7 @@ const settlement = (db, doId) => db('settlements').where({ delivery_order_id: do
 const mediaByIds = (db, ids) => (ids.length ? db('media').whereIn('id', ids) : Promise.resolve([]))
 
 /** Status pengecekan AI yang tertaut ke bacaan/struk. */
-const aiChecksByIds = (db, ids) => (ids.length ? db('ai_checks').whereIn('id', ids).select('id', 'status', 'error_code', 'error_message', db.raw("result->>'note' as note"), db.raw("result->>'display_mode' as display_mode"), db.raw("(result->>'odo_km')::int as odo_km"), db.raw("(result->>'trip_km')::numeric::float8 as trip_km"), db.raw("(result->>'fuel_percent')::int as fuel_percent")) : Promise.resolve([]))
+const aiChecksByIds = (db, ids) => (ids.length ? db('ai_checks').whereIn('id', ids).select('id', 'status', 'error_code', 'error_message', db.raw("result->>'note' as note"), db.raw("result->>'display_mode' as display_mode"), db.raw("(result->>'odo_km')::int as odo_km"), db.raw("(result->>'trip_km')::numeric::float8 as trip_km"), db.raw("(result->>'fuel_percent')::int as fuel_percent"), db.raw("result->'extras' as extras")) : Promise.resolve([]))
 
 const media = (db, doId) => db('delivery_order_media')
   .join('media', 'media.id', 'delivery_order_media.media_id')
