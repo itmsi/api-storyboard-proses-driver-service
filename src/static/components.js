@@ -625,6 +625,15 @@ const schemas = {
     unit_plate: str('B 9123 KZ'),
     expense_total: money(182000),
     delivery_status: enumOf(DELIVERY_STATUS),
+    status: enumOf(['assigned', 'onhold', 'accepted', 'loading', 'in_transit', 'handover', 'completed', 'cancelled'], 'completed', { description: 'Status DO saat ini (riwayat memuat semua status, tidak menunggu selesai)' }),
+    planned_load_at: nullable(dt()),
+    assigned_at: nullable(dt()),
+    accepted_at: nullable(dt()),
+    started_at: nullable(dt()),
+    completed_at: nullable(dt()),
+    on_hold_at: nullable(dt(), { description: 'Hanya untuk admin' }),
+    cancelled_at: nullable(dt()),
+    driver: obj({ id: str('d84f2a61-7c93-4e05-a1b8-5f3e9c0d7a22'), code: str('DRV-0021'), name: str('Andi Pratama') }, undefined, { description: 'Hanya untuk admin' }),
   }),
   HistoryMeta: obj({
     from: date('2026-11-01'),
@@ -632,7 +641,11 @@ const schemas = {
     limit: int(20),
     next_cursor: nullable(str('eyJpZCI6ImRvXzAxMzEifQ==')),
     has_more: bool(true),
-    summary: obj({ do_count: int(4), distance_km: num(167), expense_total: money(679500) }),
+    summary: obj({
+      do_count: int(4), distance_km: num(167), expense_total: money(679500), by_status: {
+        type: 'object', additionalProperties: { type: 'integer' }, example: { completed: 3, assigned: 1 }, description: 'Jumlah DO per status pada rentang dan filter yang sama',
+      },
+    }),
   }),
 
   // ---------- Sync ----------
