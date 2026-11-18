@@ -23,7 +23,7 @@ module.exports = {
       tags: ['Delivery Order'],
       summary: 'Buat dan tugaskan DO (admin)',
       description: [
-        'Nomor DO otomatis (`DO-0001`, …). Alamat asal dan tujuan **disalin** ke DO, jadi mengubah lokasi master tidak mengubah DO.',
+        'Nomor DO otomatis: `document_prefix` dari pengaturan (`PUT /settings`, default `DO-`) + `document_number` auto increment (min. 4 digit), mis. `DO-0145`; hasilnya di `no`. Alamat asal dan tujuan **disalin** ke DO, jadi mengubah lokasi master tidak mengubah DO.',
         '`customer_id` boleh dikosongkan (diturunkan dari lokasi tujuan). Driver harus aktif dan unit harus berstatus `active`.',
         'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
         'Muatan opsional: `cargo_type` (jenis, mis. `Container`) dan `cargo_details` berisi rincian bebas `[{ label, value }]` (maks. 50), mis. no container, no seal, keterangan.',

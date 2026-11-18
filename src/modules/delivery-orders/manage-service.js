@@ -9,6 +9,7 @@ const { serializeMedia } = require('../media/serializer')
 const unitDay = require('./unit-day')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
+const { resolveSettings } = require('../app/settings')
 const cargo = require('./cargo')
 const validation = require('./manage-validation')
 
@@ -46,6 +47,8 @@ const routeLabel = (row) => {
 const serializeListItem = (row) => ({
   id: row.id,
   no: row.no,
+  document_prefix: row.document_prefix,
+  document_number: row.document_number === null || row.document_number === undefined ? null : Number(row.document_number),
   status: row.status,
   delivery_status: row.delivery_status,
   driver: { id: row.driver_id, code: row.driver_code, name: row.driver_name },
@@ -375,8 +378,7 @@ const assertDriverDayFree = async (trx, {
 const lockDriver = (trx, driverId) => trx('drivers').where({ id: driverId }).forUpdate().first('id')
 
 const create = async (db, admin, body) => {
-  const refs = await resolveRefs(db, body)
-  const no = await repo.nextNumber(db)
+  const [refs, settings] = await Promise.all([resolveRefs(db, body), resolveSettings(db)])
   const workDate = assignmentDate(body.planned_load_at)
   const id = await db.transaction(async (trx) => {
     await lockDriver(trx, body.driver_id)
@@ -385,8 +387,9 @@ const create = async (db, admin, body) => {
     await unitDay.ensureUnitFree(trx, {
       driverId: body.driver_id, unitId: body.unit_id, unit: refs.unit, workDate,
     })
+    // Nomor DO = document_prefix (pengaturan) + document_number (auto increment di database); `no` dibentuk database
     const created = await repo.insert(trx, {
-      no,
+      document_prefix: settings.document_prefix,
       customer_id: refs.customerId,
       driver_id: body.driver_id,
       unit_id: body.unit_id,

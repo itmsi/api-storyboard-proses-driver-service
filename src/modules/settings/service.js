@@ -6,7 +6,7 @@ const appRepo = require('../app/repository')
 // (jumlah foto, sisi foto P2H, jam berlaku P2H, alasan koreksi wajib).
 // Disimpan sebagai baris app_settings (satu kunci per kelompok); kunci yang belum pernah diubah memakai nilai bawaan.
 
-const EDITABLE = ['modules', 'photo_rules', 'p2h', 'correction_reason_required', 'languages', 'default_language', 'branding']
+const EDITABLE = ['modules', 'photo_rules', 'p2h', 'correction_reason_required', 'languages', 'default_language', 'branding', 'document_prefix']
 
 const RANGES = ['loading', 'unloading', 'delivery_note_pages']
 
@@ -40,7 +40,7 @@ const merge = (current, body) => {
       support: { ...current.branding.support, ...(support || {}) },
     }
   }
-  ['correction_reason_required', 'languages', 'default_language'].forEach((k) => {
+  ['correction_reason_required', 'languages', 'default_language', 'document_prefix'].forEach((k) => {
     if (body[k] !== undefined) next[k] = body[k]
   })
   return next

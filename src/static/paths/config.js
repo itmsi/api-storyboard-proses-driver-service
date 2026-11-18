@@ -169,6 +169,7 @@ module.exports = {
         'Kirim hanya yang ingin diubah; tiap kelompok digabung dengan nilai sekarang (mis. `modules: { receipt_ocr: false }` tidak mengubah flag lain). Kunci yang tidak dikenal ditolak 422.',
         'Aturan antar-field dicek pada hasil gabungan: `min` foto tidak boleh melebihi `max`, bahasa bawaan harus ada di daftar bahasa, minimal satu sisi foto badan P2H.',
         '`branding` (nama aplikasi, tagline, logo, ikon, warna tema, kontak dukungan) dibaca aplikasi lewat `GET /config` dan berlaku tanpa rilis aplikasi baru. Warna `#RRGGBB`; logo dan ikon berupa URL http(s); `null` mengosongkan teks atau URL.',
+        '`document_prefix` = teks di depan nomor DO baru (mis. `DO-` -> `DO-0145`, `SJ/2026/` -> `SJ/2026/0146`). Nomor urut auto increment dan tetap berlanjut walau prefix diganti; DO lama tidak berubah.',
         'Berlaku langsung di server: jumlah foto muat/bongkar/surat jalan, sisi foto P2H, jam berlaku P2H, dan kewajiban alasan koreksi. Menaikkan `config_version`. Jika ada yang gagal validasi, tidak ada yang berubah.',
       ].join('\n'),
       security: secured,

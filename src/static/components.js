@@ -121,7 +121,7 @@ const schemas = {
     duration_ms: int(840),
   }),
   SeedResult: obj({
-    seeded: arr(str('system_user:created'), { description: 'Yang disiapkan; system_user:created | system_user:updated' }),
+    seeded: arr(str('system_user:created'), { description: 'Yang disiapkan: default_roles, setting:<kunci> (pengaturan bawaan yang baru dibuat, mis. setting:document_prefix), system_user:created | system_user:updated' }),
     duration_ms: int(120),
   }),
   VerifyResult: obj({
@@ -1129,7 +1129,9 @@ const schemas = {
   // ---------- Admin - Delivery Order & Penugasan ----------
   AdminDeliveryOrder: obj({
     id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
-    no: str('DO-0145'),
+    no: str('DO-0145', { description: 'Nomor DO lengkap = document_prefix + document_number (min. 4 digit). Dibentuk database, tidak bisa diubah.' }),
+    document_prefix: str('DO-', { description: 'Teks di depan nomor, dari pengaturan `document_prefix` saat DO dibuat' }),
+    document_number: int(145, { description: 'Nomor urut auto increment (berlanjut walau prefix diganti)' }),
     status: enumOf(DO_STATUS, 'assigned'),
     delivery_status: nullable(enumOf(DELIVERY_STATUS, 'terkirim_lengkap')),
     driver: obj({ id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'), code: str('DRV-0021'), name: str('Andi') }),
@@ -1484,6 +1486,7 @@ const schemas = {
     }),
     p2h: obj({ frequency: enumOf(['daily_per_unit']), valid_until_local: str('23:59', { description: 'Jam P2H berakhir setiap hari (WIB)' }) }),
     correction_reason_required: bool(true, { description: 'Koreksi hasil OCR wajib disertai alasan' }),
+    document_prefix: str('DO-', { description: 'Teks di depan nomor DO baru: <document_prefix><nomor urut min. 4 digit>, mis. DO-0145. Default "DO-".' }),
     branding: obj({
       app_name: nullable(str('Logistik Maju', { description: 'Nama aplikasi di dalam layar. Kosong = pakai client_name.' })),
       tagline: nullable(str('Antar Tepat Waktu')),
@@ -1530,6 +1533,12 @@ const schemas = {
     }, undefined, { description: 'Boleh sebagian per kelompok' }),
     p2h: obj({ frequency: enumOf(['daily_per_unit']), valid_until_local: str('18:30') }),
     correction_reason_required: bool(false),
+    document_prefix: str('SJ/2026/', {
+      minLength: 1,
+      maxLength: 20,
+      pattern: '^[A-Za-z0-9 ._/-]+$',
+      description: 'Prefix nomor DO baru (huruf, angka, spasi, ".", "_", "/", "-"). Hanya berlaku untuk DO yang dibuat sesudahnya; nomor urut tetap berlanjut.',
+    }),
     branding: obj({
       app_name: nullable(str('Logistik Maju', { description: 'null = kosongkan' })),
       tagline: nullable(str('Antar Tepat Waktu')),

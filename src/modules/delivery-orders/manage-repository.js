@@ -121,18 +121,6 @@ const findUnitOrdersOnDate = (db, {
   return q
 }
 
-/** Nomor DO berikutnya dari sequence; lewati nomor yang sudah dipakai (mis. DO-0144 dari data awal). */
-const nextNumber = async (db) => {
-  for (let i = 0; i < 100; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    const { rows } = await db.raw("select nextval('delivery_order_no_seq') as n")
-    const no = `DO-${String(rows[0].n).padStart(4, '0')}`
-    // eslint-disable-next-line no-await-in-loop
-    if (!(await db('delivery_orders').where({ no }).first('id'))) return no
-  }
-  throw new Error('tidak menemukan nomor DO yang kosong')
-}
-
 const insert = async (trx, row) => {
   const [created] = await trx('delivery_orders').insert(row).returning('id')
   return created.id
@@ -203,7 +191,6 @@ module.exports = {
   findLocation,
   findDriverOrdersOnDate,
   findUnitOrdersOnDate,
-  nextNumber,
   insert,
   events,
   loading,

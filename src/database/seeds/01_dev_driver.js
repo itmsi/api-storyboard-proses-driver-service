@@ -76,7 +76,8 @@ exports.seed = async (knex) => {
   const origin = locations.warehouse
   const destination = locations.customer_site
   await knex('delivery_orders').insert({
-    no: 'DO-0144',
+    document_prefix: 'DO-',
+    document_number: 144, // `no` (DO-0144) dibentuk database dari prefix + nomor
     customer_id: customer.id,
     driver_id: driver.id,
     unit_id: unit.id,
@@ -105,4 +106,7 @@ exports.seed = async (knex) => {
     assigned_by: adminId,
     created_by: adminId,
   }).onConflict('no').ignore()
+  // Nomor diisi manual di atas: majukan sequence supaya DO baru tidak memakai nomor yang sama
+  await knex.raw(`SELECT setval('delivery_order_no_seq',
+    greatest((SELECT coalesce(max(document_number), 0) FROM delivery_orders), (SELECT last_value FROM delivery_order_no_seq), 1))`)
 }

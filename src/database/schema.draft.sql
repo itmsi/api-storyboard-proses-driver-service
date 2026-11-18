@@ -281,7 +281,9 @@ CREATE SEQUENCE delivery_order_no_seq;
 
 CREATE TABLE delivery_orders (
   id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  no                       text NOT NULL UNIQUE,   -- DO-0144 (dari delivery_order_no_seq)
+  document_prefix          text NOT NULL,          -- DO- (dari pengaturan document_prefix)
+  document_number          bigint NOT NULL DEFAULT nextval('delivery_order_no_seq'), -- nomor urut
+  no                       text GENERATED ALWAYS AS (document_prefix || lpad(document_number::text, 4, '0')) STORED UNIQUE, -- DO-0144
   customer_id              uuid REFERENCES customers (id),
   driver_id                uuid NOT NULL REFERENCES drivers (id),
   unit_id                  uuid NOT NULL REFERENCES units (id),

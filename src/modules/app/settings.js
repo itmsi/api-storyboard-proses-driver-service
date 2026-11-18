@@ -29,6 +29,8 @@ const DEFAULT_CONFIG = {
     },
   ],
   correction_reason_required: true,
+  // Teks di depan nomor DO baru: <document_prefix><nomor urut 4 digit>, mis. "DO-" -> DO-0145. Nomor urut berlanjut walau prefix diganti.
+  document_prefix: 'DO-',
   p2h: { frequency: 'daily_per_unit', valid_until_local: '23:59' },
   // Tampilan merek per klien. app_name kosong = aplikasi memakai client_name. Warna #RRGGBB; logo dan ikon berupa URL.
   branding: {
