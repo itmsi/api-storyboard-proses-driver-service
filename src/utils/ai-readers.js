@@ -88,6 +88,9 @@ const DASHBOARD_SCHEMA = {
   },
 }
 
+// Transkripsi dari model berspasi antar karakter ("1 0 . 4" agar tidak menebak); yang disimpan dan ditampilkan ke admin dirapatkan ("10.4")
+const compactDigits = (value) => text(String(value).replace(/\s+/g, ''), 30)
+
 /**
  * Jarak dari transkripsi digit: hanya bila SEMUA digit terbaca (tanpa "?"). Mengembalikan { km (bulat), exact (dengan desimal bila ada) }.
  */
@@ -131,8 +134,8 @@ const normalizeDashboard = (raw) => {
     confidence: hasAny ? confidence(raw.confidence) : null,
     // Layar asal km, dan kedua bacaan jarak bila ada (ODO bulat, Trip satu desimal) beserta transkripsinya untuk admin
     ...(distance ? { display_mode: odo ? 'odo' : 'trip' } : {}),
-    ...(odo ? { odo_km: odo.km, odo_digits: text(odoText, 30) } : {}),
-    ...(trip ? { trip_km: trip.exact, trip_digits: text(tripText, 30) } : {}),
+    ...(odo ? { odo_km: odo.km, odo_digits: compactDigits(odoText) } : {}),
+    ...(trip ? { trip_km: trip.exact, trip_digits: compactDigits(tripText) } : {}),
     ...(percent !== null ? { fuel_percent: percent } : {}),
     ...(note ? { note } : {}),
   }
