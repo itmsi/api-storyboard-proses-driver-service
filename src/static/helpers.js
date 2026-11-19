@@ -18,8 +18,8 @@ const envelope = (dataSchema, metaSchema, extra = {}) => ({
   properties: {
     success: { type: 'boolean', example: true },
     data: dataSchema,
-    ...(metaSchema ? { meta: metaSchema } : {}),
     ...extra,
+    ...(metaSchema ? { meta: metaSchema } : {}), // meta (pagination) selalu paling akhir
   },
 })
 

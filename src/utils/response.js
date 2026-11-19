@@ -8,9 +8,9 @@
 const ok = (res, data = null, {
   meta, status = 200, ...extra
 } = {}) => {
-  const body = { success: true, data }
+  // Urutan kunci: success, data, kunci tambahan (summary dan sejenisnya), lalu meta (pagination) paling akhir
+  const body = { success: true, data, ...extra }
   if (meta !== undefined) body.meta = meta
-  Object.assign(body, extra)
   return res.status(status).json(body)
 }
 
