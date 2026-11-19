@@ -36,13 +36,13 @@ module.exports = {
     post: {
       tags: ['P2H'],
       summary: 'Status P2H semua unit aktif (halaman P2H Unit)',
-      description: 'Semua unit aktif pada satu tanggal, termasuk yang belum di-P2H (`status: belum`). `date` bawaan hari ini dan tidak boleh melewati hari ini. `search` mencari plat, merek, atau nama driver pemeriksa. Kolom urut: `plate` (default), `brand`, `year`, `checked_at`. `meta.summary` memuat hitungan per status untuk kartu di atas tabel. Hak `p2h:read`.',
+      description: 'Semua unit aktif pada satu tanggal, termasuk yang belum di-P2H (`status: belum`). `date` bawaan hari ini dan tidak boleh melewati hari ini. `search` mencari plat, merek, atau nama driver pemeriksa. Kolom urut: `plate` (default), `brand`, `year`, `checked_at`. `summary` (kunci sejajar dengan `data` dan `meta`; `meta` khusus pagination) memuat hitungan per status untuk kartu di atas tabel. Hak `p2h:read`.',
       security: secured,
       requestBody: listBody({
         date: dateProp('2026-11-19'),
         status: { type: 'string', enum: ['layak', 'catatan', 'tidak_layak', 'belum'] },
       }),
-      responses: { 200: jsonResponse('OK', envelope({ type: 'array', items: ref('AdminP2HUnit') }, ref('AdminP2HUnitMeta'))), ...withValidation },
+      responses: { 200: jsonResponse('OK', envelope({ type: 'array', items: ref('AdminP2HUnit') }, ref('PageMeta'), { summary: ref('AdminP2HUnitSummary') })), ...withValidation },
     },
   },
   '/p2h/get': {

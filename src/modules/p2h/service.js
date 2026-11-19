@@ -303,14 +303,13 @@ const listUnits = async (db, query) => {
         waiting_orders: u.waiting_orders,
       }
     }),
-    meta: {
-      ...pagination.meta(paging, total),
+    meta: pagination.meta(paging, total), // meta khusus pagination
+    // Ringkasan untuk kartu di atas tabel: kunci sendiri, bukan bagian meta
+    summary: {
       date,
-      summary: {
-        active_units: Object.values(counts).reduce((a, b) => a + b, 0),
-        counts,
-        items: Object.entries(P2H_LABELS).map(([code, label]) => ({ status: code, label, count: counts[code] })),
-      },
+      active_units: Object.values(counts).reduce((a, b) => a + b, 0),
+      counts,
+      items: Object.entries(P2H_LABELS).map(([code, label]) => ({ status: code, label, count: counts[code] })),
     },
   }
 }

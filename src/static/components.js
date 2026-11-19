@@ -1188,18 +1188,14 @@ const schemas = {
     recheck_requested: bool(false),
     waiting_orders: int(1, { description: 'Jumlah DO assigned yang menunggu unit ini pada tanggal itu' }),
   }),
-  AdminP2HUnitMeta: {
-    allOf: [ref('PageMeta'), obj({
-      date: str('2026-11-19'),
-      summary: obj({
-        active_units: int(5),
-        counts: obj({
-          layak: int(2), catatan: int(2), tidak_layak: int(0), belum: int(1),
-        }),
-        items: arr(obj({ status: str('belum'), label: str('Belum P2H'), count: int(1) })),
-      }, undefined, { description: 'Hitungan per status atas unit yang cocok pencarian (tidak terpengaruh filter status)' }),
-    })],
-  },
+  AdminP2HUnitSummary: obj({
+    date: str('2026-11-19'),
+    active_units: int(5),
+    counts: obj({
+      layak: int(2), catatan: int(2), tidak_layak: int(0), belum: int(1),
+    }),
+    items: arr(obj({ status: str('belum'), label: str('Belum P2H'), count: int(1) })),
+  }, undefined, { description: 'Ringkasan untuk kartu di atas tabel: hitungan per status atas unit yang cocok pencarian (tidak terpengaruh filter status). Kunci sejajar dengan data dan meta, bukan bagian meta' }),
   // ---------- Admin - Delivery Order & Penugasan ----------
   AdminDeliveryOrder: obj({
     id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),

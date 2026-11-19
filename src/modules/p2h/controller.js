@@ -13,8 +13,8 @@ const submit = async (req, res) => {
 const recheck = async (req, res) => ok(res, await service.recheck(req.db, req.admin, req.valid.params.unitId, req.body))
 
 const listUnits = async (req, res) => {
-  const { data, meta } = await service.listUnits(req.db, req.body)
-  return ok(res, data, { meta })
+  const { data, meta, summary } = await service.listUnits(req.db, req.body)
+  return ok(res, data, { meta, summary })
 }
 
 const list = async (req, res) => {

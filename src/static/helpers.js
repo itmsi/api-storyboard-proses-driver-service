@@ -11,13 +11,15 @@ const ex = (file) => require(path.join(__dirname, 'examples', file))
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` })
 
 /** Envelope sukses { success, data, meta? } */
-const envelope = (dataSchema, metaSchema) => ({
+// meta khusus pagination; data pendamping daftar (ringkasan dan sejenisnya) lewat `extra` sebagai kunci sejajar, bukan di dalam meta
+const envelope = (dataSchema, metaSchema, extra = {}) => ({
   type: 'object',
   required: ['success', 'data'],
   properties: {
     success: { type: 'boolean', example: true },
     data: dataSchema,
     ...(metaSchema ? { meta: metaSchema } : {}),
+    ...extra,
   },
 })
 
