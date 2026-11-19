@@ -1,5 +1,5 @@
 const service = require('./service')
-const { ok } = require('../../utils/response')
+const { ok, saved } = require('../../utils/response')
 
 const list = async (req, res) => {
   const { data, meta } = await service.list(req.db, req.body)
@@ -8,9 +8,16 @@ const list = async (req, res) => {
 
 const get = async (req, res) => ok(res, await service.get(req.db, req.valid.params.id))
 
-const create = async (req, res) => ok(res, await service.create(req.db, req.admin, req.body), { status: 201 })
+// Password awal yang dibuat sistem hanya tampil sekali, jadi tetap dikembalikan di data
+const create = async (req, res) => {
+  const { initial_password: initialPassword } = await service.create(req.db, req.admin, req.body)
+  return saved(res, 'Akun admin berhasil dibuat.', { status: 201, data: initialPassword ? { initial_password: initialPassword } : {} })
+}
 
-const update = async (req, res) => ok(res, await service.update(req.db, req.admin, req.valid.params.id, req.body))
+const update = async (req, res) => {
+  await service.update(req.db, req.admin, req.valid.params.id, req.body)
+  return saved(res, 'Akun admin berhasil diperbarui.')
+}
 
 const resetPassword = async (req, res) => ok(res, await service.resetPassword(req.db, req.admin, req.valid.params.id, req.body))
 

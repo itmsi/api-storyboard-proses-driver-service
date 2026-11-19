@@ -1,5 +1,5 @@
 const {
-  ref, envelope, jsonResponse, jsonBody, errorRef, secured,
+  savedResponse, ref, envelope, jsonResponse, jsonBody, errorRef, secured,
 } = require('../helpers')
 
 const idPath = [{
@@ -57,7 +57,7 @@ const crud = ({
       description: createDesc,
       security: secured,
       requestBody: jsonBody(ref(`${schemaName}Create`)),
-      responses: { 201: jsonResponse('Dibuat', envelope(ref(schemaName))), ...withValidation },
+      responses: { 201: savedResponse('Dibuat', `${label[0].toUpperCase()}${label.slice(1)} berhasil dibuat.`), ...withValidation },
     },
   },
   [`${base}/{id}`]: {
@@ -75,7 +75,7 @@ const crud = ({
       security: secured,
       parameters: idPath,
       requestBody: jsonBody(ref(`${schemaName}Update`)),
-      responses: { 200: jsonResponse('OK', envelope(ref(schemaName))), ...withValidation, ...notFound },
+      responses: { 200: savedResponse('OK', `${label[0].toUpperCase()}${label.slice(1)} berhasil diperbarui.`), ...withValidation, ...notFound },
     },
     delete: {
       tags: [tag],

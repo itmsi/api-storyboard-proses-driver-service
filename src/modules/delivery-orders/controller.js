@@ -1,6 +1,6 @@
 const service = require('./service')
 const manage = require('./manage-service')
-const { ok } = require('../../utils/response')
+const { ok, saved } = require('../../utils/response')
 
 const isAdmin = (req) => req.auth.role === 'admin'
 
@@ -35,9 +35,16 @@ const accept = async (req, res) => {
 }
 
 // Khusus admin
-const create = async (req, res) => ok(res, await manage.create(req.db, req.admin, req.body), { status: 201 })
+// Respons simpan/ubah standar (utils/response.saved); detail lengkap diambil lewat GET /delivery-orders/:id
+const create = async (req, res) => {
+  const row = await manage.create(req.db, req.admin, req.body)
+  return saved(res, `DO ${row.no} berhasil dibuat.`, { status: 201 })
+}
 
-const update = async (req, res) => ok(res, await manage.update(req.db, req.admin, req.valid.params.id, req.body))
+const update = async (req, res) => {
+  const row = await manage.update(req.db, req.admin, req.valid.params.id, req.body)
+  return saved(res, `DO ${row.no} berhasil diperbarui.`)
+}
 
 const reschedule = async (req, res) => ok(res, await manage.reschedule(req.db, req.admin, req.valid.params.id, req.body), { status: 201 })
 const hold = async (req, res) => ok(res, await manage.hold(req.db, req.admin, req.valid.params.id, req.body))
@@ -46,6 +53,11 @@ const resume = async (req, res) => ok(res, await manage.resume(req.db, req.admin
 
 const cancel = async (req, res) => ok(res, await manage.cancel(req.db, req.admin, req.valid.params.id, req.body))
 
+const remove = async (req, res) => {
+  const row = await manage.remove(req.db, req.admin, req.valid.params.id)
+  return saved(res, `DO ${row.no} berhasil dihapus.`)
+}
+
 module.exports = {
-  list, getById, active, history, accept, create, reschedule, update, hold, resume, cancel,
+  list, getById, active, history, accept, create, reschedule, update, hold, resume, cancel, remove,
 }

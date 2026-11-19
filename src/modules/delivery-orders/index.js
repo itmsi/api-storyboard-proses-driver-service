@@ -41,6 +41,7 @@ router.put('/:id', adminGuard, can('delivery_orders', 'update'), validate({ para
 router.post('/:id/reschedule', adminGuard, can('delivery_orders', 'create'), validate({ params: schema.idParams, body: manageSchema.reschedule }), asyncHandler(controller.reschedule))
 router.post('/:id/hold', adminGuard, can('delivery_orders', 'update'), validate({ params: schema.idParams, body: manageSchema.hold }), asyncHandler(controller.hold))
 router.post('/:id/resume', adminGuard, can('delivery_orders', 'update'), validate({ params: schema.idParams }), asyncHandler(controller.resume))
+router.delete('/:id', adminGuard, can('delivery_orders', 'delete'), validate({ params: schema.idParams }), asyncHandler(controller.remove))
 router.post('/:id/cancel', adminGuard, can('delivery_orders', 'update'), validate({ params: schema.idParams, body: manageSchema.cancel }), asyncHandler(controller.cancel))
 
 // Khusus driver

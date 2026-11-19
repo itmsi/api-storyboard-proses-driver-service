@@ -1,5 +1,5 @@
 const service = require('./service')
-const { ok } = require('../../utils/response')
+const { ok, saved } = require('../../utils/response')
 
 const getTemplate = async (req, res) => ok(res, await service.getTemplate(req.db))
 
@@ -24,7 +24,10 @@ const list = async (req, res) => {
 
 const get = async (req, res) => ok(res, await service.getById(req.db, req.valid.params.id))
 
-const update = async (req, res) => ok(res, await service.update(req.db, req.admin, req.valid.params.id, req.body))
+const update = async (req, res) => {
+  await service.update(req.db, req.admin, req.valid.params.id, req.body)
+  return saved(res, 'P2H berhasil diperbarui.')
+}
 
 const remove = async (req, res) => ok(res, await service.remove(req.db, req.admin, req.valid.params.id))
 

@@ -1,5 +1,5 @@
 const {
-  ref, envelope, jsonResponse, jsonBody, errorRef, secured,
+  savedResponse, ref, envelope, jsonResponse, jsonBody, errorRef, secured,
 } = require('../helpers')
 
 const arr = (items) => ({ type: 'array', items })
@@ -86,7 +86,7 @@ module.exports = {
         'Minimal: kode dan password otomatis': '15-accounts/POST.drivers.request.json',
       }),
       responses: {
-        201: jsonResponse('Dibuat', envelope(ref('AdminDriverDetail')), '15-accounts/POST.drivers.response.json'),
+        201: savedResponse('Dibuat', 'Driver berhasil dibuat.', { type: 'object', properties: { initial_password: { type: 'string', example: 'Xk7#pQ2m', description: 'Hanya ada bila password dibuat sistem (tampil sekali); selain itu data kosong' } } }),
         ...withValidation,
       },
     },
@@ -107,7 +107,7 @@ module.exports = {
       security: secured,
       parameters: idPath,
       requestBody: jsonBody(ref('AdminDriverUpdate')),
-      responses: { 200: jsonResponse('OK', envelope(ref('AdminDriverDetail'))), ...withValidation, ...notFound },
+      responses: { 200: savedResponse('OK', 'Driver berhasil diperbarui.'), ...withValidation, ...notFound },
     },
     delete: {
       tags: ['Pengguna'],
@@ -160,7 +160,7 @@ module.exports = {
       description: 'Username dan email unik (tidak membedakan huruf besar/kecil). Tanpa `password` dibuatkan password sementara (dikembalikan sekali).',
       security: secured,
       requestBody: jsonBody(ref('AdminUserCreate')),
-      responses: { 201: jsonResponse('Dibuat', envelope(ref('AdminUser'))), ...withValidation },
+      responses: { 201: savedResponse('Dibuat', 'Akun admin berhasil dibuat.', { type: 'object', properties: { initial_password: { type: 'string', example: 'Xk7#pQ2m', description: 'Hanya ada bila password dibuat sistem (tampil sekali); selain itu data kosong' } } }), ...withValidation },
     },
   },
   '/users/{id}': {
@@ -180,7 +180,7 @@ module.exports = {
       parameters: idPath,
       requestBody: jsonBody(ref('AdminUserUpdate')),
       responses: {
-        200: jsonResponse('OK', envelope(ref('AdminUser'))),
+        200: savedResponse('OK', 'Akun admin berhasil diperbarui.'),
         409: jsonResponse('Akun sendiri / admin aktif terakhir', ref('Error')),
         ...withValidation,
         ...notFound,

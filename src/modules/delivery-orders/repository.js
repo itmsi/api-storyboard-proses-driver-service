@@ -8,6 +8,7 @@ const base = (db, driverId) => withAuditNames(
     .join('units', 'units.id', 'delivery_orders.unit_id')
     .join('drivers', 'drivers.id', 'delivery_orders.driver_id')
     .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
+    .where('delivery_orders.is_delete', false) // DO yang sudah dihapus admin tidak pernah terbaca
     .modify((q) => { if (driverId) q.where('delivery_orders.driver_id', driverId) }) // driverId kosong = semua driver (admin)
     .select(
       'delivery_orders.*',
@@ -26,10 +27,10 @@ const list = (db, driverId, statuses) => base(db, driverId)
 
 const findOwned = (db, driverId, id) => base(db, driverId).where('delivery_orders.id', id).first()
 
-const findOwnedForUpdate = (trx, driverId, id) => trx('delivery_orders').where({ id, driver_id: driverId }).forUpdate().first()
+const findOwnedForUpdate = (trx, driverId, id) => trx('delivery_orders').where({ id, driver_id: driverId, is_delete: false }).forUpdate().first()
 
 const countAssigned = async (db, driverId) => {
-  const [{ count }] = await db('delivery_orders').where({ driver_id: driverId, status: 'assigned' }).count('id as count')
+  const [{ count }] = await db('delivery_orders').where({ driver_id: driverId, status: 'assigned', is_delete: false }).count('id as count')
   return Number(count)
 }
 
@@ -71,6 +72,7 @@ const history = (db, driverId, {
 
 /** Ringkasan rentang yang sama, per status (jumlah DO, jarak odometer yang lengkap, total biaya). */
 const historySummary = (db, driverId, { from, to, statuses }) => db('delivery_orders')
+  .where({ is_delete: false })
   .whereRaw(`${HISTORY_AT} BETWEEN ? AND ?`, [from, to])
   .modify((q) => {
     if (driverId) q.where({ driver_id: driverId })
@@ -90,7 +92,7 @@ const findEventByClientRef = (db, actorId, clientRef) => db('delivery_order_even
 
 const markAccepted = async (trx, id, fields) => {
   const [row] = await trx('delivery_orders')
-    .where({ id, status: 'assigned' }) // jaga race: hanya satu request yang menang
+    .where({ id, status: 'assigned', is_delete: false }) // jaga race: hanya satu request yang menang
     .update(fields)
     .returning('*')
   return row
@@ -98,7 +100,7 @@ const markAccepted = async (trx, id, fields) => {
 
 /** Ubah DO hanya jika statusnya masih salah satu dari `statuses` (jaga race antar-request). */
 const updateIfStatus = async (trx, id, statuses, fields) => {
-  const [row] = await trx('delivery_orders').where({ id }).whereIn('status', statuses).update(fields)
+  const [row] = await trx('delivery_orders').where({ id, is_delete: false }).whereIn('status', statuses).update(fields)
     .returning('*')
   return row
 }

@@ -748,6 +748,50 @@ const cancel = async (db, admin, id, { reason }) => {
   return get(db, id)
 }
 
+// DO yang boleh dihapus: belum pernah diterima driver (tanpa foto, odometer, biaya, maupun rekap uang jalan)
+const DELETABLE_STATUSES = ['assigned', 'onhold', 'cancelled']
+
+/**
+ * Hapus DO (soft delete): baris tetap ada (nomor DO tidak dipakai ulang), tetapi hilang dari daftar, detail, aplikasi driver,
+ * dashboard, dan cek bentrok, sehingga hari kerja driver dan unitnya langsung lepas.
+ * Hanya DO yang belum pernah diterima driver; DO yang sudah diterima adalah bukti kerja driver (batalkan saja bila perlu).
+ * Bila DO ini hasil jadwal ulang, DO asalnya dilepas lagi supaya bisa dijadwalkan ulang.
+ */
+const remove = async (db, admin, id) => {
+  const row = await load(db, id)
+  if (!DELETABLE_STATUSES.includes(row.status) || row.accepted_at) {
+    throw new AppError('INVALID_STATE', {
+      message: `DO ${row.no} sudah diterima driver sehingga tidak bisa dihapus. Batalkan DO bila tidak jadi dikerjakan.`,
+      details: { status: row.status, expected: DELETABLE_STATUSES },
+    })
+  }
+
+  await db.transaction(async (trx) => {
+    const done = await trx('delivery_orders')
+      .where({ id, is_delete: false })
+      .whereIn('status', DELETABLE_STATUSES)
+      .whereNull('accepted_at')
+      .update({
+        is_delete: true, deleted_at: trx.fn.now(), deleted_by: admin.id, updated_by: admin.id,
+      })
+    if (!done) throw new AppError('INVALID_STATE', { message: 'Status DO baru saja berubah, muat ulang lalu coba lagi.', details: { status: row.status } })
+    if (row.rescheduled_from_id) {
+      await trx('delivery_orders').where({ id: row.rescheduled_from_id, rescheduled_to_id: id })
+        .update({ rescheduled_to_id: null, updated_by: admin.id })
+    }
+    await doRepo.insertEvent(trx, {
+      delivery_order_id: id,
+      event: 'deleted',
+      from_status: row.status,
+      to_status: row.status,
+      actor_id: admin.id,
+      occurred_at: new Date(),
+      payload: {},
+    })
+  })
+  return { id: row.id, no: row.no }
+}
+
 module.exports = {
-  list, get, create, reschedule, update, hold, resume, cancel,
+  list, get, create, reschedule, update, hold, resume, cancel, remove,
 }

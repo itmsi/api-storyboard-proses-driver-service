@@ -26,13 +26,13 @@ const touchDevice = (db, userId, deviceId) => db('devices')
   .update({ last_synced_at: db.fn.now(), last_seen_at: db.fn.now(), updated_by: userId })
 
 /**
- * Item yang gagal dan belum berhasil dikirim ulang. DO yang sudah selesai/dibatalkan tidak dihitung
+ * Item yang gagal dan belum berhasil dikirim ulang. DO yang sudah selesai/dibatalkan/dihapus tidak dihitung
  * (item untuk DO terkunci tidak akan pernah berhasil, jadi tidak boleh menahan "belum tersinkron" selamanya).
  */
 const listPending = (db, userId) => db('sync_items')
   .leftJoin('delivery_orders', 'delivery_orders.id', 'sync_items.delivery_order_id')
   .where({ 'sync_items.created_by': userId, 'sync_items.status': 'failed' })
-  .where((q) => q.whereNull('delivery_orders.id').orWhereNotIn('delivery_orders.status', ['completed', 'cancelled']))
+  .where((q) => q.whereNull('delivery_orders.id').orWhere((open) => open.where('delivery_orders.is_delete', false).whereNotIn('delivery_orders.status', ['completed', 'cancelled'])))
   .orderBy('sync_items.client_created_at', 'asc')
   .select('sync_items.type', 'sync_items.label', 'sync_items.client_created_at', 'sync_items.delivery_order_id', 'sync_items.device_id')
 

@@ -1,5 +1,5 @@
 const {
-  ref, envelope, jsonResponse, jsonBody, errorRef, secured,
+  savedResponse, ref, envelope, jsonResponse, jsonBody, errorRef, secured,
 } = require('../helpers')
 
 // CRUD admin untuk P2H dan media. Daftar memakai POST + body (standar API), detail by id tetap GET.
@@ -77,7 +77,7 @@ module.exports = {
       security: secured,
       parameters: idPath,
       requestBody: jsonBody(ref('AdminP2HUpdateRequest')),
-      responses: { 200: jsonResponse('OK', envelope(ref('P2HInspection'))), ...withValidation, ...notFound },
+      responses: { 200: savedResponse('OK', 'P2H berhasil diperbarui.'), ...withValidation, ...notFound },
     },
     delete: {
       tags: ['P2H'],

@@ -91,7 +91,7 @@ const plateTaken = async (db, plate, exceptId) => {
 }
 
 /** Pemakaian unit yang menghalangi hapus/nonaktif: DO yang belum final. */
-const findUsage = (db, unitId) => db('delivery_orders').where({ unit_id: unitId }).whereIn('status', OPEN_DO_STATUSES).first('id', 'no', 'status')
+const findUsage = (db, unitId) => db('delivery_orders').where({ unit_id: unitId, is_delete: false }).whereIn('status', OPEN_DO_STATUSES).first('id', 'no', 'status')
 
 const insert = async (db, row) => {
   const [created] = await db('units').insert(row).returning('id')

@@ -24,6 +24,27 @@ const envelope = (dataSchema, metaSchema, extra = {}) => ({
 })
 
 /**
+ * Respons standar simpan (create) / ubah (update) / hapus DO: { success, message, data }. data bawaan objek kosong;
+ * dataSchema diisi bila endpoint itu memang mengembalikan data (mis. password awal). Lihat utils/response.saved.
+ */
+const savedResponse = (description, message, dataSchema = { type: 'object', example: {} }) => ({
+  description,
+  content: {
+    'application/json': {
+      schema: {
+        type: 'object',
+        required: ['success', 'message', 'data'],
+        properties: {
+          success: { type: 'boolean', example: true },
+          message: { type: 'string', example: message },
+          data: dataSchema,
+        },
+      },
+    },
+  },
+})
+
+/**
  * Response JSON dengan satu atau beberapa contoh.
  * examples: { namaContoh: 'path/file.json' } atau string path tunggal
  */
@@ -60,5 +81,5 @@ const pathParam = (name, description, example) => ({
 const secured = [{ bearerAuth: [] }]
 
 module.exports = {
-  ex, ref, envelope, jsonResponse, jsonBody, errorRef, authErrors, pathParam, secured,
+  ex, ref, envelope, savedResponse, jsonResponse, jsonBody, errorRef, authErrors, pathParam, secured,
 }

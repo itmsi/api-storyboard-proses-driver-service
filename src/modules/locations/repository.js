@@ -64,6 +64,7 @@ const update = (db, id, fields) => db('locations').where({ id }).update(fields)
 
 /** DO yang belum final dan memakai lokasi ini sebagai asal atau tujuan. */
 const findOpenDo = (db, id) => db('delivery_orders')
+  .where({ is_delete: false })
   .whereIn('status', OPEN_DO_STATUSES)
   .where((q) => q.where({ origin_location_id: id }).orWhere({ destination_location_id: id })
     .orWhereRaw('destinations @> ?::jsonb', [JSON.stringify([{ location_id: id }])])) // juga tujuan di tengah rute

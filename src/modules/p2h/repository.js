@@ -133,7 +133,7 @@ const listUnits = async (db, {
           FROM p2h_inspection_items ii WHERE ii.inspection_id = i.id AND ii.result = 'tidak_sesuai') as note`),
         db.raw(`EXISTS (SELECT 1 FROM p2h_inspections old WHERE old.unit_id = units.id AND old.inspection_date = ?::date
           AND old.is_delete = false AND old.superseded_at IS NOT NULL AND old.recheck_requested_at IS NOT NULL) as recheck_requested`, [date]),
-        db.raw(`(SELECT count(*)::int FROM delivery_orders o WHERE o.unit_id = units.id AND o.status = 'assigned'
+        db.raw(`(SELECT count(*)::int FROM delivery_orders o WHERE o.unit_id = units.id AND o.status = 'assigned' AND o.is_delete = false
           AND ${doWorkDateSql('o')} = ?::date) as waiting_orders`, [date])
       ),
     searched().groupByRaw("coalesce(i.status, 'belum')").select(db.raw("coalesce(i.status, 'belum') as status"), db.raw('count(*)::int as count')),

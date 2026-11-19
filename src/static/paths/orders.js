@@ -1,5 +1,5 @@
 const {
-  ref, envelope, jsonResponse, jsonBody, errorRef, secured,
+  savedResponse, ref, envelope, jsonResponse, jsonBody, errorRef, secured,
 } = require('../helpers')
 
 // Operasi admin untuk DO dan penugasan unit. Path /delivery-orders dan /delivery-orders/{id} berbagi dengan
@@ -28,14 +28,15 @@ module.exports = {
         '`customer_reference_no` opsional: nomor referensi dari customer (mis. no PO), teks bebas maks. 100 karakter; ikut dicari lewat `search` di daftar DO.',
         'Status awal `assigned`; DO langsung muncul di aplikasi driver.',
         'Muatan opsional: `cargo_type` (jenis, mis. `Container`) dan `cargo_details` berisi rincian bebas `[{ label, value }]` (maks. 50), mis. no container, no seal, keterangan.',
-        '**Unit driver pada tanggal itu mengikuti DO ini** (tanpa penugasan terpisah): driver langsung bisa P2H di unit DO untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini). Hasilnya ada di `unit_assignment` (`work_date`, `source`: `default` = driver bawaan unit, `override` = driver/unit pengganti); detail DO juga selalu memuatnya. Bila tanggal muat sudah lewat, bentrok tidak diperiksa. DO yang sudah diterima dan masih berjalan dari tanggal sebelumnya tetap menahan unitnya.',
+        '**Unit driver pada tanggal itu mengikuti DO ini** (tanpa penugasan terpisah): driver langsung bisa P2H di unit DO untuk tanggal `planned_load_at` (WIB; tanpa rencana muat = hari ini). Hasilnya ada di `unit_assignment` pada detail DO (`GET /delivery-orders/{id}`; `work_date`, `source`: `default` = driver bawaan unit, `override` = driver/unit pengganti). Bila tanggal muat sudah lewat, bentrok tidak diperiksa. DO yang sudah diterima dan masih berjalan dari tanggal sebelumnya tetap menahan unitnya.',
         '**Satu driver satu unit per tanggal** (tanggal `planned_load_at` WIB; tanpa rencana muat = tanggal penugasan): driver yang sudah punya DO `assigned`/berjalan/selesai dengan unit **berbeda** pada tanggal itu ditolak 409 `CONFLICT` reason `driver_beda_unit_tanggal_sama` (`details.conflicting_orders`, `can_hold`). Unit sama = boleh. Bila DO lama masih `assigned`, ubah dulu ke `onhold` (`POST /delivery-orders/{id}/hold`), lalu DO baru bisa di-assign. DO `onhold`/`cancelled` tidak dihitung.',
         'Bentrok = DO **tidak dibuat** (409 `CONFLICT`): `driver_beda_unit_tanggal_sama` (lihat di atas) atau `unit_sudah_ditugaskan` (unit itu sudah dipegang DO driver lain pada tanggal itu; `details.order` dan `details.driver` = pemegangnya).',
       ].join('\n'),
       security: secured,
       requestBody: jsonBody(ref('AdminDeliveryOrderCreate')),
+      // Respons standar simpan (message + data kosong); detail lengkap lewat GET /delivery-orders/{id}
       responses: {
-        201: jsonResponse('Dibuat', envelope(ref('AdminDeliveryOrderDetail'))),
+        201: savedResponse('Dibuat', 'DO DO-0145 berhasil dibuat.'),
         409: jsonResponse('Bentrok (`driver_beda_unit_tanggal_sama` / `unit_sudah_ditugaskan`)', ref('Error'), {
           'Driver sudah punya DO dengan unit lain di tanggal yang sama': '05-delivery-orders/POST.delivery-orders.error.driver-beda-unit.json',
         }),
@@ -51,14 +52,32 @@ module.exports = {
         'Hanya saat DO masih `assigned` (belum diterima driver). DO `onhold` harus dilanjutkan dulu (resume). Kirim hanya field yang ingin diubah. `cargo_details` yang dikirim mengganti seluruh rincian lama; `null` atau `[]` mengosongkannya.',
         'Sesudah diterima, data DO adalah bukti kerja driver: koreksinya lewat pembatalan lalu pembuatan DO baru (409 `INVALID_STATE`).',
         'DO selesai: 409 `DO_LOCKED`. DO dibatalkan: 409 `DO_CANCELLED`.',
-        'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, kombinasi barunya diperiksa (respons memuat `unit_assignment`). Bentrok = 409 seperti pada pembuatan DO (termasuk `driver_beda_unit_tanggal_sama`) dan DO tidak berubah.',
+        'Bila `driver_id`, `unit_id`, atau `planned_load_at` berubah, kombinasi barunya diperiksa (hasilnya di `unit_assignment` pada detail DO). Bentrok = 409 seperti pada pembuatan DO (termasuk `driver_beda_unit_tanggal_sama`) dan DO tidak berubah.',
       ].join('\n'),
       security: secured,
       parameters: idPath,
       requestBody: jsonBody(ref('AdminDeliveryOrderUpdate')),
       responses: {
-        200: jsonResponse('OK', envelope(ref('AdminDeliveryOrderDetail'))),
+        200: savedResponse('OK', 'DO DO-0145 berhasil diperbarui.'),
         409: jsonResponse('Sudah diterima / selesai / dibatalkan', ref('Error')),
+        ...withValidation,
+        ...notFound,
+      },
+    },
+    delete: {
+      tags: ['Delivery Order'],
+      summary: 'Hapus DO (admin, soft delete)',
+      description: [
+        'Soft delete: baris DO tetap tersimpan (`is_delete = true`, `deleted_at`, `deleted_by`) dan nomornya tidak dipakai ulang, tetapi DO hilang dari daftar, detail (404), aplikasi driver, riwayat, dashboard, dan cek bentrok. Hari kerja driver dan unitnya langsung lepas.',
+        'Hanya DO yang **belum pernah diterima driver**: status `assigned`, `onhold`, atau `cancelled` sebelum diterima. DO yang sudah diterima/berjalan/selesai (atau dibatalkan setelah diterima) ditolak 409 `INVALID_STATE`; batalkan DO bila tidak jadi dikerjakan.',
+        'Bila DO ini hasil jadwal ulang (`rescheduled_from`), DO gagal kirim asalnya dilepas lagi sehingga bisa dijadwalkan ulang.',
+        'Hak akses: `delivery_orders:delete`.',
+      ].join('\n'),
+      security: secured,
+      parameters: idPath,
+      responses: {
+        200: savedResponse('Terhapus', 'DO DO-0145 berhasil dihapus.'),
+        409: jsonResponse('Sudah diterima driver (`INVALID_STATE`)', ref('Error')),
         ...withValidation,
         ...notFound,
       },

@@ -1,5 +1,5 @@
 const {
-  ref, envelope, jsonResponse, jsonBody, errorRef, secured,
+  savedResponse, ref, envelope, jsonResponse, jsonBody, errorRef, secured,
 } = require('../helpers')
 
 // Konfigurasi perusahaan oleh admin: checklist P2H, kategori biaya, pengaturan aplikasi.
@@ -54,7 +54,7 @@ module.exports = {
       description: 'Berlaku untuk P2H yang dibuat sesudahnya: semua item aktif wajib dijawab driver. Menaikkan `config_version`.',
       security: secured,
       requestBody: jsonBody(ref('AdminP2HItemCreate')),
-      responses: { 201: jsonResponse('Dibuat', envelope(ref('AdminP2HItem'))), ...withValidation },
+      responses: { 201: savedResponse('Dibuat', 'Item checklist P2H berhasil dibuat.'), ...withValidation },
     },
   },
   '/p2h-items/{code}': {
@@ -76,7 +76,7 @@ module.exports = {
       parameters: codePath('item'),
       requestBody: jsonBody(ref('AdminP2HItemUpdate')),
       responses: {
-        200: jsonResponse('OK', envelope(ref('AdminP2HItem'))),
+        200: savedResponse('OK', 'Item checklist P2H berhasil diperbarui.'),
         409: jsonResponse('Item aktif terakhir', ref('Error')),
         ...withValidation,
         ...notFound,
@@ -111,7 +111,7 @@ module.exports = {
       description: 'Kategori aktif langsung muncul di `expense_categories` pada `GET /config` driver. Menaikkan `config_version`.',
       security: secured,
       requestBody: jsonBody(ref('AdminExpenseCategoryCreate')),
-      responses: { 201: jsonResponse('Dibuat', envelope(ref('AdminExpenseCategory'))), ...withValidation },
+      responses: { 201: savedResponse('Dibuat', 'Kategori biaya berhasil dibuat.'), ...withValidation },
     },
   },
   '/expense-categories/{code}': {
@@ -133,7 +133,7 @@ module.exports = {
       parameters: codePath('kategori'),
       requestBody: jsonBody(ref('AdminExpenseCategoryUpdate')),
       responses: {
-        200: jsonResponse('OK', envelope(ref('AdminExpenseCategory'))),
+        200: savedResponse('OK', 'Kategori biaya berhasil diperbarui.'),
         409: jsonResponse('Kategori sudah dipakai / kategori aktif terakhir', ref('Error')),
         ...withValidation,
         ...notFound,
@@ -174,7 +174,7 @@ module.exports = {
       ].join('\n'),
       security: secured,
       requestBody: jsonBody(ref('AdminSettingsUpdate')),
-      responses: { 200: jsonResponse('OK', envelope(ref('AdminSettings'))), ...withValidation },
+      responses: { 200: savedResponse('OK', 'Pengaturan berhasil diperbarui.'), ...withValidation },
     },
   },
   '/settings/ai': {

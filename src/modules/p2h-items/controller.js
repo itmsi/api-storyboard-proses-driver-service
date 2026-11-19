@@ -1,5 +1,5 @@
 const service = require('./service')
-const { ok } = require('../../utils/response')
+const { ok, saved } = require('../../utils/response')
 
 const list = async (req, res) => {
   const { data, meta } = await service.list(req.db, req.body)
@@ -8,9 +8,15 @@ const list = async (req, res) => {
 
 const get = async (req, res) => ok(res, await service.get(req.db, req.valid.params.code))
 
-const create = async (req, res) => ok(res, await service.create(req.db, req.admin, req.body), { status: 201 })
+const create = async (req, res) => {
+  await service.create(req.db, req.admin, req.body)
+  return saved(res, 'Item checklist P2H berhasil dibuat.', { status: 201 })
+}
 
-const update = async (req, res) => ok(res, await service.update(req.db, req.admin, req.valid.params.code, req.body))
+const update = async (req, res) => {
+  await service.update(req.db, req.admin, req.valid.params.code, req.body)
+  return saved(res, 'Item checklist P2H berhasil diperbarui.')
+}
 
 const remove = async (req, res) => ok(res, await service.remove(req.db, req.admin, req.valid.params.code))
 

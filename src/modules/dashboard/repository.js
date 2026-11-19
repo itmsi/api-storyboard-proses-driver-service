@@ -2,7 +2,8 @@ const { doWorkDateSql, holdsOnDateSql, RUNNING_DO_STATUSES } = require('../../ut
 
 // Semua angka dashboard dihitung dari DO yang tanggal kerjanya (jadwal muat, atau waktu penugasan bila tanpa jadwal; WIB)
 // ada di rentang start_date..end_date, sama dengan filter from/to di POST /delivery-orders/get.
-const inRange = (db, alias, range) => db.raw(`${doWorkDateSql(alias)} BETWEEN ?::date AND ?::date`, [range.startDate, range.endDate])
+// DO yang sudah dihapus (is_delete) tidak dihitung
+const inRange = (db, alias, range) => db.raw(`${alias}.is_delete = false AND ${doWorkDateSql(alias)} BETWEEN ?::date AND ?::date`, [range.startDate, range.endDate])
 
 const RUNNING_SQL = RUNNING_DO_STATUSES.map((s) => `'${s}'`).join(', ')
 
@@ -41,7 +42,7 @@ const pendingSyncCount = async (db) => {
   const [{ count }] = await db('sync_items')
     .leftJoin('delivery_orders', 'delivery_orders.id', 'sync_items.delivery_order_id')
     .where('sync_items.status', 'failed')
-    .where((q) => q.whereNull('delivery_orders.id').orWhereNotIn('delivery_orders.status', ['completed', 'cancelled']))
+    .where((q) => q.whereNull('delivery_orders.id').orWhere((open) => open.where('delivery_orders.is_delete', false).whereNotIn('delivery_orders.status', ['completed', 'cancelled'])))
     .count('sync_items.id as count')
   return Number(count)
 }

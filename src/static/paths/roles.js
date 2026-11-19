@@ -1,5 +1,5 @@
 const {
-  ref, envelope, jsonResponse, jsonBody, errorRef, secured,
+  savedResponse, ref, envelope, jsonResponse, jsonBody, errorRef, secured,
 } = require('../helpers')
 
 // Role dan hak akses admin. Tiap role = matriks hak per modul; tiap user admin punya satu role. Daftar memakai POST + body.
@@ -56,7 +56,7 @@ module.exports = {
       description: 'Admin hanya boleh memberi hak yang dimilikinya sendiri (403 `melebihi_hak_sendiri`). Hak diubah langsung berlaku untuk semua akun pemakai role, tanpa login ulang.',
       security: secured,
       requestBody: jsonBody(ref('AdminRoleCreate')),
-      responses: { 201: jsonResponse('Dibuat', envelope(ref('AdminRole'))), ...withValidation },
+      responses: { 201: savedResponse('Dibuat', 'Role berhasil dibuat.'), ...withValidation },
     },
   },
   '/roles/{id}': {
@@ -75,7 +75,7 @@ module.exports = {
       parameters: idPath,
       requestBody: jsonBody(ref('AdminRoleUpdate')),
       responses: {
-        200: jsonResponse('OK', envelope(ref('AdminRole'))),
+        200: savedResponse('OK', 'Role berhasil diperbarui.'),
         409: jsonResponse('Role bawaan', ref('Error')),
         ...withValidation,
         ...notFound,

@@ -24,7 +24,10 @@ const hasLocations = (q, db) => q.whereExists(function activeLocations() {
   this.select(db.raw('1')).from('locations').whereRaw('locations.customer_id = customers.id').where({ 'locations.is_delete': false })
 })
 const hasOpenOrders = (q, db) => q.whereExists(function openOrders() {
-  this.select(db.raw('1')).from('delivery_orders').whereRaw('delivery_orders.customer_id = customers.id').whereIn('delivery_orders.status', OPEN_DO_STATUSES)
+  this.select(db.raw('1')).from('delivery_orders')
+    .whereRaw('delivery_orders.customer_id = customers.id')
+    .where('delivery_orders.is_delete', false)
+    .whereIn('delivery_orders.status', OPEN_DO_STATUSES)
 })
 
 const list = async (db, {
@@ -63,7 +66,7 @@ const countLocations = async (db, id) => {
   return Number(count)
 }
 
-const findOpenDo = (db, id) => db('delivery_orders').where({ customer_id: id }).whereIn('status', OPEN_DO_STATUSES).first('id', 'no', 'status')
+const findOpenDo = (db, id) => db('delivery_orders').where({ customer_id: id, is_delete: false }).whereIn('status', OPEN_DO_STATUSES).first('id', 'no', 'status')
 
 module.exports = {
   list, findById, codeTaken, insert, update, countLocations, findOpenDo,

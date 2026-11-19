@@ -1,10 +1,13 @@
 const service = require('./service')
 const ai = require('./ai')
-const { ok } = require('../../utils/response')
+const { ok, saved } = require('../../utils/response')
 
 const get = async (req, res) => ok(res, await service.get(req.db))
 
-const update = async (req, res) => ok(res, await service.update(req.db, req.admin, req.body))
+const update = async (req, res) => {
+  await service.update(req.db, req.admin, req.body)
+  return saved(res, 'Pengaturan berhasil diperbarui.')
+}
 
 const aiStatus = async (req, res) => ok(res, await ai.status(req.db))
 

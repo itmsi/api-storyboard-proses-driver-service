@@ -39,9 +39,10 @@ const RUNNING_SQL = RUNNING_DO_STATUSES.map((s) => `'${s}'`).join(', ')
  * Kondisi SQL "DO ini memegang driver dan unitnya pada tanggal kerja X" (X = ekspresi tanggal, mis. '?::date'):
  *  - DO pada tanggal X yang berstatus DAY_BOUND_DO_STATUSES (assigned sampai completed), atau
  *  - DO yang sudah diterima dan masih berjalan (RUNNING_DO_STATUSES) dari tanggal sebelum X: tetap menahan unitnya sampai selesai.
+ *  DO yang sudah dihapus (is_delete) tidak pernah dihitung.
  */
-const holdsOnDateSql = (alias, dateExpr) => `((${alias}.status IN (${DAY_BOUND_SQL}) AND ${doWorkDateSql(alias)} = ${dateExpr})
-  OR (${alias}.status IN (${RUNNING_SQL}) AND ${doWorkDateSql(alias)} < ${dateExpr}))`
+const holdsOnDateSql = (alias, dateExpr) => `(${alias}.is_delete = false AND ((${alias}.status IN (${DAY_BOUND_SQL}) AND ${doWorkDateSql(alias)} = ${dateExpr})
+  OR (${alias}.status IN (${RUNNING_SQL}) AND ${doWorkDateSql(alias)} < ${dateExpr})))`
 
 module.exports = {
   notFound, inUse, softDelete, OPEN_DO_STATUSES, DAY_BOUND_DO_STATUSES, RUNNING_DO_STATUSES, DAY_BOUND_SQL, doWorkDateSql, holdsOnDateSql,

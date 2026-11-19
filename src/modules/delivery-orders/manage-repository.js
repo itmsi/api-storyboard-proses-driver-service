@@ -10,6 +10,7 @@ const base = (db) => db('delivery_orders')
   .join('users as driver_user', 'driver_user.id', 'drivers.user_id')
   .join('units', 'units.id', 'delivery_orders.unit_id')
   .leftJoin('customers', 'customers.id', 'delivery_orders.customer_id')
+  .where('delivery_orders.is_delete', false) // DO yang sudah dihapus tidak muncul di daftar maupun detail
 
 const select = (query) => query.select(
   'delivery_orders.*',
