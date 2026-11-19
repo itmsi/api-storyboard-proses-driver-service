@@ -13,6 +13,8 @@ const select = (query) => query.select(
   'delivery_orders.completed_at',
   'delivery_orders.origin_snapshot',
   'delivery_orders.destination_snapshot',
+  'delivery_orders.destination_location_id',
+  'delivery_orders.destinations',
   'delivery_orders.driver_id',
   'drivers.code as driver_code',
   'driver_user.name as driver_name',

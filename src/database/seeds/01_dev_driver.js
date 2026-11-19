@@ -95,6 +95,19 @@ exports.seed = async (knex) => {
       operating_hours: destination.operating_hours,
       pic: { name: destination.pic_name, phone: destination.pic_phone },
     },
+    destinations: JSON.stringify([{
+      step: 1,
+      location_id: destination.id,
+      snapshot: {
+        name: destination.name,
+        city: destination.city,
+        address: destination.address,
+        lat: Number(destination.lat),
+        lng: Number(destination.lng),
+        operating_hours: destination.operating_hours,
+        pic: { name: destination.pic_name, phone: destination.pic_phone },
+      },
+    }]),
     planned_load_at: new Date(`${wibDate()}T13:00:00+07:00`),
     cargo_type: 'Palet',
     cargo_details: JSON.stringify([

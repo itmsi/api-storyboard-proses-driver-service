@@ -13,34 +13,32 @@ const SORTABLE = {
   completed_at: 'delivery_orders.completed_at', amount: 'settlements.amount', type: 'settlements.type', do: 'delivery_orders.no',
 }
 
+const { routeLabel } = require('../delivery-orders/stops')
+
 const num = (v) => (v === null || v === undefined ? null : Number(v))
 
-const serialize = (row) => {
-  const from = row.origin_snapshot.city || row.origin_snapshot.name
-  const dest = row.destination_snapshot
-  return {
-    delivery_order: {
-      id: row.delivery_order_id,
-      no: row.do_no,
-      route: `${from} → ${dest.name}${dest.city ? `, ${dest.city}` : ''}`,
-      completed_at: toWib(row.completed_at),
-    },
-    driver: { id: row.driver_id, code: row.driver_code, name: row.driver_name },
-    unit_plate: row.unit_plate,
-    type: row.type,
-    label: LABELS[row.type],
-    amount: num(row.amount),
-    travel_allowance: num(row.travel_allowance),
-    expense_total: num(row.expense_total),
-    distance_km: num(row.distance_km),
-    duration_minutes: row.duration_minutes,
-    settled: row.settled_at ? {
-      at: toWib(row.settled_at),
-      by: row.settled_by ? { id: row.settled_by, name: row.settled_by_name } : null,
-      note: row.note,
-    } : null,
-  }
-}
+const serialize = (row) => ({
+  delivery_order: {
+    id: row.delivery_order_id,
+    no: row.do_no,
+    route: routeLabel(row),
+    completed_at: toWib(row.completed_at),
+  },
+  driver: { id: row.driver_id, code: row.driver_code, name: row.driver_name },
+  unit_plate: row.unit_plate,
+  type: row.type,
+  label: LABELS[row.type],
+  amount: num(row.amount),
+  travel_allowance: num(row.travel_allowance),
+  expense_total: num(row.expense_total),
+  distance_km: num(row.distance_km),
+  duration_minutes: row.duration_minutes,
+  settled: row.settled_at ? {
+    at: toWib(row.settled_at),
+    by: row.settled_by ? { id: row.settled_by, name: row.settled_by_name } : null,
+    note: row.note,
+  } : null,
+})
 
 const load = async (db, deliveryOrderId) => {
   const row = await repo.findByDeliveryOrder(db, deliveryOrderId)

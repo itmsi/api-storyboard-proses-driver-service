@@ -30,11 +30,16 @@ const list = async (db, {
       // rute: nama dan kota lokasi asal dan tujuan (salinan di DO)
       "delivery_orders.origin_snapshot->>'name'", "delivery_orders.origin_snapshot->>'city'",
       "delivery_orders.destination_snapshot->>'name'", "delivery_orders.destination_snapshot->>'city'",
+      'delivery_orders.destinations::text', // semua tujuan (nama, kota, alamat)
     ])
     if (filters.statuses && filters.statuses.length) q.whereIn('delivery_orders.status', filters.statuses)
     if (filters.deliveryStatus) q.where('delivery_orders.delivery_status', filters.deliveryStatus)
     if (filters.originLocationId) q.where('delivery_orders.origin_location_id', filters.originLocationId)
-    if (filters.destinationLocationId) q.where('delivery_orders.destination_location_id', filters.destinationLocationId)
+    // lokasi tujuan mana pun di antara tujuan DO (bukan hanya tujuan akhir)
+    if (filters.destinationLocationId) {
+      q.where((w) => w.where('delivery_orders.destination_location_id', filters.destinationLocationId)
+        .orWhereRaw('delivery_orders.destinations @> ?::jsonb', [JSON.stringify([{ location_id: filters.destinationLocationId }])]))
+    }
     if (filters.settlementStatus === 'none') q.whereNotExists(function none() { this.select(db.raw('1')).from('settlements').whereRaw('settlements.delivery_order_id = delivery_orders.id') })
     if (filters.settlementStatus === 'pending') q.whereExists(function pending() { this.select(db.raw('1')).from('settlements').whereRaw('settlements.delivery_order_id = delivery_orders.id').whereNull('settlements.settled_at') })
     if (filters.settlementStatus === 'settled') q.whereExists(function settled() { this.select(db.raw('1')).from('settlements').whereRaw('settlements.delivery_order_id = delivery_orders.id').whereNotNull('settlements.settled_at') })

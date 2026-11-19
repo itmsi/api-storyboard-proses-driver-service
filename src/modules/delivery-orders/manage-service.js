@@ -12,6 +12,7 @@ const repo = require('./manage-repository')
 const { resolveSettings } = require('../app/settings')
 const cargo = require('./cargo')
 const timeline = require('./timeline')
+const stops = require('./stops')
 const validation = require('./manage-validation')
 
 // Pengelolaan DO oleh admin: buat, daftar, detail, ubah (hanya saat belum diterima driver), tahan (onhold)/lanjutkan, batalkan.
@@ -39,11 +40,7 @@ const num = (v) => (v === null || v === undefined ? null : Number(v))
  */
 const assignmentDate = (plannedLoadAt, assignedAt = null) => wibDate(new Date(plannedLoadAt || assignedAt || Date.now()))
 
-const routeLabel = (row) => {
-  const from = row.origin_snapshot.city || row.origin_snapshot.name
-  const dest = row.destination_snapshot
-  return `${from} → ${dest.name}${dest.city ? `, ${dest.city}` : ''}`
-}
+const { routeLabel } = stops
 
 /**
  * Tambahan item daftar DO untuk tabel admin, dari data yang sudah ada (tanpa kolom salinan): `last_stage` (tahap terakhir), `flags` (kolom
@@ -108,7 +105,8 @@ const serializeListItem = (row) => ({
   customer_reference_no: row.customer_reference_no ?? null,
   route: routeLabel(row),
   origin: { name: row.origin_snapshot.name, city: row.origin_snapshot.city || null, maps_url: mapsUrlFor(row.origin_snapshot) },
-  destination: { name: row.destination_snapshot.name, city: row.destination_snapshot.city || null, maps_url: mapsUrlFor(row.destination_snapshot) },
+  destination: { name: row.destination_snapshot.name, city: row.destination_snapshot.city || null, maps_url: mapsUrlFor(row.destination_snapshot) }, // tujuan akhir
+  destinations: stops.stopsOf(row).map(stops.summary), // semua tujuan berurutan
   planned_load_at: toWib(row.planned_load_at),
   assigned_at: toWib(row.assigned_at),
   ...cargo.serialize(row),
@@ -211,7 +209,8 @@ const serializeDetail = async (db, row) => {
     },
     destination: {
       ...row.destination_snapshot, gps: gps(row.destination_snapshot), maps_url: mapsUrlFor(row.destination_snapshot), location_id: row.destination_location_id,
-    },
+    }, // tujuan akhir (pemberhentian terakhir)
+    destinations: stops.stopsOf(row).map(stops.full),
     travel_allowance: { amount: num(row.travel_allowance_amount), received_at: toWib(row.travel_allowance_received_at) },
     rescheduled_from: row.rescheduled_from_id ? linkRefs.get(row.rescheduled_from_id) || { id: row.rescheduled_from_id, no: null } : null,
     rescheduled_to: row.rescheduled_to_id ? linkRefs.get(row.rescheduled_to_id) || { id: row.rescheduled_to_id, no: null } : null,
@@ -311,35 +310,70 @@ const snapshotDestination = (loc) => ({
 })
 
 /**
+ * Daftar tujuan dari body: `destinations` (banyak tujuan; step menentukan urutan, bawaan urutan array) atau
+ * `destination_location_id` (satu tujuan). null = body tidak menyebut tujuan. Hasil: { ids (berurutan), legacy }.
+ */
+const requestedStops = (body) => {
+  if (Array.isArray(body.destinations)) {
+    const items = body.destinations.map((d) => ({ id: d.location_id, step: d.step === undefined ? null : d.step }))
+    const given = items.filter((i) => i.step !== null)
+    if (given.length && given.length !== items.length) throw fail('destinations', 'step harus diisi di semua tujuan atau tidak diisi sama sekali.')
+    if (given.length && new Set(given.map((i) => i.step)).size !== given.length) throw fail('destinations', 'step tidak boleh kembar.')
+    const ordered = given.length ? [...items].sort((x, y) => x.step - y.step) : items
+    return { ids: ordered.map((i) => i.id), legacy: false }
+  }
+  if (body.destination_location_id) return { ids: [body.destination_location_id], legacy: true }
+  return null
+}
+
+/**
  * Periksa semua rujukan pada data DO yang sudah lengkap (buat baru, atau gabungan data lama + perubahan):
- * driver dan unit harus aktif, lokasi ada, dan customer harus sesuai dengan lokasi tujuan.
- * Mengembalikan baris-baris rujukan dan customer_id akhir (diturunkan dari lokasi tujuan jika tidak dipilih).
+ * driver dan unit harus aktif, semua lokasi ada, dan customer harus sesuai dengan lokasi tujuan.
+ * data.stop_ids = id lokasi tujuan berurutan; data.legacy = dikirim lewat destination_location_id (nama field pada pesan kesalahan).
+ * Mengembalikan baris rujukan, daftar tujuan berurutan ({ step, location }), dan customer_id akhir. Customer diturunkan dari lokasi tujuan
+ * bila tidak dipilih: satu customer di antara tujuan = customer itu; tanpa customer = kosong; lebih dari satu = customer_id wajib dipilih.
  */
 const resolveRefs = async (db, data) => {
-  const [driver, unit, origin, destination] = await Promise.all([
+  const [driver, unit, origin, ...found] = await Promise.all([
     repo.findDriver(db, data.driver_id),
     repo.findUnit(db, data.unit_id),
     repo.findLocation(db, data.origin_location_id),
-    repo.findLocation(db, data.destination_location_id),
+    ...data.stop_ids.map((id) => repo.findLocation(db, id)),
   ])
+  const field = (i) => (data.legacy ? 'destination_location_id' : `destinations.${i}.location_id`)
   if (!driver) throw fail('driver_id', 'Driver tidak ditemukan.')
   if (driver.user_status !== 'active' || driver.driver_status !== 'active') throw fail('driver_id', 'Driver sedang dinonaktifkan.')
   if (!unit) throw fail('unit_id', 'Unit tidak ditemukan.')
   if (unit.status !== 'active') throw fail('unit_id', `Unit ${unit.plate} tidak aktif (${unit.status}).`)
   if (!origin) throw fail('origin_location_id', 'Lokasi asal tidak ditemukan.')
-  if (!destination) throw fail('destination_location_id', 'Lokasi tujuan tidak ditemukan.')
-  if (origin.id === destination.id) throw fail('destination_location_id', 'Lokasi tujuan tidak boleh sama dengan lokasi asal.')
+  found.forEach((loc, i) => {
+    if (!loc) throw fail(field(i), 'Lokasi tujuan tidak ditemukan.')
+    if (origin.id === loc.id) throw fail(field(i), 'Lokasi tujuan tidak boleh sama dengan lokasi asal.')
+  })
 
-  let customerId = data.customer_id || destination.customer_id || null
+  const customers = [...new Set(found.map((l) => l.customer_id).filter(Boolean))]
+  let customerId = null
   if (data.customer_id) {
     if (!(await repo.findCustomer(db, data.customer_id))) throw fail('customer_id', 'Customer tidak ditemukan.')
-    if (destination.customer_id && destination.customer_id !== data.customer_id) {
-      throw fail('customer_id', 'Customer tidak sesuai dengan lokasi tujuan.')
-    }
+    if (customers.length && !customers.includes(data.customer_id)) throw fail('customer_id', 'Customer tidak sesuai dengan lokasi tujuan.')
     customerId = data.customer_id
+  } else if (customers.length > 1) {
+    throw fail('customer_id', 'Lokasi tujuan milik lebih dari satu customer. Pilih customer_id.')
+  } else if (customers.length === 1) {
+    [customerId] = customers
   }
   return {
-    driver, unit, origin, destination, customerId,
+    driver, unit, origin, stops: found.map((location, i) => ({ step: i + 1, location })), customerId,
+  }
+}
+
+/** Kolom DO dari daftar tujuan: tujuan akhir (pemberhentian terakhir) di kolom lama, dan seluruh daftar di destinations. */
+const destinationColumns = (refStops) => {
+  const last = refStops[refStops.length - 1].location
+  return {
+    destination_location_id: last.id,
+    destination_snapshot: snapshotDestination(last),
+    destinations: JSON.stringify(refStops.map((s) => ({ step: s.step, location_id: s.location.id, snapshot: snapshotDestination(s.location) }))),
   }
 }
 
@@ -439,7 +473,11 @@ const lockDriver = (trx, driverId) => trx('drivers').where({ id: driverId }).for
  * dalam satu transaksi (bila asalnya ternyata sudah dijadwalkan ulang, tidak ada yang dibuat).
  */
 const create = async (db, admin, body, { from = null } = {}) => {
-  const [refs, settings] = await Promise.all([resolveRefs(db, body), resolveSettings(db)])
+  const requested = requestedStops(body)
+  const [refs, settings] = await Promise.all([
+    resolveRefs(db, { ...body, stop_ids: requested.ids, legacy: requested.legacy }),
+    resolveSettings(db),
+  ])
   const workDate = assignmentDate(body.planned_load_at)
   const id = await db.transaction(async (trx) => {
     await lockDriver(trx, body.driver_id)
@@ -457,8 +495,7 @@ const create = async (db, admin, body, { from = null } = {}) => {
       unit_id: body.unit_id,
       origin_location_id: body.origin_location_id,
       origin_snapshot: snapshotOrigin(refs.origin),
-      destination_location_id: body.destination_location_id,
-      destination_snapshot: snapshotDestination(refs.destination),
+      ...destinationColumns(refs.stops),
       planned_load_at: body.planned_load_at || null,
       cargo_type: null,
       cargo_details: null,
@@ -523,7 +560,7 @@ const reschedule = async (db, admin, id, body) => {
     driver_id: row.driver_id,
     unit_id: row.unit_id,
     origin_location_id: row.origin_location_id,
-    destination_location_id: row.destination_location_id,
+    destinations: stops.stopsOf(row).map((s) => ({ step: s.step, location_id: s.location_id })),
     estimated_distance_km: row.estimated_distance_km === null ? null : Number(row.estimated_distance_km),
     travel_allowance_amount: Number(row.travel_allowance_amount),
     cargo_type: row.cargo_type,
@@ -531,6 +568,8 @@ const reschedule = async (db, admin, id, body) => {
     customer_reference_no: row.customer_reference_no,
     ...body,
   }
+  // destination_location_id dari body menggantikan seluruh daftar tujuan DO asal
+  if (body.destination_location_id !== undefined) delete merged.destinations
   return create(db, admin, merged, { from: row })
 }
 
@@ -560,12 +599,14 @@ const update = async (db, admin, id, body) => {
     })
   }
 
-  const destinationChanged = body.destination_location_id !== undefined
+  const requested = requestedStops(body)
+  const destinationChanged = requested !== null
   const merged = {
     driver_id: body.driver_id ?? row.driver_id,
     unit_id: body.unit_id ?? row.unit_id,
     origin_location_id: body.origin_location_id ?? row.origin_location_id,
-    destination_location_id: body.destination_location_id ?? row.destination_location_id,
+    stop_ids: destinationChanged ? requested.ids : stops.stopsOf(row).map((s) => s.location_id),
+    legacy: destinationChanged ? requested.legacy : true,
     customer_id: row.customer_id,
   }
   // Tujuan baru tanpa customer eksplisit: customer diturunkan lagi dari tujuan itu
@@ -574,11 +615,11 @@ const update = async (db, admin, id, body) => {
   const refs = await resolveRefs(db, merged)
 
   const fields = { updated_by: admin.id, customer_id: refs.customerId };
-  ['driver_id', 'unit_id', 'origin_location_id', 'destination_location_id', 'planned_load_at', 'estimated_distance_km', 'travel_allowance_amount'].forEach((k) => {
+  ['driver_id', 'unit_id', 'origin_location_id', 'planned_load_at', 'estimated_distance_km', 'travel_allowance_amount'].forEach((k) => {
     if (body[k] !== undefined) fields[k] = body[k]
   })
   if (body.origin_location_id !== undefined) fields.origin_snapshot = snapshotOrigin(refs.origin)
-  if (destinationChanged) fields.destination_snapshot = snapshotDestination(refs.destination)
+  if (destinationChanged) Object.assign(fields, destinationColumns(refs.stops))
   if (body.customer_reference_no !== undefined) fields.customer_reference_no = body.customer_reference_no || null
   Object.assign(fields, cargo.toColumns(body))
 
@@ -653,7 +694,9 @@ const resume = async (db, admin, id) => {
   if (row.status !== 'onhold') {
     throw new AppError('INVALID_STATE', { message: 'Hanya DO onhold yang bisa dilanjutkan.', details: { status: row.status, expected: ['onhold'] } })
   }
-  const refs = await resolveRefs(db, { ...row, customer_id: null }) // driver/unit/lokasi bisa saja sudah dinonaktifkan selama DO ditahan
+  const refs = await resolveRefs(db, {
+    ...row, customer_id: null, stop_ids: stops.stopsOf(row).map((st) => st.location_id), legacy: true,
+  }) // driver/unit/lokasi bisa saja sudah dinonaktifkan selama DO ditahan
   const workDate = assignmentDate(row.planned_load_at, row.assigned_at)
 
   await db.transaction(async (trx) => {

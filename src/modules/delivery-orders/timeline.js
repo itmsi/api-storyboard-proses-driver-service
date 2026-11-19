@@ -18,6 +18,7 @@ const FIELD_TEXT = {
   customer_id: 'customer',
   origin_location_id: 'lokasi asal',
   destination_location_id: 'lokasi tujuan',
+  destinations: 'lokasi tujuan',
   planned_load_at: 'jadwal muat',
   travel_allowance_amount: 'uang jalan',
   estimated_distance_km: 'perkiraan jarak',

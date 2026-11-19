@@ -67,6 +67,15 @@ const list = listQuery.keys({
   completed_to: date,
 })
 
+// Tujuan berurutan (satu DO banyak tujuan). step opsional (bawaan: urutan array); location_name diterima tetapi diabaikan
+// (nama selalu dari master lokasi).
+const stop = Joi.object({
+  step: Joi.number().integer().min(1),
+  location_id: Joi.string().guid().required(),
+  location_name: Joi.string().trim().max(120).allow('', null),
+})
+const MAX_STOPS = 20
+
 const fields = {
   customer_id: Joi.string().guid().allow(null),
   // Nomor referensi dari customer, mis. no PO (opsional)
@@ -74,7 +83,10 @@ const fields = {
   driver_id: Joi.string().guid(),
   unit_id: Joi.string().guid(),
   origin_location_id: Joi.string().guid(),
+  // destination_location_id (satu tujuan) tetap diterima; pakai destinations untuk banyak tujuan. Tidak boleh dikirim bersamaan.
   destination_location_id: Joi.string().guid(),
+  destinations: Joi.array().items(stop).min(1).max(MAX_STOPS)
+    .unique('location_id'),
   planned_load_at: Joi.date().iso().allow(null),
   estimated_distance_km: Joi.number().min(0).max(100000).allow(null),
   travel_allowance_amount: Joi.number().integer().min(0).max(1000000000),
@@ -87,19 +99,21 @@ const create = Joi.object({
   driver_id: fields.driver_id.required(),
   unit_id: fields.unit_id.required(),
   origin_location_id: fields.origin_location_id.required(),
-  destination_location_id: fields.destination_location_id.required(),
 })
+  .or('destination_location_id', 'destinations')
+  .nand('destination_location_id', 'destinations')
 
 // DO ulang dari DO gagal kirim: semua field boleh diganti, sisanya disalin dari DO asal. Jadwal muat baru wajib.
 const reschedule = Joi.object({
   ...fields,
   planned_load_at: Joi.date().iso().required(),
-})
+}).nand('destination_location_id', 'destinations')
 
 // Parsial: hanya field yang dikirim yang berubah. cargo_details dikirim = diganti seluruhnya; null / [] = dikosongkan.
 const update = Joi.object({
   ...fields,
 }).min(1)
+  .nand('destination_location_id', 'destinations')
 
 const cancel = Joi.object({
   reason: Joi.string().trim().min(3).max(300)

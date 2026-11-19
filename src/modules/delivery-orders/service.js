@@ -5,6 +5,7 @@ const p2h = require('../p2h/service')
 const { getPending } = require('../sync/pending')
 const repo = require('./repository')
 const cargo = require('./cargo')
+const stops = require('./stops')
 
 const MAX_RANGE_DAYS = 366
 const DEFAULT_RANGE_DAYS = 30
@@ -17,12 +18,8 @@ const gpsOf = (snapshot) => (snapshot.lat === null || snapshot.lat === undefined
 
 const mapsUrl = mapsUrlFor
 
-/** "Cakung → PT Contoh Jaya, Karawang" */
-const routeLabel = (row) => {
-  const from = row.origin_snapshot.city || row.origin_snapshot.name
-  const dest = row.destination_snapshot
-  return `${from} → ${dest.name}${dest.city ? `, ${dest.city}` : ''}`
-}
+/** "Cakung → PT Contoh Jaya, Karawang" (banyak tujuan: dipisah →) */
+const { routeLabel } = stops
 
 const serialize = (row, extra = {}) => ({
   id: row.id,
@@ -49,7 +46,8 @@ const serialize = (row, extra = {}) => ({
     operating_hours: row.destination_snapshot.operating_hours || null,
     pic: row.destination_snapshot.pic || null,
     maps_url: mapsUrl(row.destination_snapshot),
-  },
+  }, // tujuan akhir
+  destinations: stops.stopsOf(row).map(stops.forDriver), // semua tujuan berurutan
   ...cargo.serialize(row),
   estimated_distance_km: num(row.estimated_distance_km),
   travel_allowance: {
