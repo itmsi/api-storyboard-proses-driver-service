@@ -10,6 +10,7 @@ const idParams = Joi.object({
 const list = listQuery.keys({
   status: Joi.string().valid('active', 'suspended'),
   role_id: Joi.string().guid(),
+  license_type: Joi.string().trim().max(20), // jenis SIM persis (A, B1, B1 Umum, B2, B2 Umum; huruf besar/kecil diabaikan)
   license_status: expiryStatus, // masa berlaku SIM: expired | expiring | valid | unknown
   expiring_days: expiringDays, // batas 'expiring': hari ke depan (bawaan 30)
   has_unit: Joi.boolean(), // true = punya unit bawaan, false = belum

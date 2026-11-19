@@ -10,6 +10,7 @@ const unitDay = require('./unit-day')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
 const cargo = require('./cargo')
+const timeline = require('./timeline')
 const validation = require('./manage-validation')
 
 // Pengelolaan DO oleh admin: buat, daftar, detail, ubah (hanya saat belum diterima driver), tahan (onhold)/lanjutkan, batalkan.
@@ -41,6 +42,51 @@ const routeLabel = (row) => {
   const from = row.origin_snapshot.city || row.origin_snapshot.name
   const dest = row.destination_snapshot
   return `${from} → ${dest.name}${dest.city ? `, ${dest.city}` : ''}`
+}
+
+/**
+ * Tambahan item daftar DO untuk tabel admin, dari data yang sudah ada (tanpa kolom salinan): `last_stage` (tahap terakhir), `flags` (kolom
+ * "Catatan"), dan `settlement`. Semuanya diambil dengan satu query per jenis untuk seluruh halaman.
+ */
+const withListExtras = async (db, rows, items) => {
+  if (!rows.length) return items
+  const ids = rows.map((r) => r.id)
+  const assignedUnits = [...new Set(rows.filter((r) => r.status === 'assigned').map((r) => r.unit_id))]
+  const [stages, corrections, settlements, p2h] = await Promise.all([
+    repo.lastStages(db, ids, timeline.STAGE_EVENTS),
+    repo.correctionCounts(db, ids),
+    repo.settlementsOf(db, ids),
+    repo.currentP2h(db, assignedUnits, wibDate()),
+  ])
+  const stageOf = new Map(stages.map((r) => [r.delivery_order_id, r]))
+  const correctionsOf = new Map(corrections.map((r) => [r.delivery_order_id, r.count]))
+  const settlementOf = new Map(settlements.map((r) => [r.delivery_order_id, r]))
+  const p2hOf = new Map(p2h.map((r) => [r.unit_id, r.status]))
+
+  return items.map((item, i) => {
+    const row = rows[i]
+    const stage = stageOf.get(row.id)
+    const corrected = correctionsOf.get(row.id) || 0
+    const flags = []
+    if (corrected) flags.push({ code: 'correction', label: `${corrected} koreksi`, count: corrected })
+    if (row.status === 'assigned' && !p2hOf.has(row.unit_id)) flags.push({ code: 'p2h_missing', label: 'P2H belum' })
+    if (row.status === 'assigned' && p2hOf.get(row.unit_id) === 'tidak_layak') flags.push({ code: 'p2h_unfit', label: 'P2H tidak layak' })
+    if (row.status === 'completed' && row.delivery_status === 'gagal_kirim' && !row.rescheduled_to_id) {
+      flags.push({ code: 'needs_reschedule', label: 'Perlu dijadwalkan ulang' })
+    }
+    if (row.needs_review) flags.push({ code: 'needs_review', label: 'Perlu dilihat' })
+    const settlement = settlementOf.get(row.id)
+    let settlementStatus = 'none'
+    if (settlement) settlementStatus = settlement.settled_at ? 'settled' : 'pending'
+    return {
+      ...item,
+      last_stage: stage
+        ? { code: stage.event, label: timeline.stageLabel(stage.event), at: toWib(stage.occurred_at) }
+        : { code: 'assigned', label: timeline.stageLabel('assigned'), at: toWib(row.assigned_at) },
+      flags,
+      settlement: { status: settlementStatus, ...(settlement ? { type: settlement.type } : {}) },
+    }
+  })
 }
 
 const serializeListItem = (row) => ({
@@ -75,6 +121,8 @@ const serializeListItem = (row) => ({
   on_hold_reason: row.on_hold_reason ?? null,
   cancelled_at: toWib(row.cancelled_at),
   cancel_reason: row.cancel_reason,
+  rescheduled_from_id: row.rescheduled_from_id || null, // DO ini adalah DO ulang dari DO gagal kirim itu
+  rescheduled_to_id: row.rescheduled_to_id || null, // DO ini sudah dijadwalkan ulang menjadi DO itu
   needs_review: Boolean(row.needs_review), // ada bacaan odometer/struk yang perlu dilihat admin (lihat detail untuk alasannya)
   ...auditFields(row),
 })
@@ -99,6 +147,9 @@ const serializeDetail = async (db, row) => {
     repo.settlement(db, row.id),
     repo.media(db, row.id),
   ])
+  const linkIds = [row.rescheduled_from_id, row.rescheduled_to_id].filter(Boolean)
+  const linkRefs = new Map((await repo.orderRefs(db, linkIds)).map((r) => [r.id, r]))
+  const p2hById = new Map((await repo.p2hByIds(db, [...new Set(events.map((e) => e.payload && e.payload.p2h_id).filter(Boolean))])).map((r) => [r.id, r]))
   // Foto dan status pengecekan AI bacaan/struk, diambil sekali untuk semuanya (dua query, bukan per baris)
   const [photoRows, checkRows] = await Promise.all([
     repo.mediaByIds(db, [...odometers.map((o) => o.media_id), ...expenses.map((e) => e.proof_media_id)].filter(Boolean)),
@@ -158,9 +209,14 @@ const serializeDetail = async (db, row) => {
       ...row.destination_snapshot, gps: gps(row.destination_snapshot), maps_url: mapsUrlFor(row.destination_snapshot), location_id: row.destination_location_id,
     },
     travel_allowance: { amount: num(row.travel_allowance_amount), received_at: toWib(row.travel_allowance_received_at) },
+    rescheduled_from: row.rescheduled_from_id ? linkRefs.get(row.rescheduled_from_id) || { id: row.rescheduled_from_id, no: null } : null,
+    rescheduled_to: row.rescheduled_to_id ? linkRefs.get(row.rescheduled_to_id) || { id: row.rescheduled_to_id, no: null } : null,
     timeline: events.map((e) => ({
       id: Number(e.id),
       event: e.event,
+      ...timeline.describeEvent(e, {
+        order: row, expenses, handover, p2hById,
+      }),
       from_status: e.from_status,
       to_status: e.to_status,
       occurred_at: toWib(e.occurred_at),
@@ -312,7 +368,7 @@ const list = async (db, query) => {
       to: query.to ? new Date(`${query.to}T23:59:59.999+07:00`) : null,
     },
   })
-  return { data: rows.map(serializeListItem), meta: pagination.meta(paging, total) }
+  return { data: await withListExtras(db, rows, rows.map(serializeListItem)), meta: pagination.meta(paging, total) }
 }
 
 const get = async (db, id) => serializeDetail(db, await load(db, id))
@@ -374,7 +430,11 @@ const assertDriverDayFree = async (trx, {
 /** Kunci baris driver selama transaksi: pemeriksaan "satu unit per tanggal" dan penyimpanan DO jadi berurutan per driver. */
 const lockDriver = (trx, driverId) => trx('drivers').where({ id: driverId }).forUpdate().first('id')
 
-const create = async (db, admin, body) => {
+/**
+ * Buat dan tugaskan DO. `from` (opsional) = DO gagal kirim asal DO ulang: DO baru menunjuk asalnya dan asalnya menunjuk DO baru,
+ * dalam satu transaksi (bila asalnya ternyata sudah dijadwalkan ulang, tidak ada yang dibuat).
+ */
+const create = async (db, admin, body, { from = null } = {}) => {
   const refs = await resolveRefs(db, body)
   const no = await repo.nextNumber(db)
   const workDate = assignmentDate(body.planned_load_at)
@@ -400,6 +460,7 @@ const create = async (db, admin, body) => {
       ...cargo.toColumns(body),
       estimated_distance_km: body.estimated_distance_km ?? null,
       travel_allowance_amount: body.travel_allowance_amount ?? 0,
+      rescheduled_from_id: from ? from.id : null,
       assigned_by: admin.id,
       created_by: admin.id,
       updated_by: admin.id,
@@ -411,11 +472,58 @@ const create = async (db, admin, body) => {
       to_status: 'assigned',
       actor_id: admin.id,
       occurred_at: new Date(),
-      payload: { driver_id: body.driver_id, unit_id: body.unit_id },
+      payload: { driver_id: body.driver_id, unit_id: body.unit_id, ...(from ? { rescheduled_from: { id: from.id, no: from.no } } : {}) },
     })
+    if (from) {
+      const linked = await trx('delivery_orders').where({ id: from.id }).whereNull('rescheduled_to_id')
+        .update({ rescheduled_to_id: created, updated_by: admin.id })
+      if (!linked) throw new AppError('INVALID_STATE', { message: `DO ${from.no} sudah dijadwalkan ulang.`, details: { reason: 'sudah_dijadwalkan_ulang' } })
+      await doRepo.insertEvent(trx, {
+        delivery_order_id: from.id,
+        event: 'rescheduled',
+        from_status: from.status,
+        to_status: from.status,
+        actor_id: admin.id,
+        occurred_at: new Date(),
+        payload: { new_order_id: created, new_no: no },
+      })
+    }
     return created
   })
   return get(db, id)
+}
+
+/**
+ * DO ulang dari DO yang gagal kirim (selesai dengan hasil gagal_kirim): DO baru berstatus assigned, disalin dari DO asal (driver, unit,
+ * lokasi, muatan, uang jalan), dengan jadwal muat baru dan field lain yang boleh diganti lewat body. Satu DO hanya bisa dijadwalkan ulang sekali.
+ */
+const reschedule = async (db, admin, id, body) => {
+  const row = await load(db, id)
+  if (row.status !== 'completed' || row.delivery_status !== 'gagal_kirim') {
+    throw new AppError('INVALID_STATE', {
+      message: 'Hanya DO yang gagal kirim yang bisa dijadwalkan ulang.',
+      details: { status: row.status, delivery_status: row.delivery_status, expected: 'completed dengan hasil gagal_kirim' },
+    })
+  }
+  if (row.rescheduled_to_id) {
+    const [next] = await repo.orderRefs(db, [row.rescheduled_to_id])
+    throw new AppError('INVALID_STATE', {
+      message: `DO ${row.no} sudah dijadwalkan ulang${next ? ` (${next.no})` : ''}.`,
+      details: { reason: 'sudah_dijadwalkan_ulang', rescheduled_to_id: row.rescheduled_to_id },
+    })
+  }
+  const merged = {
+    driver_id: row.driver_id,
+    unit_id: row.unit_id,
+    origin_location_id: row.origin_location_id,
+    destination_location_id: row.destination_location_id,
+    estimated_distance_km: row.estimated_distance_km === null ? null : Number(row.estimated_distance_km),
+    travel_allowance_amount: Number(row.travel_allowance_amount),
+    cargo_type: row.cargo_type,
+    cargo_details: row.cargo_details,
+    ...body,
+  }
+  return create(db, admin, merged, { from: row })
 }
 
 /** Status yang tidak boleh diubah/dibatalkan lagi, dengan pesan yang tepat. */
@@ -589,5 +697,5 @@ const cancel = async (db, admin, id, { reason }) => {
 }
 
 module.exports = {
-  list, get, create, update, hold, resume, cancel,
+  list, get, create, reschedule, update, hold, resume, cancel,
 }

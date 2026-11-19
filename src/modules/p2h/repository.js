@@ -1,6 +1,7 @@
 const { withAuditNames } = require('../../utils/audit')
 const { findEffectiveUnit } = require('../../utils/driver-unit')
 const { searchColumns } = require('../../utils/pagination')
+const { doWorkDateSql } = require('../../utils/master')
 
 const findUnit = (db, unitId) => db('units')
   .where({ 'units.id': unitId, 'units.is_delete': false })
@@ -78,6 +79,68 @@ const listAdmin = async (db, { filters, search, paging }) => {
   return { rows, total: Number(count) }
 }
 
+/**
+ * Status P2H semua unit aktif pada `date` (halaman "P2H Unit"): unit tanpa P2H hari itu tetap muncul dengan status belum.
+ * summary = hitungan per status atas unit yang cocok pencarian (tidak terpengaruh filter status).
+ */
+const listUnits = async (db, {
+  date, status, search, paging,
+}) => {
+  const joined = () => db('units')
+    .leftJoin('p2h_inspections as i', (j) => j
+      .on('i.unit_id', 'units.id')
+      .andOn('i.inspection_date', db.raw('?::date', [date]))
+      .andOnNull('i.superseded_at')
+      .andOn('i.is_delete', db.raw('false')))
+    .leftJoin('drivers as d', 'd.id', 'i.checked_by')
+    .leftJoin('users as du', 'du.id', 'd.user_id')
+    .where({ 'units.is_delete': false, 'units.status': 'active' })
+  const searched = () => {
+    const q = joined()
+    if (search && search.trim()) {
+      const like = `%${search.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+      q.where((w) => w.whereRaw('units.plate ILIKE ?', [like]).orWhereRaw('units.brand ILIKE ?', [like]).orWhereRaw('du.name ILIKE ?', [like]))
+    }
+    return q
+  }
+  const filtered = () => {
+    const q = searched()
+    if (status === 'belum') q.whereNull('i.id')
+    else if (status) q.where('i.status', status)
+    return q
+  }
+  const [{ count }] = await filtered().count('units.id as count')
+  const [rows, summary] = await Promise.all([
+    filtered()
+      .orderBy(paging.column, paging.direction)
+      .orderBy('units.id')
+      .limit(paging.limit)
+      .offset(paging.offset)
+      .select(
+        'units.id',
+        'units.plate',
+        'units.unit_type',
+        'units.brand',
+        'units.year',
+        'i.id as inspection_id',
+        'i.status as p2h_status',
+        'i.can_operate',
+        'i.checked_at',
+        'i.admin_confirmed_by_driver',
+        'd.id as driver_id',
+        'du.name as driver_name',
+        db.raw(`(SELECT string_agg(ii.description, '; ' ORDER BY ii.label)
+          FROM p2h_inspection_items ii WHERE ii.inspection_id = i.id AND ii.result = 'tidak_sesuai') as note`),
+        db.raw(`EXISTS (SELECT 1 FROM p2h_inspections old WHERE old.unit_id = units.id AND old.inspection_date = ?::date
+          AND old.is_delete = false AND old.superseded_at IS NOT NULL AND old.recheck_requested_at IS NOT NULL) as recheck_requested`, [date]),
+        db.raw(`(SELECT count(*)::int FROM delivery_orders o WHERE o.unit_id = units.id AND o.status = 'assigned'
+          AND ${doWorkDateSql('o')} = ?::date) as waiting_orders`, [date])
+      ),
+    searched().groupByRaw("coalesce(i.status, 'belum')").select(db.raw("coalesce(i.status, 'belum') as status"), db.raw('count(*)::int as count')),
+  ])
+  return { rows, total: Number(count), summary }
+}
+
 /** Satu P2H berdasarkan id (tanpa yang dihapus), beserta unit dan pemeriksa. */
 const findById = (db, id) => withAuditNames(
   db('p2h_inspections')
@@ -145,6 +208,7 @@ const markRecheck = (db, inspectionId, adminId, note) => db('p2h_inspections')
 
 module.exports = {
   listAdmin,
+  listUnits,
   findById,
   getItemRows,
   updateItem,

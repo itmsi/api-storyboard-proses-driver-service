@@ -68,7 +68,7 @@ const verifyCredentials = async (db, user, password) => {
  * @param {object} claims  isi tambahan access token (mis. { role, driver_id, device_id })
  */
 const issueTokens = async (db, {
-  clientCode, userId, claims, deviceUuid = null, familyId, remember,
+  clientCode, userId, claims, deviceUuid = null, familyId, remember, client = {},
 }) => {
   const refreshToken = buildRefreshToken(clientCode)
   const ttl = remember ? config.jwt.refreshTokenTtl : config.jwt.refreshTokenTtlShort
@@ -79,6 +79,8 @@ const issueTokens = async (db, {
     family_id: familyId,
     token_hash: sha256(refreshToken),
     expires_at: new Date(Date.now() + ttl * 1000),
+    user_agent: client.userAgent || null,
+    ip: client.ip || null,
   })
 
   const accessToken = signAccessToken({
@@ -134,6 +136,7 @@ const rotate = async (token, { loadUser, isActive, claims }) => {
       deviceUuid: stored.device_id,
       familyId: stored.family_id,
       remember,
+      client: { userAgent: stored.user_agent, ip: stored.ip }, // sesi yang sama: perangkat tidak berubah
     })
     const newRow = await repo.findRefreshTokenByHash(trx, sha256(tokens.refresh_token))
     await repo.revokeRefreshToken(trx, stored.id, newRow.id)

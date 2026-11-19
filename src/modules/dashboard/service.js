@@ -172,8 +172,9 @@ const financeSection = async (db, range) => {
  */
 const get = async (db, query) => {
   const range = resolveRange(query)
-  const [counts, pendingSync, p2h, finance, orders] = await Promise.all([
+  const [counts, needsReschedule, pendingSync, p2h, finance, orders] = await Promise.all([
     repo.doCounts(db, range),
+    repo.needsRescheduleCount(db, range),
     repo.pendingSyncCount(db),
     p2hSection(db, range.p2hDate),
     financeSection(db, range),
@@ -201,7 +202,7 @@ const get = async (db, query) => {
         delivery_orders: { total: status.total, not_accepted: status.counts.assigned, on_hold: status.counts.onhold },
         running: { total: status.counts.running, pending_sync: pendingSync },
         completed: { total: status.counts.completed, settled: finance.settled_count },
-        failed: { total: status.counts.failed, needs_reschedule: status.counts.failed > 0 },
+        failed: { total: status.counts.failed, needs_reschedule: needsReschedule > 0, needs_reschedule_count: needsReschedule },
       },
       do_status: {
         total: status.total,

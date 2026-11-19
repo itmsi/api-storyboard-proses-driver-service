@@ -30,6 +30,26 @@ const RESOURCES = {
   settings: 'Pengaturan aplikasi',
 }
 
+/**
+ * Aksi tambahan di luar CRUD untuk tindakan yang perlu hak terpisah (misalnya finance boleh menyetujui settlement tanpa boleh mengubah DO).
+ * Hanya modul admin. Role bawaan Administrator memegang semuanya; role lain harus diberi eksplisit.
+ */
+const EXTRA_ACTIONS = {
+  settlements: ['approve'], // POST /settlements/{id}/settle
+  p2h: ['recheck'], // POST /units/{unitId}/p2h/recheck
+  drivers: ['reset_password'], // POST /drivers/{id}/reset-password
+  users: ['reset_password'], // POST /users/{id}/reset-password
+}
+const ACTION_LABELS = {
+  read: 'Lihat',
+  create: 'Tambah',
+  update: 'Ubah',
+  delete: 'Hapus',
+  approve: 'Setujui settlement',
+  recheck: 'Minta P2H ulang',
+  reset_password: 'Atur ulang kata sandi',
+}
+
 /** Modul hak akun driver (aplikasi HP). Awalan "driver_" membedakannya dari modul admin. */
 const DRIVER_RESOURCES = {
   driver_profile: { label: 'Profil, pengaturan, dan password sendiri', actions: ['read', 'update'] },
@@ -46,7 +66,7 @@ const DRIVER_RESOURCES = {
 /** Modul dan aksi yang boleh dimiliki sebuah jenis akun: { <modul>: { label, actions } }. */
 const resourcesOf = (userType) => {
   if (userType === 'driver') return DRIVER_RESOURCES
-  return Object.fromEntries(Object.entries(RESOURCES).map(([key, label]) => [key, { label, actions: ACTIONS }]))
+  return Object.fromEntries(Object.entries(RESOURCES).map(([key, label]) => [key, { label, actions: [...ACTIONS, ...(EXTRA_ACTIONS[key] || [])] }]))
 }
 
 /**
@@ -61,6 +81,7 @@ const driverDefaults = () => Object.fromEntries(Object.entries(DRIVER_RESOURCES)
 /** Katalog untuk menggambar matriks hak: tiap modul memuat jenis akunnya dan aksi yang tersedia. */
 const catalog = () => ({
   actions: ACTIONS,
+  action_labels: ACTION_LABELS, // nama tampil semua aksi, termasuk aksi tambahan per modul
   user_types: USER_TYPES,
   resources: USER_TYPES.flatMap((userType) => Object.entries(resourcesOf(userType))
     .map(([key, def]) => ({
@@ -69,7 +90,7 @@ const catalog = () => ({
 })
 
 /** Semua hak admin (untuk Administrator). */
-const all = () => Object.fromEntries(Object.keys(RESOURCES).map((r) => [r, [...ACTIONS]]))
+const all = () => Object.fromEntries(Object.keys(RESOURCES).map((r) => [r, [...ACTIONS, ...(EXTRA_ACTIONS[r] || [])]]))
 
 /**
  * Rapikan matriks dari request: buang duplikat dan modul kosong, urut sesuai ACTIONS.
@@ -98,7 +119,7 @@ const normalize = (input, field = 'permissions', userType = 'admin') => {
       })
       return
     }
-    const unique = ACTIONS.filter((a) => actions.includes(a))
+    const unique = allowed[resource].actions.filter((a) => actions.includes(a)) // urutan mengikuti definisi modul
     if (unique.length) result[resource] = unique
   })
   if (details.length) throw new AppError('VALIDATION_ERROR', { details })
@@ -112,6 +133,7 @@ const isSubset = (actor, target) => Object.entries(target).every(([resource, act
 
 module.exports = {
   ACTIONS,
+  EXTRA_ACTIONS,
   USER_TYPES,
   RESOURCES,
   DRIVER_RESOURCES,

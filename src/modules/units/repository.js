@@ -21,6 +21,7 @@ const select = (db, query) => query.select(
   'units.unit_type',
   'units.max_load_kg',
   'units.driver_id',
+  'units.driver_assigned_at',
   'default_driver.code as default_driver_code',
   'default_driver_user.name as default_driver_name',
   'units.created_at',
@@ -30,12 +31,13 @@ const select = (db, query) => query.select(
 )
 
 const list = async (db, {
-  search, status, unitType, defaultDriverId, hasDriver, stnkStatus, kirStatus, dates, paging,
+  search, status, unitType, brand, defaultDriverId, hasDriver, stnkStatus, kirStatus, dates, paging,
 }) => {
   const filtered = () => {
     const q = searchColumns(base(db), search, ['units.plate', 'units.brand', 'units.vin_number', 'units.unit_type'])
     if (status) q.where('units.status', status)
     if (unitType) q.whereRaw('lower(units.unit_type) = ?', [unitType.toLowerCase()])
+    if (brand) q.whereRaw('lower(units.brand) = ?', [brand.toLowerCase()])
     if (defaultDriverId) q.where('units.driver_id', defaultDriverId)
     if (hasDriver === true) q.whereNotNull('units.driver_id')
     if (hasDriver === false) q.whereNull('units.driver_id')
@@ -51,6 +53,13 @@ const list = async (db, {
     .offset(paging.offset)
   return { rows, total: Number(count) }
 }
+
+/** DO yang sedang berjalan dengan unit ini (diterima driver dan belum selesai), bila ada. */
+const findRunningOrder = (db, unitId) => db('delivery_orders')
+  .where({ unit_id: unitId })
+  .whereIn('status', ['accepted', 'loading', 'in_transit', 'handover'])
+  .orderBy('started_at', 'desc')
+  .first('id', 'no', 'status')
 
 const findById = (db, id) => withAuditNames(select(db, base(db)).where('units.id', id), 'units').first()
 
@@ -92,5 +101,5 @@ const insert = async (db, row) => {
 const update = (db, id, fields) => db('units').where({ id }).update(fields)
 
 module.exports = {
-  list, findById, findDriver, findUnitOfDefaultDriver, plateTaken, vinTaken, findUsage, insert, update,
+  findRunningOrder, list, findById, findDriver, findUnitOfDefaultDriver, plateTaken, vinTaken, findUsage, insert, update,
 }

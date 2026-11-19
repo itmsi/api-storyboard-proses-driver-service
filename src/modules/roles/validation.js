@@ -1,6 +1,11 @@
 const Joi = require('joi')
 const { listQuery } = require('../../utils/pagination')
-const { ACTIONS, USER_TYPES, RESOURCES } = require('../../utils/permissions')
+const {
+  ACTIONS, EXTRA_ACTIONS, USER_TYPES, RESOURCES,
+} = require('../../utils/permissions')
+
+// Semua aksi yang dikenal (CRUD dan aksi tambahan per modul); kecocokan aksi dengan modulnya diperiksa permissions.normalize
+const KNOWN_ACTIONS = [...new Set([...ACTIONS, ...Object.values(EXTRA_ACTIONS).flat()])]
 
 const idParams = Joi.object({
   id: Joi.string().guid().required(),
@@ -12,8 +17,8 @@ const list = listQuery.keys({
 })
 
 // { "drivers": ["read", "create"], ... }; modul dan aksi asing ditolak di service (pesan per field)
-const permissions = Joi.object().pattern(Joi.string(), Joi.array().items(Joi.string().valid(...ACTIONS)).max(ACTIONS.length))
-  .messages({ 'any.only': `Aksi harus salah satu dari: ${ACTIONS.join(', ')}.` })
+const permissions = Joi.object().pattern(Joi.string(), Joi.array().items(Joi.string().valid(...KNOWN_ACTIONS)).max(KNOWN_ACTIONS.length))
+  .messages({ 'any.only': `Aksi harus salah satu dari: ${KNOWN_ACTIONS.join(', ')}.` })
 
 const fields = {
   name: Joi.string().trim().min(2).max(60),

@@ -53,7 +53,7 @@ const lockUnit = (trx, unitId) => trx.raw('SELECT pg_advisory_xact_lock(hashtext
 /**
  * Riwayat: SEMUA DO (status apa pun, tidak menunggu selesai) yang tanggal kerjanya (jadwal muat, atau waktu penugasan bila tanpa
  * jadwal; sama dengan filter from/to di daftar admin dan dashboard) ada di rentang, terbaru dulu. cursor = (tanggal kerja, id) terakhir halaman sebelumnya.
- * driverId kosong = semua driver (admin). statuses kosong = semua status.
+ * driverId kosong = semua driver (admin). statuses null = semua status; array kosong = tidak ada yang cocok.
  */
 const HISTORY_AT = 'coalesce(delivery_orders.planned_load_at, delivery_orders.assigned_at)'
 
@@ -63,7 +63,7 @@ const history = (db, driverId, {
   .select(db.raw(`${HISTORY_AT} as sort_at`))
   .whereRaw(`${HISTORY_AT} BETWEEN ? AND ?`, [from, to])
   .modify((q) => {
-    if (statuses && statuses.length) q.whereIn('delivery_orders.status', statuses)
+    if (statuses) q.whereIn('delivery_orders.status', statuses)
     if (cursor) q.whereRaw(`(${HISTORY_AT}, delivery_orders.id) < (?, ?)`, [cursor.sortAt, cursor.id])
   })
   .orderByRaw(`${HISTORY_AT} DESC, delivery_orders.id DESC`)
@@ -74,7 +74,7 @@ const historySummary = (db, driverId, { from, to, statuses }) => db('delivery_or
   .whereRaw(`${HISTORY_AT} BETWEEN ? AND ?`, [from, to])
   .modify((q) => {
     if (driverId) q.where({ driver_id: driverId })
-    if (statuses && statuses.length) q.whereIn('status', statuses)
+    if (statuses) q.whereIn('status', statuses)
   })
   .groupBy('status')
   .select(

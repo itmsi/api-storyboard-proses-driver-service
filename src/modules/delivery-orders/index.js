@@ -38,6 +38,7 @@ router.get('/:id', anyRole, adminCan('delivery_orders', 'read'), driverCan('driv
 
 // Khusus admin
 router.put('/:id', adminGuard, can('delivery_orders', 'update'), validate({ params: schema.idParams, body: manageSchema.update }), asyncHandler(controller.update))
+router.post('/:id/reschedule', adminGuard, can('delivery_orders', 'create'), validate({ params: schema.idParams, body: manageSchema.reschedule }), asyncHandler(controller.reschedule))
 router.post('/:id/hold', adminGuard, can('delivery_orders', 'update'), validate({ params: schema.idParams, body: manageSchema.hold }), asyncHandler(controller.hold))
 router.post('/:id/resume', adminGuard, can('delivery_orders', 'update'), validate({ params: schema.idParams }), asyncHandler(controller.resume))
 router.post('/:id/cancel', adminGuard, can('delivery_orders', 'update'), validate({ params: schema.idParams, body: manageSchema.cancel }), asyncHandler(controller.cancel))

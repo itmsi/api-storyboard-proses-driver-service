@@ -11,6 +11,7 @@ const idParams = Joi.object({
 const list = listQuery.keys({
   status: Joi.string().valid(...STATUSES),
   unit_type: Joi.string().trim().max(40),
+  brand: Joi.string().trim().max(60), // merek persis (huruf besar/kecil diabaikan)
   driver_id: Joi.string().guid(),
   has_driver: Joi.boolean(), // true = punya driver bawaan, false = belum
   stnk_status: expiryStatus, // masa berlaku STNK: expired | expiring | valid | unknown

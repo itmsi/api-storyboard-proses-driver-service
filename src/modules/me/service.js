@@ -5,6 +5,7 @@ const { wibDate, toWib } = require('../../utils/date')
 const password = require('../../utils/password')
 const permissions = require('../../utils/permissions')
 const { getPending } = require('../sync/pending')
+const userAgent = require('../../utils/user-agent')
 const authRepo = require('../auth/repository')
 const repo = require('./repository')
 
@@ -58,6 +59,9 @@ const getAdminProfile = async (db, auth) => {
     'users'
   ).first()
   if (!row) throw new AppError('UNAUTHORIZED')
+  // Sesi login ini (rantai refresh token): sejak kapan dan dari perangkat apa
+  const stored = auth.fam ? await authRepo.findSession(db, auth.fam) : null
+  const session = stored ? { since: toWib(stored.created_at), device: userAgent.label(stored.user_agent), ip: stored.ip || null } : null
   return {
     id: row.id,
     username: row.username,
@@ -70,6 +74,7 @@ const getAdminProfile = async (db, auth) => {
     role: row.role_id ? { id: row.role_id, name: row.role_name, is_system: Boolean(row.role_is_system) } : null,
     permissions: row.role_is_system ? permissions.all() : (row.role_permissions || {}),
     last_login_at: toWib(row.last_login_at),
+    session,
     ...auditFields(row),
   }
 }

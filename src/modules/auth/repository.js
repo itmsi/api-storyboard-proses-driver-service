@@ -80,6 +80,12 @@ const upsertDevice = async (db, userId, device) => {
 
 const insertRefreshToken = (db, row) => db('refresh_tokens').insert(row).returning('id')
 
+/** Sesi (rantai refresh token) dari access token: awal login dan perangkatnya. */
+const findSession = async (db, familyId) => {
+  const first = await db('refresh_tokens').where({ family_id: familyId }).orderBy('created_at', 'asc').first('created_at', 'user_agent', 'ip')
+  return first || null
+}
+
 const findRefreshTokenByHash = (db, hash) => db('refresh_tokens').where({ token_hash: hash }).first()
 
 const revokeRefreshToken = (db, id, replacedBy = null) => db('refresh_tokens')
@@ -182,6 +188,7 @@ module.exports = {
   markLoginSuccess,
   upsertDevice,
   insertRefreshToken,
+  findSession,
   findRefreshTokenByHash,
   revokeRefreshToken,
   revokeFamily,

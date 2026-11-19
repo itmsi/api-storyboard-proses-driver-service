@@ -88,6 +88,12 @@ const create = Joi.object({
   destination_location_id: fields.destination_location_id.required(),
 })
 
+// DO ulang dari DO gagal kirim: semua field boleh diganti, sisanya disalin dari DO asal. Jadwal muat baru wajib.
+const reschedule = Joi.object({
+  ...fields,
+  planned_load_at: Joi.date().iso().required(),
+})
+
 // Parsial: hanya field yang dikirim yang berubah. cargo_details dikirim = diganti seluruhnya; null / [] = dikosongkan.
 const update = Joi.object({
   ...fields,
@@ -104,5 +110,5 @@ const hold = Joi.object({
 })
 
 module.exports = {
-  list, create, update, hold, cancel, STATUSES, STATUS_GROUPS, DELIVERY_STATUSES, SETTLEMENT_STATUSES,
+  list, create, reschedule, update, hold, cancel, STATUSES, STATUS_GROUPS, DELIVERY_STATUSES, SETTLEMENT_STATUSES,
 }

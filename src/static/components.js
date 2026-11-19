@@ -236,7 +236,7 @@ const schemas = {
           driver: {
             allOf: [ref('DriverRef'), obj({
               role: nullable(obj({ id: str('4c7e9b21-8d35-4a60-b1f2-6e0a3d5c8f17'), name: str('Driver'), is_system: bool(true) })),
-              permissions: obj({}, [], { description: 'Hak akses dari role driver: { <modul driver_*>: [aksi] }', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { driver_profile: ['read', 'update'], driver_p2h: ['read', 'create'] } }),
+              permissions: obj({}, [], { description: 'Hak akses dari role driver: { <modul driver_*>: [aksi] }', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete', 'approve', 'recheck', 'reset_password']) }, example: { driver_profile: ['read', 'update'], driver_p2h: ['read', 'create'] } }),
             })],
           },
         }),
@@ -247,7 +247,7 @@ const schemas = {
             name: str('Budi Admin'),
             email: str('budi@contoh.co.id'),
             role: nullable(obj({ id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90'), name: str('Staf Operasional'), is_system: bool(false) })),
-            permissions: obj({}, [], { description: 'Hak akses dari role: { <modul>: [read, create, update, delete] }', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { units: ['read', 'update'] } }),
+            permissions: obj({}, [], { description: 'Hak akses dari role: { <modul>: [read, create, update, delete] }', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete', 'approve', 'recheck', 'reset_password']) }, example: { units: ['read', 'update'] } }),
           }),
         }),
       ],
@@ -265,7 +265,7 @@ const schemas = {
     phone: str('[NO_HP]'),
     unit_today: nullable(ref('UnitRef')),
     role: nullable(obj({ id: str('4c7e9b21-8d35-4a60-b1f2-6e0a3d5c8f17'), name: str('Driver'), is_system: bool(true) })),
-    permissions: obj({}, [], { description: 'Hak akses dari role driver: { <modul driver_*>: [aksi] }. Aplikasi boleh menyembunyikan fitur yang tidak diizinkan; server tetap memeriksa di setiap request.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { driver_profile: ['read', 'update'] } }),
+    permissions: obj({}, [], { description: 'Hak akses dari role driver: { <modul driver_*>: [aksi] }. Aplikasi boleh menyembunyikan fitur yang tidak diizinkan; server tetap memeriksa di setiap request.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete', 'approve', 'recheck', 'reset_password']) }, example: { driver_profile: ['read', 'update'] } }),
     settings: obj({ language: enumOf(['id', 'en', 'zh']) }),
     app: obj({ version: str('1.0.0') }),
     sync: obj({ pending: int(0), last_synced_at: nullable(dt('2026-11-05T07:29:00+07:00')) }),
@@ -642,7 +642,10 @@ const schemas = {
     next_cursor: nullable(str('eyJpZCI6ImRvXzAxMzEifQ==')),
     has_more: bool(true),
     summary: obj({
-      do_count: int(4), distance_km: num(167), expense_total: money(679500), by_status: {
+      do_count: int(4),
+      distance_km: num(167),
+      expense_total: money(679500),
+      by_status: {
         type: 'object', additionalProperties: { type: 'integer' }, example: { completed: 3, assigned: 1 }, description: 'Jumlah DO per status pada rentang dan filter yang sama',
       },
     }),
@@ -699,7 +702,8 @@ const schemas = {
       }),
       failed: obj({
         total: int(1, { description: 'Selesai dengan hasil serah terima gagal_kirim' }),
-        needs_reschedule: bool(true, { description: 'true bila ada DO gagal kirim (perlu dijadwalkan ulang)' }),
+        needs_reschedule: bool(true, { description: 'true bila ada DO gagal kirim yang belum dijadwalkan ulang' }),
+        needs_reschedule_count: int(1, { description: 'Jumlah DO gagal kirim di rentang yang belum dijadwalkan ulang (POST /delivery-orders/{id}/reschedule)' }),
       }),
     }),
     do_status: obj({
@@ -811,8 +815,9 @@ const schemas = {
     settings: obj({ language: enumOf(['id', 'en', 'zh']) }),
     status: enumOf(['active', 'suspended']),
     role: nullable(obj({ id: str('9a1c3e55-2b7d-4f80-b6a4-1d5e8c7f2a90'), name: str('Administrator'), is_system: bool(true) })),
-    permissions: obj({}, [], { description: 'Hak akses dari role: { <modul>: [read, create, update, delete] }. Dipakai FE untuk menyembunyikan menu; server tetap memeriksa di setiap request.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read', 'create', 'update', 'delete'] } }),
+    permissions: obj({}, [], { description: 'Hak akses dari role: { <modul>: [read, create, update, delete] }. Dipakai FE untuk menyembunyikan menu; server tetap memeriksa di setiap request.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete', 'approve', 'recheck', 'reset_password']) }, example: { drivers: ['read', 'create', 'update', 'delete'] } }),
     last_login_at: nullable(dt('2026-11-05T07:00:00+07:00')),
+    session: nullable(obj({ since: dt('2026-11-16T08:12:00+07:00'), device: nullable(str('Chrome, Windows')), ip: nullable(str('103.10.20.30')) }, undefined, { description: 'Sesi login yang sedang dipakai: awal login dan perangkatnya (dari User-Agent). null bila tidak diketahui' })),
     ...auditProps,
   }),
   ChangePasswordRequest: obj({
@@ -837,7 +842,7 @@ const schemas = {
       no: nullable(str('1234-5678')), type: nullable(str('B2 Umum')), expires_on: nullable(date('2028-05-01')),
     }),
     unit_today: nullable(obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ') }, undefined, { description: 'Unit yang dipegang hari ini: pengecualian harian (penugasan) bila ada, selain itu unit bawaan' })),
-    default_unit: nullable(obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ') }, undefined, { description: 'Unit yang menjadikan driver ini sebagai driver bawaan (diatur di master unit: driver_id)' })),
+    default_unit: nullable(obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ'), since: nullable(dt('2024-01-12T08:00:00+07:00', { description: 'Sejak kapan menjadi driver tetap unit ini (perkiraan untuk data lama)' })) }, undefined, { description: 'Unit yang menjadikan driver ini sebagai driver bawaan (diatur di master unit: driver_id)' })),
     last_login_at: nullable(dt('2026-11-05T07:00:00+07:00')),
     locked: bool(false, { description: 'true jika akun terkunci sementara karena salah password' }),
     locked_until: nullable(dt('2026-11-05T07:15:00+07:00')),
@@ -846,6 +851,7 @@ const schemas = {
   AdminDriverDetail: {
     allOf: [ref('AdminDriver'), obj({
       active_do: nullable(obj({ id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'), no: str('DO-0144'), status: enumOf(DO_STATUS, 'in_transit') })),
+      activity: obj({ completed_orders: int(96, { description: 'Jumlah DO yang sudah selesai' }), last_login_at: nullable(dt()) }, undefined, { description: 'Bagian "Aktivitas" di form driver' }),
       failed_login_count: int(0),
       initial_password: str('Kp7mQ3xZ9t', { description: 'Hanya di response pembuatan, dan hanya jika `password` tidak diisi' }),
     })],
@@ -965,7 +971,7 @@ const schemas = {
     code: str('operasional'),
     name: str('Staf Operasional'),
     description: nullable(str('Mengelola unit dan customer')),
-    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
+    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete', 'approve', 'recheck', 'reset_password']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
     user_type: enumOf(['admin', 'driver'], 'admin', { description: 'Jenis akun pemakai role: admin (modul pengelolaan) atau driver (modul aplikasi HP, awalan driver_)' }),
     is_system: bool(false, { description: 'true = role bawaan: Administrator (semua hak admin, terkunci penuh) atau Driver (hak default driver; hanya hak dan deskripsi yang boleh disesuaikan, tidak bisa dihapus)' }),
     is_active: bool(true, { description: 'Role nonaktif: akun yang memakainya ditolak (403 role_nonaktif)' }),
@@ -977,13 +983,13 @@ const schemas = {
     name: str('Staf Operasional'),
     code: str('operasional', { description: 'Huruf kecil, angka, "_", "-" (2-40). Kosong = dibuat dari nama.' }),
     description: nullable(str('Mengelola unit dan customer')),
-    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
+    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete', 'approve', 'recheck', 'reset_password']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
     is_active: bool(true),
   }, ['name', 'permissions']),
   AdminRoleUpdate: obj({
     name: str('Staf Operasional'),
     description: nullable(str('Mengelola unit dan customer')),
-    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
+    permissions: obj({}, [], { description: 'Hak per modul: { "drivers": ["read", "create"], ... }. Modul dan aksi: lihat GET /roles/catalog.', additionalProperties: { type: 'array', items: enumOf(['read', 'create', 'update', 'delete', 'approve', 'recheck', 'reset_password']) }, example: { drivers: ['read'], units: ['read', 'create', 'update'] } }),
     is_active: bool(true),
   }),
   PermissionCatalog: obj({
@@ -1031,6 +1037,16 @@ const schemas = {
   // ---------- Admin - Master Data ----------
   AdminUnit: obj({
     id: str('fc06e493-e9c6-429b-9529-bc07084818ee'),
+    driver_assigned_at: nullable(dt('2024-01-12T08:00:00+07:00', { description: 'Sejak kapan driver tetap unit ini (null bila tanpa driver)' })),
+    summary: obj({
+      running_order: nullable(obj({ id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'), no: str('DO-0144'), status: enumOf(DO_STATUS, 'in_transit') })),
+      p2h_today: obj({
+        status: enumOf(['layak', 'catatan', 'tidak_layak', 'belum'], 'catatan'),
+        label: str('Boleh jalan · catatan'),
+        checked_at: nullable(dt()),
+        recheck_requested: bool(true, { description: 'Hanya ada bila admin meminta P2H ulang' }),
+      }),
+    }, undefined, { description: 'Panel "Ringkasan unit": DO yang sedang berjalan dan status P2H hari ini. Hanya ada di detail (GET /units/{id})' }),
     plate: str('B 9123 KZ'),
     unit_type: str('CDD Bak', { description: 'Tipe unit (teks bebas)' }),
     max_load_kg: nullable(int(2500)),
@@ -1139,6 +1155,34 @@ const schemas = {
     pic_phone: nullable(str('+628111222333')),
   }),
 
+  AdminP2HUnit: obj({
+    unit: obj({
+      id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ'), type: str('CDD Bak'), brand: nullable(str('Mitsubishi')), year: nullable(int(2022)),
+    }),
+    date: str('2026-11-19'),
+    status: enumOf(['layak', 'catatan', 'tidak_layak', 'belum'], 'catatan', { description: 'belum = unit aktif yang belum di-P2H pada tanggal itu' }),
+    label: str('Boleh jalan · catatan'),
+    can_operate: bool(true),
+    p2h_id: nullable(str('0c4f6f2e-1d6b-4d0a-9a5e-3d0d3d7a7a10')),
+    checked_by: nullable(obj({ id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'), name: str('Budi') })),
+    checked_at: nullable(dt()),
+    note: nullable(str('Lampu sein kiri mati', { description: 'Keterangan driver untuk item yang tidak sesuai' })),
+    admin_confirmed_by_driver: nullable(bool(true)),
+    recheck_requested: bool(false),
+    waiting_orders: int(1, { description: 'Jumlah DO assigned yang menunggu unit ini pada tanggal itu' }),
+  }),
+  AdminP2HUnitMeta: {
+    allOf: [ref('PageMeta'), obj({
+      date: str('2026-11-19'),
+      summary: obj({
+        active_units: int(5),
+        counts: obj({
+          layak: int(2), catatan: int(2), tidak_layak: int(0), belum: int(1),
+        }),
+        items: arr(obj({ status: str('belum'), label: str('Belum P2H'), count: int(1) })),
+      }, undefined, { description: 'Hitungan per status atas unit yang cocok pencarian (tidak terpengaruh filter status)' }),
+    })],
+  },
   // ---------- Admin - Delivery Order & Penugasan ----------
   AdminDeliveryOrder: obj({
     id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'),
@@ -1147,6 +1191,22 @@ const schemas = {
     delivery_status: nullable(enumOf(DELIVERY_STATUS, 'terkirim_lengkap')),
     driver: obj({ id: str('952975ba-bcf9-4a57-ac3b-be20940d8b25'), code: str('DRV-0021'), name: str('Andi') }),
     unit: obj({ id: str('fc06e493-e9c6-429b-9529-bc07084818ee'), plate: str('B 9123 KZ'), type: str('CDD Bak') }),
+    last_stage: obj({
+      code: str('odometer_start', { description: 'Kejadian terakhir yang mengubah tahap: assigned, on_hold, resumed, accepted, loaded, odometer_start, handover, odometer_end, completed, cancelled' }),
+      label: str('Perjalanan'),
+      at: dt(),
+    }, undefined, { description: 'Kolom "Tahap terakhir" di daftar DO. Hanya ada di daftar (POST /delivery-orders/get)' }),
+    flags: arr(obj({
+      code: enumOf(['correction', 'p2h_missing', 'p2h_unfit', 'needs_reschedule', 'needs_review'], 'correction'),
+      label: str('1 koreksi'),
+      count: int(1, { description: 'Hanya untuk correction' }),
+    }), { description: 'Kolom "Catatan" di daftar DO. Hanya ada di daftar' }),
+    settlement: obj({
+      status: enumOf(['none', 'pending', 'settled'], 'pending', { description: 'none = belum ada rekap, pending = rekap belum disetor/dibayar, settled = sudah' }),
+      type: enumOf(['refund_to_company', 'payable_to_driver', 'balanced'], 'refund_to_company'),
+    }, ['status'], { description: 'Status rekap uang jalan. Hanya ada di daftar' }),
+    rescheduled_from_id: nullable(str('2fb9f57e-a6e7-4890-b957-30261a15b471', { description: 'DO ini adalah DO ulang dari DO gagal kirim itu' })),
+    rescheduled_to_id: nullable(str('2fb9f57e-a6e7-4890-b957-30261a15b471', { description: 'DO gagal kirim ini sudah dijadwalkan ulang menjadi DO itu' })),
     unit_assignment: obj({
       work_date: str('2026-11-19', { description: 'Tanggal kerja DO = tanggal rencana muat (WIB), atau hari ini bila tanpa rencana muat' }),
       source: enumOf(['default', 'override'], 'override', { description: 'default = driver adalah driver bawaan unit; override = driver atau unit pengganti' }),
@@ -1226,9 +1286,13 @@ const schemas = {
         pic: nullable(obj({ name: nullable(str('Pak Rudi')), phone: nullable(str('+628111222333')) })),
       }),
       travel_allowance: obj({ amount: money(600000), received_at: nullable(dt()) }),
+      rescheduled_from: nullable(obj({ id: str('2fb9f57e-a6e7-4890-b957-30261a15b471'), no: str('DO-0140') }), { description: 'DO gagal kirim asal DO ulang ini' }),
+      rescheduled_to: nullable(obj({ id: str('3c8a1d90-7e24-4f6b-9a31-5d2e8f4b7c10'), no: str('DO-0152') }), { description: 'DO ulang dari DO gagal kirim ini' }),
       timeline: arr(obj({
         id: int(1),
-        event: str('assigned', { description: 'assigned, updated, on_hold, resumed, accepted, loaded, odometer_start, expense_added, handover, odometer_end, completed, cancelled' }),
+        event: str('assigned', { description: 'assigned, updated, on_hold, resumed, accepted, loaded, odometer_start, expense_added, expense_voided, handover, odometer_end, completed, cancelled, settled, rescheduled' }),
+        label: str('DO diterima', { description: 'Judul jadi untuk ditampilkan (mis. "BBM dicatat")' }),
+        detail: nullable(str('Andi · P2H unit B 9123 KZ boleh jalan dengan catatan', { description: 'Keterangan jadi, disusun dari payload dan data DO (berlaku juga untuk kejadian lama)' })),
         from_status: nullable(str('assigned')),
         to_status: nullable(str('accepted')),
         occurred_at: dt(),

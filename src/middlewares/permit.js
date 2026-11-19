@@ -11,12 +11,17 @@ const permissions = require('../utils/permissions')
  */
 const READ_PATHS = new Set(['/get', '/history', '/catalog'])
 
+/** Tindakan yang punya hak sendiri (permissions.EXTRA_ACTIONS): dikenali dari akhir path. */
+const ACTION_PATHS = [[/\/reset-password$/, 'reset_password'], [/\/settle$/, 'approve']]
+
 /** GET dan daftar (POST /get) = read, POST / = create, PUT = update, DELETE = delete, POST tindakan lain (/:id/cancel, ...) = update. */
 const inferAction = (req) => {
   if (req.method === 'GET') return 'read'
   if (req.method === 'DELETE') return 'delete'
   if (req.method === 'PUT' || req.method === 'PATCH') return 'update'
   if (READ_PATHS.has(req.path)) return 'read'
+  const special = ACTION_PATHS.find(([re]) => re.test(req.path))
+  if (special) return special[1]
   return req.path === '/' ? 'create' : 'update'
 }
 

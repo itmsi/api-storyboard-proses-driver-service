@@ -52,6 +52,9 @@ module.exports = {
       parameters: [
         ...listParams(['name', 'code', 'created_at', 'last_login_at', 'license_expires_on'], 'Cari nama, kode, atau No. HP (sebagian)'),
         {
+          name: 'license_type', in: 'query', description: 'Jenis SIM persis (A, B1, B1 Umum, B2, B2 Umum; huruf besar/kecil diabaikan)', schema: { type: 'string', maxLength: 20 }
+        },
+        {
           name: 'license_status', in: 'query', description: 'Masa berlaku SIM: expired (sudah lewat), expiring (akan habis dalam expiring_days), valid, unknown (belum diisi)', schema: { type: 'string', enum: ['expired', 'expiring', 'valid', 'unknown'] }
         },
         {

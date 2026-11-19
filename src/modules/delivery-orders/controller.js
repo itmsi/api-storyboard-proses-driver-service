@@ -39,6 +39,7 @@ const create = async (req, res) => ok(res, await manage.create(req.db, req.admin
 
 const update = async (req, res) => ok(res, await manage.update(req.db, req.admin, req.valid.params.id, req.body))
 
+const reschedule = async (req, res) => ok(res, await manage.reschedule(req.db, req.admin, req.valid.params.id, req.body), { status: 201 })
 const hold = async (req, res) => ok(res, await manage.hold(req.db, req.admin, req.valid.params.id, req.body))
 
 const resume = async (req, res) => ok(res, await manage.resume(req.db, req.admin, req.valid.params.id))
@@ -46,5 +47,5 @@ const resume = async (req, res) => ok(res, await manage.resume(req.db, req.admin
 const cancel = async (req, res) => ok(res, await manage.cancel(req.db, req.admin, req.valid.params.id, req.body))
 
 module.exports = {
-  list, getById, active, history, accept, create, update, hold, resume, cancel,
+  list, getById, active, history, accept, create, reschedule, update, hold, resume, cancel,
 }

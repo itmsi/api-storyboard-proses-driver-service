@@ -39,6 +39,7 @@ const select = (db, query) => query.select(
   'unit_today.plate as unit_plate',
   'default_unit.id as default_unit_id',
   'default_unit.plate as default_unit_plate',
+  'default_unit.driver_assigned_at as default_unit_since',
   'drivers.created_at',
   'drivers.created_by',
   'drivers.updated_at',
@@ -46,13 +47,14 @@ const select = (db, query) => query.select(
 )
 
 const list = async (db, {
-  today, search, status, roleId, licenseStatus, hasUnit, dates, paging,
+  today, search, status, roleId, licenseType, licenseStatus, hasUnit, dates, paging,
 }) => {
   const filtered = () => {
     const q = base(db, today)
     searchColumns(q, search, ['users.name', 'drivers.code', 'users.phone'])
     if (status) q.where('users.status', status)
     if (roleId) q.where('users.role_id', roleId)
+    if (licenseType) q.whereRaw('lower(drivers.license_type) = ?', [licenseType.toLowerCase()])
     if (hasUnit === true) q.whereNotNull('default_unit.id')
     if (hasUnit === false) q.whereNull('default_unit.id')
     applyExpiry(q, 'drivers.license_expires_on', licenseStatus, dates)
@@ -81,6 +83,12 @@ const findActiveDo = (db, driverId) => db('delivery_orders')
   .where({ driver_id: driverId })
   .whereIn('status', ['accepted', 'loading', 'in_transit', 'handover'])
   .first('id', 'no', 'status')
+
+/** Jumlah DO yang sudah selesai (semua hasil) untuk satu driver. */
+const completedOrders = async (db, driverId) => {
+  const [{ count }] = await db('delivery_orders').where({ driver_id: driverId, status: 'completed' }).count('id as count')
+  return Number(count)
+}
 
 /** Kode driver sudah pernah dipakai (termasuk akun yang dihapus: drivers.code unik tanpa pengecualian). */
 const codeUsed = async (db, code) => Boolean(await db('drivers').where({ code }).first('id'))
@@ -115,6 +123,7 @@ module.exports = {
   list,
   findById,
   findActiveDo,
+  completedOrders,
   codeUsed,
   nextSequence,
   insertDriver,

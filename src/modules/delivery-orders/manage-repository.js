@@ -140,6 +140,45 @@ const insert = async (trx, row) => {
 
 // ---- Bagian-bagian detail ----
 
+/** Status P2H (id -> status) untuk teks timeline "DO diterima". */
+const p2hByIds = (db, ids) => (ids.length ? db('p2h_inspections').whereIn('id', ids).select('id', 'status') : Promise.resolve([]))
+
+// ---- Tambahan daftar DO (satu query per jenis untuk seluruh halaman, bukan per baris) ----
+
+/** Kejadian terakhir yang mengubah tahap, per DO. */
+const lastStages = (db, ids, stageEvents) => (ids.length ? db('delivery_order_events')
+  .distinctOn('delivery_order_id')
+  .whereIn('delivery_order_id', ids)
+  .whereIn('event', stageEvents)
+  .orderBy([{ column: 'delivery_order_id' }, { column: 'id', order: 'desc' }])
+  .select('delivery_order_id', 'event', 'occurred_at') : Promise.resolve([]))
+
+/** Jumlah koreksi driver per DO: bacaan odometer dan biaya (yang belum dibatalkan) yang dikoreksi. */
+const correctionCounts = async (db, ids) => {
+  if (!ids.length) return []
+  const { rows } = await db.raw(`SELECT delivery_order_id, sum(n)::int AS count FROM (
+      SELECT delivery_order_id, count(*) AS n FROM odometer_readings
+        WHERE delivery_order_id = ANY(?) AND (corrected_km IS NOT NULL OR corrected_fuel_level IS NOT NULL) GROUP BY delivery_order_id
+      UNION ALL
+      SELECT delivery_order_id, count(*) AS n FROM expenses
+        WHERE delivery_order_id = ANY(?) AND corrected_fields IS NOT NULL AND voided_at IS NULL GROUP BY delivery_order_id
+    ) t GROUP BY delivery_order_id`, [ids, ids])
+  return rows
+}
+
+/** Status rekap per DO: ada baris = sudah dihitung; settled_at terisi = sudah disetor/dibayar. */
+const settlementsOf = (db, ids) => (ids.length ? db('settlements').whereIn('delivery_order_id', ids).select('delivery_order_id', 'type', 'settled_at') : Promise.resolve([]))
+
+/** P2H yang berlaku pada tanggal itu untuk unit-unit ini (unit tanpa baris = belum P2H). */
+const currentP2h = (db, unitIds, date) => (unitIds.length ? db('p2h_inspections')
+  .whereIn('unit_id', unitIds)
+  .where({ inspection_date: date, is_delete: false })
+  .whereNull('superseded_at')
+  .select('unit_id', 'status') : Promise.resolve([]))
+
+/** Nomor DO untuk beberapa id (DO asal dan DO ulang di detail). */
+const orderRefs = (db, ids) => (ids.length ? db('delivery_orders').whereIn('id', ids).select('id', 'no') : Promise.resolve([]))
+
 const events = (db, doId) => db('delivery_order_events')
   .leftJoin('users', 'users.id', 'delivery_order_events.actor_id')
   .leftJoin('roles', 'roles.id', 'users.role_id')
@@ -195,6 +234,12 @@ const media = (db, doId) => db('delivery_order_media')
   .select('media.*', 'delivery_order_media.purpose', 'delivery_order_media.page_no')
 
 module.exports = {
+  orderRefs,
+  p2hByIds,
+  lastStages,
+  correctionCounts,
+  settlementsOf,
+  currentP2h,
   list,
   findById,
   findDriver,

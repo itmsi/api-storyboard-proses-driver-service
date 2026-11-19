@@ -36,12 +36,14 @@ router.post(
 router.post(
   '/units/:unitId/p2h/recheck',
   adminGuard,
-  can('p2h', 'update'),
+  can('p2h', 'recheck'),
   validate({ params: schema.unitParams, body: schema.recheck }),
   asyncHandler(controller.recheck)
 )
 
 // Admin: kelola P2H (daftar, detail, koreksi, hapus lunak). Router di-mount di root, jadi guard dipasang per route.
+// Status P2H semua unit aktif pada satu tanggal, termasuk yang belum P2H (halaman P2H Unit)
+router.post('/p2h/units/get', adminGuard, can('p2h', 'read'), validate({ body: schema.unitsList }), asyncHandler(controller.listUnits))
 router.post('/p2h/get', adminGuard, can('p2h', 'read'), validate({ body: schema.list }), asyncHandler(controller.list))
 router.get('/p2h/:id', adminGuard, can('p2h', 'read'), validate({ params: schema.idParams }), asyncHandler(controller.get))
 router.put('/p2h/:id', adminGuard, can('p2h', 'update'), validate({ params: schema.idParams, body: schema.update }), asyncHandler(controller.update))

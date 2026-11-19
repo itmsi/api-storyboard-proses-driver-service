@@ -53,6 +53,12 @@ const list = listQuery.keys({
   to: date,
 })
 
+// Status P2H semua unit aktif pada satu tanggal: POST /p2h/units/get. status belum = unit tanpa P2H hari itu.
+const unitsList = listQuery.keys({
+  date,
+  status: Joi.string().valid('layak', 'catatan', 'tidak_layak', 'belum'),
+})
+
 // Koreksi hasil P2H oleh admin: hanya jawaban item yang sudah ada; status dihitung ulang server
 const update = Joi.object({
   items: Joi.array().min(1).max(50).items(Joi.object({
@@ -66,5 +72,5 @@ const update = Joi.object({
 })
 
 module.exports = {
-  unitParams, submit, recheck, idParams, list, update,
+  unitParams, submit, recheck, idParams, list, unitsList, update,
 }

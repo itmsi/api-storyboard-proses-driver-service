@@ -264,6 +264,57 @@ const list = async (db, query) => {
   return { data: rows.map(serializeListItem), meta: pagination.meta(paging, total) }
 }
 
+const UNIT_SORTABLE = {
+  plate: 'units.plate', brand: 'units.brand', year: 'units.year', checked_at: 'i.checked_at',
+}
+const P2H_LABELS = {
+  layak: 'Boleh jalan', catatan: 'Boleh jalan · catatan', tidak_layak: 'Tidak layak jalan', belum: 'Belum P2H',
+}
+
+/** Daftar status P2H semua unit aktif pada satu tanggal (bawaan hari ini; tidak melewati hari ini), untuk halaman "P2H Unit". */
+const listUnits = async (db, query) => {
+  const today = wibDate()
+  const date = query.date && query.date < today ? query.date : today
+  const paging = pagination.parse(query, UNIT_SORTABLE, 'plate')
+  const { rows, total, summary } = await repo.listUnits(db, {
+    date, status: query.status, search: query.search, paging,
+  })
+  const counts = {
+    layak: 0, catatan: 0, tidak_layak: 0, belum: 0,
+  }
+  summary.forEach((r) => { counts[r.status] = r.count })
+  return {
+    data: rows.map((u) => {
+      const status = u.p2h_status || 'belum'
+      return {
+        unit: {
+          id: u.id, plate: u.plate, type: u.unit_type, brand: u.brand, year: u.year,
+        },
+        date,
+        status,
+        label: P2H_LABELS[status],
+        can_operate: Boolean(u.can_operate),
+        p2h_id: u.inspection_id,
+        checked_by: u.driver_id ? { id: u.driver_id, name: u.driver_name } : null,
+        checked_at: toWib(u.checked_at),
+        note: u.note || null, // item yang tidak sesuai (keterangan driver)
+        admin_confirmed_by_driver: u.admin_confirmed_by_driver === null || u.admin_confirmed_by_driver === undefined ? null : Boolean(u.admin_confirmed_by_driver),
+        recheck_requested: status === 'belum' && Boolean(u.recheck_requested),
+        waiting_orders: u.waiting_orders,
+      }
+    }),
+    meta: {
+      ...pagination.meta(paging, total),
+      date,
+      summary: {
+        active_units: Object.values(counts).reduce((a, b) => a + b, 0),
+        counts,
+        items: Object.entries(P2H_LABELS).map(([code, label]) => ({ status: code, label, count: counts[code] })),
+      },
+    },
+  }
+}
+
 const loadAdmin = async (db, id) => {
   const row = await repo.findById(db, id)
   if (!row) throw new AppError('NOT_FOUND', { details: { p2h_id: id } })
@@ -317,5 +368,5 @@ const remove = async (db, admin, id) => {
 }
 
 module.exports = {
-  getTemplate, getToday, getStatus, submit, summarize, recheck, list, getById, update, remove,
+  getTemplate, getToday, getStatus, submit, summarize, recheck, list, listUnits, getById, update, remove,
 }

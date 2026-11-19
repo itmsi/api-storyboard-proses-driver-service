@@ -29,7 +29,7 @@ const claimsOf = (user, deviceUuid = null) => (user.user_type === 'driver'
 
 const login = async ({
   client_code: clientCodeInput, username, password, device, remember_me: remember,
-}) => {
+}, client = {}) => {
   const clientCode = tenant.normalizeCode(clientCodeInput)
   const db = await tenant.getDb(clientCode) // INVALID_CLIENT_CODE / CLIENT_INACTIVE / TENANT_UNAVAILABLE
 
@@ -53,6 +53,7 @@ const login = async ({
     deviceUuid: deviceRow ? deviceRow.id : null,
     familyId: crypto.randomUUID(),
     remember,
+    client,
   })
 
   // Hak akses dari role (untuk FE menyembunyikan menu); server tetap memeriksa di setiap request

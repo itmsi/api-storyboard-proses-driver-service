@@ -26,6 +26,16 @@ const doCounts = (db, range) => db('delivery_orders')
     db.raw('count(*)::int as count')
   )
 
+/** DO gagal kirim di rentang yang belum dijadwalkan ulang (kartu "perlu dijadwalkan ulang"). */
+const needsRescheduleCount = async (db, range) => {
+  const [{ count }] = await db('delivery_orders')
+    .where(inRange(db, 'delivery_orders', range))
+    .where({ status: 'completed', delivery_status: 'gagal_kirim' })
+    .whereNull('rescheduled_to_id')
+    .count('id as count')
+  return Number(count)
+}
+
 /** Data sync dari HP yang masih gagal (antre) milik DO yang belum selesai, atau tanpa DO. */
 const pendingSyncCount = async (db) => {
   const [{ count }] = await db('sync_items')
@@ -138,5 +148,5 @@ const doHoldingUnits = (db, unitIds, date) => (unitIds.length ? db('delivery_ord
   ) : Promise.resolve([]))
 
 module.exports = {
-  doCounts, pendingSyncCount, financeTotals, pendingSettlements, unitsP2h, doHoldingUnits,
+  doCounts, needsRescheduleCount, pendingSyncCount, financeTotals, pendingSettlements, unitsP2h, doHoldingUnits,
 }

@@ -186,7 +186,9 @@ const history = async (db, auth, query) => {
   const cursor = query.cursor ? decodeCursor(query.cursor) : null
   // Semua status, tidak menunggu selesai. DO onhold ditahan admin dan memang tidak tampil di aplikasi driver.
   const requested = query.status ? [...new Set((Array.isArray(query.status) ? query.status : [query.status]).flatMap((v) => HISTORY_GROUPS[v] || [v]))] : []
-  const statuses = isAdmin ? requested : (requested.length ? requested : ALL_STATUSES).filter((st) => st !== 'onhold')
+  // null = semua status; array kosong = tidak ada yang cocok (mis. driver meminta onhold)
+  let statuses = requested.length ? requested : null
+  if (!isAdmin) statuses = (statuses || ALL_STATUSES).filter((st) => st !== 'onhold')
 
   const [rows, summaryRows] = await Promise.all([
     repo.history(db, driverId, {

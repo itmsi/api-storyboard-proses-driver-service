@@ -41,7 +41,7 @@ exports.seed = async (knex) => {
   const unit = await knex('units').whereRaw("upper(replace(plate, ' ', '')) = 'B9123KZ'").first()
   const driver = await knex('drivers').where({ code: 'DRV-0021' }).first()
   // Andi adalah driver bawaan unit ini: otomatis memegang unitnya setiap hari
-  await knex('units').where({ id: unit.id }).update({ driver_id: driver.id })
+  await knex('units').where({ id: unit.id }).update({ driver_id: driver.id, driver_assigned_at: new Date() })
 
   // Customer + lokasi + DO-0144 (Cakung -> PT Contoh Jaya, Karawang) sesuai fixture
   await knex('customers').insert({

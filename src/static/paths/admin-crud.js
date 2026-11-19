@@ -32,6 +32,19 @@ const listBody = (extra) => jsonBody({
 const dateProp = (example) => ({ type: 'string', format: 'date', example })
 
 module.exports = {
+  '/p2h/units/get': {
+    post: {
+      tags: ['P2H'],
+      summary: 'Status P2H semua unit aktif (halaman P2H Unit)',
+      description: 'Semua unit aktif pada satu tanggal, termasuk yang belum di-P2H (`status: belum`). `date` bawaan hari ini dan tidak boleh melewati hari ini. `search` mencari plat, merek, atau nama driver pemeriksa. Kolom urut: `plate` (default), `brand`, `year`, `checked_at`. `meta.summary` memuat hitungan per status untuk kartu di atas tabel. Hak `p2h:read`.',
+      security: secured,
+      requestBody: listBody({
+        date: dateProp('2026-11-19'),
+        status: { type: 'string', enum: ['layak', 'catatan', 'tidak_layak', 'belum'] },
+      }),
+      responses: { 200: jsonResponse('OK', envelope({ type: 'array', items: ref('AdminP2HUnit') }, ref('AdminP2HUnitMeta'))), ...withValidation },
+    },
+  },
   '/p2h/get': {
     post: {
       tags: ['P2H'],

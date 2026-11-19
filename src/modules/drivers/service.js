@@ -29,7 +29,7 @@ const serialize = (row, extra = {}) => ({
     expires_on: row.license_expires_on,
   },
   unit_today: row.unit_id ? { id: row.unit_id, plate: row.unit_plate } : null,
-  default_unit: row.default_unit_id ? { id: row.default_unit_id, plate: row.default_unit_plate } : null, // diatur di master unit (driver_id)
+  default_unit: row.default_unit_id ? { id: row.default_unit_id, plate: row.default_unit_plate, since: toWib(row.default_unit_since) } : null, // diatur di master unit (driver_id)
   last_login_at: toWib(row.last_login_at),
   locked: Boolean(row.locked_until && new Date(row.locked_until) > new Date()),
   locked_until: row.locked_until && new Date(row.locked_until) > new Date() ? toWib(row.locked_until) : null,
@@ -50,6 +50,7 @@ const list = async (db, query) => {
     search: query.search,
     status: query.status,
     roleId: query.role_id,
+    licenseType: query.license_type,
     licenseStatus: query.license_status,
     hasUnit: query.has_unit,
     dates: { today: wibDate(), soon: addDays(wibDate(), query.expiring_days) },
@@ -60,9 +61,11 @@ const list = async (db, query) => {
 
 const get = async (db, id) => {
   const row = await load(db, id)
-  const active = await repo.findActiveDo(db, id)
+  const [active, completed] = await Promise.all([repo.findActiveDo(db, id), repo.completedOrders(db, id)])
   return serialize(row, {
     active_do: active ? { id: active.id, no: active.no, status: active.status } : null,
+    // Bagian "Aktivitas" di form driver
+    activity: { completed_orders: completed, last_login_at: toWib(row.last_login_at) },
     failed_login_count: row.failed_login_count,
   })
 }

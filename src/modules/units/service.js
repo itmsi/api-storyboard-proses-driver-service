@@ -1,10 +1,11 @@
 const { auditFields } = require('../../utils/audit')
-const { wibDate } = require('../../utils/date')
+const { wibDate, toWib } = require('../../utils/date')
 const { addDays } = require('../../utils/expiry')
 const pagination = require('../../utils/pagination')
 const { normalizePlate } = require('../../utils/plate')
 const { fail } = require('../../utils/accounts')
 const master = require('../../utils/master')
+const p2h = require('../p2h/service')
 const repo = require('./repository')
 
 const SORTABLE = {
@@ -30,6 +31,7 @@ const serialize = (row) => {
     status: row.status,
     last_odometer_km: row.last_odometer_km,
     driver_id: row.driver_id,
+    driver_assigned_at: toWib(row.driver_assigned_at), // sejak kapan driver tetap (null bila tanpa driver)
     driver: row.driver_id ? { id: row.driver_id, code: row.default_driver_code, name: row.default_driver_name } : null, // driver bawaan unit
     stnk_expires_on: row.stnk_expires_on,
     kir_expires_on: row.kir_expires_on,
@@ -93,6 +95,7 @@ const list = async (db, query) => {
     search: query.search,
     status: query.status,
     unitType: query.unit_type,
+    brand: query.brand,
     defaultDriverId: query.driver_id,
     hasDriver: query.has_driver,
     stnkStatus: query.stnk_status,
@@ -103,7 +106,27 @@ const list = async (db, query) => {
   return { data: rows.map(serialize), meta: pagination.meta(paging, total) }
 }
 
-const get = async (db, id) => serialize(await load(db, id))
+const P2H_LABELS = {
+  layak: 'Boleh jalan', catatan: 'Boleh jalan · catatan', tidak_layak: 'Tidak layak jalan', belum: 'Belum P2H',
+}
+
+/** Detail unit beserta ringkasan: DO yang sedang berjalan dan status P2H hari ini (panel "Ringkasan unit"). */
+const get = async (db, id) => {
+  const row = await load(db, id)
+  const [running, today] = await Promise.all([repo.findRunningOrder(db, id), p2h.getStatus(db, id, wibDate())])
+  return {
+    ...serialize(row),
+    summary: {
+      running_order: running ? { id: running.id, no: running.no, status: running.status } : null,
+      p2h_today: {
+        status: today.status,
+        label: P2H_LABELS[today.status],
+        checked_at: today.checked_at || null,
+        ...(today.recheck_requested ? { recheck_requested: true } : {}),
+      },
+    },
+  }
+}
 
 const create = async (db, admin, body) => {
   const plate = await validPlate(db, body.plate)
@@ -113,6 +136,7 @@ const create = async (db, admin, body) => {
     unit_type: normalizeType(body.unit_type),
     max_load_kg: body.max_load_kg ?? null,
     driver_id: defaultDriverId,
+    driver_assigned_at: defaultDriverId ? new Date() : null,
     brand: body.brand || null,
     year: body.year ?? null,
     vin_number: await validVin(db, body.vin_number),
@@ -133,7 +157,11 @@ const update = async (db, admin, id, body) => {
   if (body.plate !== undefined) fields.plate = await validPlate(db, body.plate, id)
   if (body.unit_type !== undefined) fields.unit_type = normalizeType(body.unit_type)
   if (body.vin_number !== undefined) fields.vin_number = await validVin(db, body.vin_number, id)
-  if (body.driver_id !== undefined) fields.driver_id = await validDefaultDriver(db, body.driver_id, id)
+  if (body.driver_id !== undefined) {
+    fields.driver_id = await validDefaultDriver(db, body.driver_id, id)
+    // Tanggal mulai driver tetap hanya berubah bila drivernya benar-benar berganti
+    if (fields.driver_id !== current.driver_id) fields.driver_assigned_at = fields.driver_id ? new Date() : null
+  }
   if (body.status !== undefined && body.status !== 'active' && current.status === 'active') {
     await assertNotInUse(db, id, 'dinonaktifkan')
   }

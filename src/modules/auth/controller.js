@@ -1,7 +1,7 @@
 const service = require('./service')
 const { ok } = require('../../utils/response')
 
-const login = async (req, res) => ok(res, await service.login(req.body))
+const login = async (req, res) => ok(res, await service.login(req.body, { userAgent: req.get('user-agent'), ip: req.ip }))
 
 const refresh = async (req, res) => ok(res, await service.refresh(req.body))
 

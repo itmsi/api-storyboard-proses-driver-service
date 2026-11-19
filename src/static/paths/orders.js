@@ -103,6 +103,38 @@ module.exports = {
       },
     },
   },
+  '/delivery-orders/{id}/reschedule': {
+    post: {
+      tags: ['Delivery Order'],
+      summary: 'Buat DO ulang dari DO gagal kirim (admin)',
+      description: [
+        'Hanya untuk DO `completed` dengan hasil serah terima `gagal_kirim`; selain itu 409 `INVALID_STATE`. Satu DO hanya bisa dijadwalkan ulang sekali (409 `sudah_dijadwalkan_ulang`).',
+        'Membuat DO baru berstatus `assigned` dengan nomor baru. Driver, unit, lokasi asal dan tujuan, jarak, uang jalan, dan muatan **disalin** dari DO asal; `planned_load_at` baru wajib, dan field lain boleh diganti lewat body (sama dengan pembuatan DO).',
+        'Aturan pembuatan DO berlaku penuh (driver aktif, unit aktif, satu driver satu unit per tanggal, unit tidak dipegang driver lain), jadi bentrok = DO tidak dibuat (409 `CONFLICT`).',
+        'DO baru memuat `rescheduled_from` dan DO asal memuat `rescheduled_to` di detailnya; kejadian `rescheduled` tercatat di timeline DO asal. Penanda "perlu dijadwalkan ulang" di daftar dan dashboard hilang setelahnya. Hak `delivery_orders:create`.',
+      ].join('\n'),
+      security: secured,
+      parameters: idPath,
+      requestBody: jsonBody({
+        type: 'object',
+        required: ['planned_load_at'],
+        properties: {
+          planned_load_at: { type: 'string', format: 'date-time', example: '2026-11-20T09:00:00+07:00' },
+          driver_id: { type: 'string', format: 'uuid', description: 'Ganti driver (bawaan: driver DO asal)' },
+          unit_id: { type: 'string', format: 'uuid', description: 'Ganti unit (bawaan: unit DO asal)' },
+          travel_allowance_amount: { type: 'integer', minimum: 0 },
+          cargo_type: { type: 'string', nullable: true },
+          cargo_details: { type: 'array', nullable: true, items: { type: 'object', properties: { label: { type: 'string' }, value: { type: 'string' } } } },
+        },
+      }),
+      responses: {
+        201: jsonResponse('DO ulang dibuat', envelope(ref('AdminDeliveryOrderDetail'))),
+        409: jsonResponse('Bukan DO gagal kirim / sudah dijadwalkan ulang / bentrok driver atau unit', ref('Error')),
+        ...withValidation,
+        ...notFound,
+      },
+    },
+  },
   '/delivery-orders/{id}/cancel': {
     post: {
       tags: ['Delivery Order'],

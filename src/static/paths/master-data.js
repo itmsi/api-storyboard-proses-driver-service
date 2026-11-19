@@ -104,6 +104,9 @@ module.exports = {
         name: 'unit_type', in: 'query', description: 'Tipe unit persis (huruf besar/kecil diabaikan)', schema: { type: 'string', maxLength: 40 }
       },
       {
+        name: 'brand', in: 'query', description: 'Merek persis (huruf besar/kecil diabaikan)', schema: { type: 'string', maxLength: 60 }
+      },
+      {
         name: 'driver_id', in: 'query', description: 'Unit yang driver bawaannya driver ini', schema: { type: 'string', format: 'uuid' }
       },
       {
