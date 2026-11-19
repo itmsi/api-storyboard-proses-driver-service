@@ -46,6 +46,22 @@ const create = Joi.object({
 
 const update = Joi.object(fields).min(1)
 
+/**
+ * Lokasi yang dikirim bersama customer (POST /customers dan PUT /customers/{id}). Customer-nya selalu customer itu, jadi customer_id
+ * tidak boleh dikirim; type opsional (bawaan customer_site). Dengan `id` = ubah lokasi customer itu (parsial); tanpa `id` = lokasi baru
+ * (name dan address wajib).
+ */
+const MAX_NESTED = 50
+const { customer_id: _customerId, ...nestedFields } = fields
+const nested = Joi.object({
+  id: Joi.string().guid(),
+  ...nestedFields, // type opsional: bawaan customer_site; gudang (warehouse) atau depot milik customer juga boleh
+  name: nestedFields.name.when('id', { is: Joi.exist(), otherwise: Joi.required() }),
+  address: nestedFields.address.when('id', { is: Joi.exist(), otherwise: Joi.required() }),
+})
+const nestedCreate = nested.fork('id', (schema) => schema.forbidden())
+const nestedList = (item) => Joi.array().items(item).max(MAX_NESTED)
+
 module.exports = {
-  idParams, list, create, update,
+  idParams, list, create, update, nestedCreate, nestedUpsert: nested, nestedList, MAX_NESTED,
 }

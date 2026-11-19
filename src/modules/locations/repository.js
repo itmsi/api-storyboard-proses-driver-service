@@ -20,6 +20,7 @@ const select = (db, query) => query.select(
   'locations.pic_name',
   'locations.pic_phone',
   'locations.customer_id',
+  'customers.code as customer_code',
   'customers.name as customer_name',
   'locations.created_at',
   'locations.created_by',

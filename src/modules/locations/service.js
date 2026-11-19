@@ -36,7 +36,7 @@ const serialize = (row) => ({
   geofence_radius_m: row.geofence_radius_m,
   operating_hours: row.operating_hours,
   pic: row.pic_name || row.pic_phone ? { name: row.pic_name, phone: row.pic_phone } : null,
-  customer: row.customer_id ? { id: row.customer_id, name: row.customer_name } : null,
+  customer: row.customer_id ? { id: row.customer_id, code: row.customer_code, name: row.customer_name } : null,
   ...auditFields(row),
 })
 
@@ -48,15 +48,15 @@ const load = async (db, id) => {
 
 /**
  * Aturan antar-field pada data GABUNGAN (data lama + perubahan):
- * - customer_site wajib punya customer yang masih ada; gudang/depot tidak boleh punya customer
+ * - customer_site wajib punya customer yang masih ada; gudang/depot boleh milik customer (gudang customer) atau milik perusahaan sendiri (tanpa customer)
  * - koordinat harus berpasangan (lat dan lng sama-sama ada atau sama-sama kosong)
  */
 const checkRules = async (db, data) => {
   if (data.type === 'customer_site') {
     if (!data.customer_id) throw fail('customer_id', 'Lokasi customer wajib memilih customer.')
     if (!(await repo.findCustomer(db, data.customer_id))) throw fail('customer_id', 'Customer tidak ditemukan.')
-  } else if (data.customer_id) {
-    throw fail('customer_id', 'Gudang atau depot sendiri tidak boleh terkait customer.')
+  } else if (data.customer_id && !(await repo.findCustomer(db, data.customer_id))) {
+    throw fail('customer_id', 'Customer tidak ditemukan.')
   }
   if ((data.lat === null || data.lat === undefined) !== (data.lng === null || data.lng === undefined)) {
     throw fail(data.lat === null || data.lat === undefined ? 'lat' : 'lng', 'Koordinat harus diisi lengkap (lat dan lng).')
@@ -111,11 +111,6 @@ const update = async (db, admin, id, body) => {
     lng: current.lng,
     ...changes,
   }
-  // Pindah jenis ke gudang/depot otomatis melepas customer, supaya admin tidak perlu mengirim customer_id: null
-  if (changes.type && changes.type !== 'customer_site' && changes.customer_id === undefined) {
-    merged.customer_id = null
-    changes.customer_id = null
-  }
   // Tautan peta diubah tanpa koordinat baru: ikuti koordinat dari tautan itu bila bisa dibaca
   if (changes.maps_url && changes.lat === undefined && changes.lng === undefined) {
     const c = coordsFromMapsUrl(changes.maps_url)
@@ -141,6 +136,22 @@ const remove = async (db, admin, id) => {
   return { deleted: true }
 }
 
+/** Lokasi aktif satu customer (untuk detail customer), diurutkan menurut nama. */
+const forCustomer = async (db, customerId) => {
+  const paging = {
+    column: 'locations.name', direction: 'asc', limit: 200, offset: 0,
+  }
+  const { rows } = await repo.list(db, { customerId, paging })
+  return rows.map(serialize)
+}
+
+/** Lokasi dari satu customer sendiri: id harus milik customer itu dan belum dihapus. */
+const assertOwned = async (db, customerId, id) => {
+  const row = await repo.findById(db, id)
+  if (!row || row.customer_id !== customerId) throw fail('id', 'Lokasi tidak ditemukan pada customer ini.')
+  return row
+}
+
 module.exports = {
-  list, get, create, update, remove,
+  list, get, create, update, remove, forCustomer, assertOwned,
 }

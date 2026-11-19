@@ -2,6 +2,7 @@ const { auditFields } = require('../../utils/audit')
 const pagination = require('../../utils/pagination')
 const { fail } = require('../../utils/accounts')
 const master = require('../../utils/master')
+const locations = require('../locations/service')
 const repo = require('./repository')
 
 const SORTABLE = {
@@ -33,18 +34,58 @@ const list = async (db, query) => {
   return { data: rows.map(serialize), meta: pagination.meta(paging, total) }
 }
 
-const get = async (db, id) => serialize(await load(db, id))
+/** Detail memuat lokasi aktif customer (bagian "Lokasi customer" di form); daftar hanya memuat location_count. */
+const get = async (db, id) => ({
+  ...serialize(await load(db, id)),
+  locations: await locations.forCustomer(db, id),
+})
+
+/** Kesalahan validasi dari lokasi ke-N diberi awalan locations.N supaya FE tahu baris mana yang salah. */
+const withPath = (err, index) => {
+  if (err && err.code === 'VALIDATION_ERROR' && Array.isArray(err.details)) {
+    return Object.assign(err, { details: err.details.map((d) => ({ ...d, field: `locations.${index}.${d.field}` })) })
+  }
+  return err
+}
+
+/**
+ * Terapkan daftar lokasi pada customer: dengan id = ubah (harus milik customer ini), tanpa id = buat baru (jenis bawaan customer_site, boleh warehouse atau depot milik customer).
+ * Dijalankan di transaksi yang sama dengan customernya: satu lokasi gagal = tidak ada yang tersimpan.
+ */
+const applyLocations = async (trx, admin, customerId, items = []) => {
+  // eslint-disable-next-line no-restricted-syntax
+  for (const [index, item] of items.entries()) {
+    const { id: locationId, ...fields } = item
+    try {
+      if (locationId) {
+        // eslint-disable-next-line no-await-in-loop
+        await locations.assertOwned(trx, customerId, locationId)
+        // eslint-disable-next-line no-await-in-loop
+        await locations.update(trx, admin, locationId, fields)
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        await locations.create(trx, admin, { type: 'customer_site', ...fields, customer_id: customerId })
+      }
+    } catch (err) {
+      throw withPath(err, index)
+    }
+  }
+}
 
 const create = async (db, admin, body) => {
   if (await repo.codeTaken(db, body.code)) throw fail('code', 'Kode customer sudah dipakai.')
-  const id = await repo.insert(db, {
-    code: body.code,
-    name: body.name,
-    nomor_customer: body.nomor_customer || null,
-    phone: body.phone || null,
-    email: body.email ? body.email.toLowerCase() : null,
-    created_by: admin.id,
-    updated_by: admin.id,
+  const id = await db.transaction(async (trx) => {
+    const created = await repo.insert(trx, {
+      code: body.code,
+      name: body.name,
+      nomor_customer: body.nomor_customer || null,
+      phone: body.phone || null,
+      email: body.email ? body.email.toLowerCase() : null,
+      created_by: admin.id,
+      updated_by: admin.id,
+    })
+    await applyLocations(trx, admin, created, body.locations)
+    return created
   })
   return get(db, id)
 }
@@ -56,7 +97,10 @@ const update = async (db, admin, id, body) => {
   if (body.nomor_customer !== undefined) fields.nomor_customer = body.nomor_customer || null
   if (body.phone !== undefined) fields.phone = body.phone || null
   if (body.email !== undefined) fields.email = body.email ? body.email.toLowerCase() : null
-  await repo.update(db, id, fields)
+  await db.transaction(async (trx) => {
+    await repo.update(trx, id, fields)
+    await applyLocations(trx, admin, id, body.locations)
+  })
   return get(db, id)
 }
 
@@ -68,8 +112,8 @@ const remove = async (db, admin, id) => {
   await load(db, id)
   const openDo = await repo.findOpenDo(db, id)
   if (openDo) throw master.inUse(`Customer masih dipakai ${openDo.no} (${openDo.status}).`, { delivery_order_no: openDo.no })
-  const locations = await repo.countLocations(db, id)
-  if (locations > 0) throw master.inUse(`Customer masih punya ${locations} lokasi. Hapus lokasinya dulu.`, { location_count: locations })
+  const locationCount = await repo.countLocations(db, id)
+  if (locationCount > 0) throw master.inUse(`Customer masih punya ${locationCount} lokasi. Hapus lokasinya dulu.`, { location_count: locationCount })
   await master.softDelete(db, 'customers', id, admin.id)
   return { deleted: true }
 }

@@ -1,5 +1,6 @@
 const Joi = require('joi')
 const { listQuery } = require('../../utils/pagination')
+const locationSchema = require('../locations/validation')
 
 const idParams = Joi.object({
   id: Joi.string().guid().required(),
@@ -24,10 +25,16 @@ const create = Joi.object({
     .messages({ 'string.pattern.base': 'Kode hanya boleh huruf, angka, "_" dan "-" (2-30 karakter).' }),
   ...fields,
   name: fields.name.required(),
+  // Lokasi customer dibuat bersamaan (opsional)
+  locations: locationSchema.nestedList(locationSchema.nestedCreate),
 })
 
 // Kode tidak bisa diubah: dipakai sebagai acuan di DO dan laporan
-const update = Joi.object(fields).min(1)
+// locations: dengan id = ubah lokasi customer ini, tanpa id = lokasi baru. Lokasi yang tidak disebut tidak berubah (hapus lewat DELETE /locations/{id}).
+const update = Joi.object({
+  ...fields,
+  locations: locationSchema.nestedList(locationSchema.nestedUpsert),
+}).min(1)
 
 module.exports = {
   idParams, list, create, update,

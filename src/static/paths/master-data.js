@@ -148,7 +148,8 @@ module.exports = {
         name: 'has_open_orders', in: 'query', description: 'true = punya DO yang belum final, false = tidak', schema: { type: 'boolean' }
       },
     ],
-    createDesc: '`code` unik di antara data aktif dan tidak bisa diubah setelah dibuat. Email disimpan huruf kecil.',
+    createDesc: '`code` unik di antara data aktif dan tidak bisa diubah setelah dibuat. Email disimpan huruf kecil. `locations` (opsional, maks. 50) membuat lokasi customer bersamaan dalam satu transaksi (jenis bawaan `customer_site`; `warehouse`/`depot` untuk gudang milik customer); kesalahan di lokasi ke-N dilaporkan sebagai `locations.N.<field>`.',
+    updateDesc: 'Kirim hanya field yang ingin diubah. `locations`: dengan `id` = ubah lokasi milik customer ini (parsial), tanpa `id` = lokasi baru; lokasi yang tidak disebut tidak berubah dan tidak dihapus (gunakan `DELETE /locations/{id}`). Semuanya satu transaksi.',
     deleteDesc: 'Ditolak jika masih punya DO yang belum final, atau masih punya lokasi aktif (hapus lokasinya dulu).',
     deleteGuard: 'Customer masih dipakai DO atau punya lokasi',
   }),
@@ -172,9 +173,9 @@ module.exports = {
         name: 'has_maps_url', in: 'query', description: 'true = sudah punya tautan Google Maps', schema: { type: 'boolean' }
       },
     ],
-    createDesc: 'Jenis `customer_site` wajib memilih `customer_id`; `warehouse`/`depot` tidak boleh terkait customer. '
+    createDesc: 'Jenis `customer_site` wajib memilih `customer_id`; `warehouse`/`depot` boleh diberi customer (gudang milik customer) atau dikosongkan (milik perusahaan sendiri). '
       + 'Koordinat (`lat` dan `lng`) boleh kosong, tapi jika diisi harus berpasangan. `geofence_radius_m` default 200.',
-    updateDesc: 'Aturan customer dan koordinat dicek pada data gabungan. Mengubah `type` ke gudang/depot otomatis melepas customer. '
+    updateDesc: 'Aturan customer dan koordinat dicek pada data gabungan. Mengubah `type` tidak melepas customer; kirim `customer_id: null` untuk melepasnya (tidak boleh untuk `customer_site`). '
       + 'Mengubah lokasi tidak mengubah DO lama (DO menyimpan salinan alamat).',
     deleteDesc: 'Ditolak jika masih dipakai DO yang belum final sebagai asal atau tujuan. DO lama tetap menyimpan alamat aslinya.',
     deleteGuard: 'Lokasi masih dipakai DO',
