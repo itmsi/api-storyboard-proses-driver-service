@@ -11,6 +11,7 @@
 const tenant = require('./tenant')
 const migrator = require('./tenant/migrator')
 const knexfile = require('./knexfile')
+const { ensureDefaultSettings } = require('./tenant/default-settings')
 
 const args = process.argv.slice(2)
 const flag = (name) => args.includes(`--${name}`)
@@ -25,13 +26,17 @@ const run = async (code) => {
   const opts = { migrations: knexfile.migrations, seeds: knexfile.seeds }
   if (action === 'seed') {
     const [files] = await db.seed.run({ directory: opts.seeds.directory })
-    console.log(`[${code}] seed: ${files.length} file`)
+    const settings = await ensureDefaultSettings(db, code)
+    console.log(`[${code}] seed: ${files.length} file${settings.created.length ? `, pengaturan bawaan: ${settings.created.join(', ')}` : ''}`)
   } else if (action === 'rollback') {
     const [batch, files] = await db.migrate.rollback(opts.migrations)
     console.log(`[${code}] rollback batch ${batch}: ${files.length} file`)
   } else {
-    const { batch, applied } = await migrator.migrateLatest(code)
+    const {
+      batch, applied, settings_created: created,
+    } = await migrator.migrateLatest(code)
     console.log(`[${code}] migrate batch ${batch}: ${applied.length ? applied.join(', ') : 'sudah terbaru'}`)
+    if (created.length) console.log(`[${code}] pengaturan bawaan dibuat: ${created.join(', ')}`)
   }
 };
 (async () => {

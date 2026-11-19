@@ -45,6 +45,10 @@ const update = Joi.object({
       .messages({ 'string.pattern.base': 'Jam harus berformat HH:mm.' }),
   }).min(1),
   correction_reason_required: Joi.boolean(),
+  // Teks di depan nomor DO baru (mis. "DO-", "SJ/2026/"); DO lama tidak berubah
+  document_prefix: Joi.string().trim().min(1).max(20)
+    .pattern(/^[A-Za-z0-9 ._/-]+$/)
+    .messages({ 'string.pattern.base': 'Prefix nomor dokumen hanya boleh huruf, angka, spasi, ".", "_", "/", dan "-".' }),
   languages: Joi.array().items(Joi.string().valid(...LANGUAGES)).unique().min(1),
   default_language: Joi.string().valid(...LANGUAGES),
   // Merek: kirim hanya yang berubah. null mengosongkan teks atau URL; warna tidak bisa dikosongkan (selalu ada nilai).

@@ -6,6 +6,7 @@ const knexfile = require('../knexfile')
 const tenant = require('./index')
 const { upsertSystemUser } = require('./system-user')
 const { ensureDefaultRoles } = require('./default-roles')
+const { ensureDefaultSettings } = require('./default-settings')
 
 /**
  * Operasi yang dipanggil saas-worker saat membuat client baru (dan saat rollout migrasi):
@@ -74,11 +75,14 @@ const migrate = async (clientId) => {
       const [, applied] = await db.migrate.latest(knexfile.migrations)
       const [completed] = await db.migrate.list(knexfile.migrations)
       const done = names(completed)
-      return { applied: names(applied), schemaVersion: done[done.length - 1] || null }
+      // Pengaturan bawaan dari client_code (mis. document_prefix) untuk client yang belum punya; yang sudah ada dibiarkan
+      const settings = await ensureDefaultSettings(db, found.code)
+      return { applied: names(applied), schemaVersion: done[done.length - 1] || null, settings }
     })
     // Skema berubah: pool app tenant ini ditutup supaya koneksi berikutnya segar
     await tenant.closePool(found.code)
     logger.info(`Tenant ${found.code}: migrasi selesai (${result.applied.length} file, versi ${result.schemaVersion})`)
+    if (result.settings.created.length) logger.info(`Tenant ${found.code}: pengaturan bawaan dibuat (${result.settings.created.join(', ')})`)
     return { schema_version: result.schemaVersion, applied: result.applied, duration_ms: Date.now() - started }
   } catch (err) {
     if (err instanceof AppError) throw err // mis. NOT_FOUND / TENANT_UNAVAILABLE dari registry
@@ -109,6 +113,9 @@ const seed = async (clientId, { includeSystemUser }) => {
       // Role bawaan (Administrator, Driver dengan default permission) selalu disiapkan, lalu akun sistem bila diminta
       await ensureDefaultRoles(db)
       seeded.push('default_roles')
+      // Pengaturan bawaan dari client_code (document_prefix = "<CLIENT_CODE>-"); tidak menimpa yang sudah diatur admin
+      const settings = await ensureDefaultSettings(db, found.code)
+      seeded.push(...settings.created.map((key) => `setting:${key}`))
       if (includeSystemUser) {
         const { action } = await upsertSystemUser(db, found.systemUser)
         seeded.push(`system_user:${action}`)

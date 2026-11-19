@@ -2,6 +2,7 @@ const knexfile = require('../knexfile')
 const logger = require('../../utils/logger')
 const { AppError } = require('../../utils/errors')
 const tenant = require('./index')
+const { ensureDefaultSettings } = require('./default-settings')
 
 /**
  * Migrasi skema pada database client. Dipakai script CLI (migrate-tenant.js) dan endpoint
@@ -40,7 +41,12 @@ const migrateLatest = async (clientCode) => {
   try {
     const [batch, applied] = await db.migrate.latest(knexfile.migrations)
     if (applied.length) logger.info(`Tenant ${code}: migrasi batch ${batch} selesai (${applied.length} file)`)
-    return { client_code: code, batch, applied: names(applied) }
+    // Pengaturan bawaan dari client_code (mis. document_prefix) untuk client yang belum punya; yang sudah ada dibiarkan
+    const settings = await ensureDefaultSettings(db, code)
+    if (settings.created.length) logger.info(`Tenant ${code}: pengaturan bawaan dibuat (${settings.created.join(', ')})`)
+    return {
+      client_code: code, batch, applied: names(applied), settings_created: settings.created,
+    }
   } catch (err) {
     if (/lock/i.test(err.message)) throw new AppError('MIGRATION_IN_PROGRESS')
     logger.error(`Tenant ${code}: migrasi gagal: ${err.stack || err.message}`)

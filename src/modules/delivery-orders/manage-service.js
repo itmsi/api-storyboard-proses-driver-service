@@ -9,6 +9,7 @@ const { serializeMedia } = require('../media/serializer')
 const unitDay = require('./unit-day')
 const doRepo = require('./repository')
 const repo = require('./manage-repository')
+const { resolveSettings } = require('../app/settings')
 const cargo = require('./cargo')
 const timeline = require('./timeline')
 const validation = require('./manage-validation')
@@ -92,6 +93,8 @@ const withListExtras = async (db, rows, items) => {
 const serializeListItem = (row) => ({
   id: row.id,
   no: row.no,
+  document_prefix: row.document_prefix,
+  document_number: row.document_number === null || row.document_number === undefined ? null : Number(row.document_number),
   status: row.status,
   delivery_status: row.delivery_status,
   driver: { id: row.driver_id, code: row.driver_code, name: row.driver_name },
@@ -102,6 +105,7 @@ const serializeListItem = (row) => ({
     source: row.unit_default_driver_id === row.driver_id ? 'default' : 'override',
   },
   customer: row.customer_id ? { id: row.customer_id, name: row.customer_name } : null,
+  customer_reference_no: row.customer_reference_no ?? null,
   route: routeLabel(row),
   origin: { name: row.origin_snapshot.name, city: row.origin_snapshot.city || null, maps_url: mapsUrlFor(row.origin_snapshot) },
   destination: { name: row.destination_snapshot.name, city: row.destination_snapshot.city || null, maps_url: mapsUrlFor(row.destination_snapshot) },
@@ -435,8 +439,7 @@ const lockDriver = (trx, driverId) => trx('drivers').where({ id: driverId }).for
  * dalam satu transaksi (bila asalnya ternyata sudah dijadwalkan ulang, tidak ada yang dibuat).
  */
 const create = async (db, admin, body, { from = null } = {}) => {
-  const refs = await resolveRefs(db, body)
-  const no = await repo.nextNumber(db)
+  const [refs, settings] = await Promise.all([resolveRefs(db, body), resolveSettings(db)])
   const workDate = assignmentDate(body.planned_load_at)
   const id = await db.transaction(async (trx) => {
     await lockDriver(trx, body.driver_id)
@@ -445,9 +448,11 @@ const create = async (db, admin, body, { from = null } = {}) => {
     await unitDay.ensureUnitFree(trx, {
       driverId: body.driver_id, unitId: body.unit_id, unit: refs.unit, workDate,
     })
+    // Nomor DO = document_prefix (pengaturan) + document_number (auto increment di database); `no` dibentuk database
     const created = await repo.insert(trx, {
-      no,
+      document_prefix: settings.document_prefix,
       customer_id: refs.customerId,
+      customer_reference_no: body.customer_reference_no || null,
       driver_id: body.driver_id,
       unit_id: body.unit_id,
       origin_location_id: body.origin_location_id,
@@ -475,6 +480,8 @@ const create = async (db, admin, body, { from = null } = {}) => {
       payload: { driver_id: body.driver_id, unit_id: body.unit_id, ...(from ? { rescheduled_from: { id: from.id, no: from.no } } : {}) },
     })
     if (from) {
+      // Nomor DO dibentuk database (document_prefix + document_number), jadi dibaca dari baris yang baru dibuat
+      const { no: newNo } = await trx('delivery_orders').where({ id: created }).first('no')
       const linked = await trx('delivery_orders').where({ id: from.id }).whereNull('rescheduled_to_id')
         .update({ rescheduled_to_id: created, updated_by: admin.id })
       if (!linked) throw new AppError('INVALID_STATE', { message: `DO ${from.no} sudah dijadwalkan ulang.`, details: { reason: 'sudah_dijadwalkan_ulang' } })
@@ -485,7 +492,7 @@ const create = async (db, admin, body, { from = null } = {}) => {
         to_status: from.status,
         actor_id: admin.id,
         occurred_at: new Date(),
-        payload: { new_order_id: created, new_no: no },
+        payload: { new_order_id: created, new_no: newNo },
       })
     }
     return created
@@ -521,6 +528,7 @@ const reschedule = async (db, admin, id, body) => {
     travel_allowance_amount: Number(row.travel_allowance_amount),
     cargo_type: row.cargo_type,
     cargo_details: row.cargo_details,
+    customer_reference_no: row.customer_reference_no,
     ...body,
   }
   return create(db, admin, merged, { from: row })
@@ -571,6 +579,7 @@ const update = async (db, admin, id, body) => {
   })
   if (body.origin_location_id !== undefined) fields.origin_snapshot = snapshotOrigin(refs.origin)
   if (destinationChanged) fields.destination_snapshot = snapshotDestination(refs.destination)
+  if (body.customer_reference_no !== undefined) fields.customer_reference_no = body.customer_reference_no || null
   Object.assign(fields, cargo.toColumns(body))
 
   await db.transaction(async (trx) => {

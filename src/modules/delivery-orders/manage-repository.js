@@ -26,7 +26,7 @@ const list = async (db, {
 }) => {
   const filtered = () => {
     const q = searchColumns(base(db), search, [
-      'delivery_orders.no', cargo.SEARCH_SQL, 'driver_user.name', 'drivers.code', 'units.plate', 'customers.name',
+      'delivery_orders.no', 'delivery_orders.customer_reference_no', cargo.SEARCH_SQL, 'driver_user.name', 'drivers.code', 'units.plate', 'customers.name',
       // rute: nama dan kota lokasi asal dan tujuan (salinan di DO)
       "delivery_orders.origin_snapshot->>'name'", "delivery_orders.origin_snapshot->>'city'",
       "delivery_orders.destination_snapshot->>'name'", "delivery_orders.destination_snapshot->>'city'",
@@ -119,18 +119,6 @@ const findUnitOrdersOnDate = (db, {
   if (exceptId) q.whereNot('delivery_orders.id', exceptId)
   if (exceptDriverId) q.whereNot('delivery_orders.driver_id', exceptDriverId)
   return q
-}
-
-/** Nomor DO berikutnya dari sequence; lewati nomor yang sudah dipakai (mis. DO-0144 dari data awal). */
-const nextNumber = async (db) => {
-  for (let i = 0; i < 100; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    const { rows } = await db.raw("select nextval('delivery_order_no_seq') as n")
-    const no = `DO-${String(rows[0].n).padStart(4, '0')}`
-    // eslint-disable-next-line no-await-in-loop
-    if (!(await db('delivery_orders').where({ no }).first('id'))) return no
-  }
-  throw new Error('tidak menemukan nomor DO yang kosong')
 }
 
 const insert = async (trx, row) => {
@@ -248,7 +236,6 @@ module.exports = {
   findLocation,
   findDriverOrdersOnDate,
   findUnitOrdersOnDate,
-  nextNumber,
   insert,
   events,
   loading,

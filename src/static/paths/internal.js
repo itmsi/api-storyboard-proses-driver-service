@@ -34,6 +34,7 @@ module.exports = {
       'Database dan role-nya sudah dibuat saas-worker. Kredensial **owner** diminta ke saas-api, bukan dari request.',
       '',
       '- **Idempoten**: aman dipanggil berulang; jika sudah terbaru `applied` kosong.',
+      '- Setelah migrasi, pengaturan bawaan dari `client_code` ditanam bila belum ada: `document_prefix` = `<CLIENT_CODE>-` (mis. `OGO-` -> nomor DO `OGO-0145`). Yang sudah diatur admin tidak ditimpa.',
       '- **Sinkron**: response dikirim setelah selesai; pakai timeout klien ≥ 60 detik.',
       '- 409 `TENANT_LOCKED`: migrasi client ini sedang berjalan (transient, retry).',
       '- 500 `MIGRATION_FAILED`: `details.reason` berisi penyebab.',
@@ -52,6 +53,7 @@ module.exports = {
     post: op('Seed database client', [
       'Idempoten. Membuat/menyamakan akun sistem MSI (`msi.support`, role admin, `is_system`) dengan password dari saas-api.',
       'Akun ini tidak tampil di `GET /users` dan tidak bisa mengganti passwordnya sendiri.',
+      'Juga menanam pengaturan bawaan dari `client_code` bila belum ada (`document_prefix` = `<CLIENT_CODE>-`); tercatat di `seeded` sebagai `setting:document_prefix`.',
       '',
       '409 `INVALID_STATE` bila database belum dimigrasi.',
     ].join('\n'), {
