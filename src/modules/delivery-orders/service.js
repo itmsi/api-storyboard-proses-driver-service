@@ -262,7 +262,8 @@ const accept = async (db, auth, id, body) => {
 
   const date = wibDate()
   const p2hStatus = await p2h.getStatus(db, row.unit_id, date)
-  if (p2hStatus.status === 'belum' || !p2hStatus.can_operate) {
+  // Sementara tanpa pengecekan layak/tidak layak: hanya unit yang belum di-P2H yang ditolak. Aturan semula: `|| !p2hStatus.can_operate`
+  if (p2hStatus.status === 'belum') {
     throw new AppError('P2H_REQUIRED', {
       message: p2hStatus.status === 'tidak_layak'
         ? `Unit ${row.unit_plate} dinyatakan tidak layak jalan. Lakukan P2H ulang setelah diperbaiki.`
